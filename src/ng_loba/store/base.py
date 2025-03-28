@@ -1,13 +1,22 @@
 """
 Base store implementation providing core CRUD operations and validation.
+
+A Store...
+- maps a collection of items to underlying storage, eg dict or database table(s)
+- it notifies registered observers of changes to the store, eg create, update, delete
+  (to do this, it is an app-wide singleton per type, and optionally, tenant)
+- it enables tenant separation by having one instance (per type) per tenant
+- it performs validation and normalization of modified/new items before accepting them
+- it is *not* meant for caching
 """
 
 import inspect
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
-from ..utils.types import FieldSpec
-from ..utils.logging import logger
+from ..models import FieldSpec
+from ..utils import logger
+
 
 @dataclass
 class StoreEvent:
@@ -46,9 +55,7 @@ class Store:
         return len(self._observers)
 
     def validate(self, item: dict) -> tuple[bool, dict]:
-        """Validate and normalize an item.
-        The item dict is modified in place for normalization.
-        Returns (True, {}) if valid, or (False, error_info) if invalid."""
+        """Validate an item or partial. Returns (True, {}) if valid, or (False, error_info) if invalid."""
         for field, config in self._field_specs.items():
             if field in item:
                 value = item[field]
@@ -65,11 +72,19 @@ class Store:
                             },
                         )
 
-                # Normalize if normalizer exists
-                if config.normalizer and value is not None:
-                    item[field] = config.normalizer(value)
+                # # Normalize if normalizer exists -> moved to update & create functions
+                # if config.normalizer and value is not None:
+                #     item[field] = config.normalizer(value)
 
         return (True, {})
+
+    def normalize(self, item: dict):
+        """Normalize an item in place"""
+        for field, config in self._field_specs.items():
+            if field in item:
+                value = item[field]
+                if config.normalizer and value is not None:
+                    item[field] = config.normalizer(value)
 
     async def notify_observers(self, event: StoreEvent) -> None:
         """Notify observers of store events"""
@@ -103,6 +118,7 @@ class Store:
     # Public CRUD API with validation and events
     async def create_item(self, item: dict) -> Optional[dict]:
         """Create an item with validation"""
+        self.normalize(item)
         is_valid, error = self.validate(item)
         if not is_valid:
             logger.error(f"Validation error creating item: {error}")
@@ -124,6 +140,8 @@ class Store:
 
     async def update_item(self, id: int, partial_item: dict) -> Optional[dict]:
         """Update an item with validation"""
+        print('normalize in update_item')
+        self.normalize(partial_item)
         is_valid, error = self.validate(partial_item)
         if not is_valid:
             logger.error(f"Validation error updating item: {error}")

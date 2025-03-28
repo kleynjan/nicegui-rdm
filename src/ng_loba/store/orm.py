@@ -8,23 +8,33 @@ from tortoise.contrib.fastapi import register_tortoise
 from tortoise.expressions import Q
 from tortoise.models import Model
 
+from ..models import QModel
 from ..utils.logging import logger
+from ..utils.helpers import str_to_utc_datetime, utc_datetime_to_str
+
 from .base import Store
 
-T = TypeVar('T', bound=Model)
+T = TypeVar('T', bound=QModel)
 
-def init_db(app):
+def init_db(app, db_url: str, modules: Dict[str, List[str]]):
     """Initialize Tortoise ORM with FastAPI"""
     register_tortoise(
         app,
-        db_url="sqlite://db.sqlite3",
-        modules={"models": ["models"]},  # tortoise will look for models in this main module
+        db_url=db_url,
+        modules=modules,  # type:ignore # eg, {"models": ["models"]}
         generate_schemas=True,  # in production you should use version control migrations instead
     )
 
 
 class TortoiseStore(Store, Generic[T]):
     """Tortoise ORM implementation of Store (without multitenancy)"""
+
+    hydration_mapping = {
+        "DatetimeField": {
+            "hydrate": utc_datetime_to_str,
+            "dehydrate": str_to_utc_datetime,
+        },
+    }
 
     def __init__(self, model: Type[T]) -> None:
         self.model = model
@@ -51,7 +61,7 @@ class TortoiseStore(Store, Generic[T]):
     async def _create_item(self, item: dict) -> dict:
         """Create item in database"""
         db_item = await self.model.create(**item)
-        return await db_item.values()
+        return db_item.values()
 
     async def _read_items(self, filter_by: Optional[dict] = None, q: Optional[Q] = None, join_fields: List[str] = []) -> List[dict]:
         """Read items from database with optional filtering"""

@@ -1,5 +1,9 @@
 """
 Refreshable components for reactive UI updates.
+
+A *refreshable* is a UI component that maintains state and can be rebuilt on state changes.
+It can be registered as an observer to one or more stores, so the UI can be updated when data changes.
+Also, through on_state_change, it can notify other UI components of state changes.
 """
 
 from typing import Callable, Optional
@@ -51,4 +55,11 @@ class StoreRefreshable(StatefulRefreshable):
 
     def filter(self, event: StoreEvent) -> bool:
         """Check store notification (verb, item) against self.state, return True if the instance should be refreshed."""
+
+        # # example : basic multitenancy filter: only refresh events within same tenant
+        # # not needed since we have per-tenant store instances
+        # if event.item and "tenant" in event.item:
+        #     if event.item["tenant"] != self.state["props"]["tenant"]:
+        #         return False
+
         return True

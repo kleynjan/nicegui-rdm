@@ -1,69 +1,9 @@
-/* ----------------- show-refresh -----------------
-*/
-// enable this block to see refresh animated
-
-.show-refresh {
-    border: 2px solid green;
-    animation: borderAnimation 2s forwards;
-}
-@keyframes borderAnimation {
-    0% {
-        border: 2px solid green;
-    }
-    100% {
-        border: 2px solid white;
-    }
-}
-/*
---------------------------------------------------- */
-
-$max-width: 1250px;
-$textarea-min-height: 180px;
-$border-grey: #c0c0c0;
-
-// see theme.py to match Quasar colors with scss (ui.colors)
-$primary: rgb(0,82,194);
-$secondary: #53B689;
-$green-text: #006600;
-$red: #e33944;
-$accent: #111B1E;
-$positive: #53B689;
-
-body {
-  overflow-y: scroll; // avoid header jumping around when page expands
-  max-width: $max-width;
-}
-
-table {
-  width: 100%;
-  text-align: left;
-}
-
-/* ---- quasar overrides ---- */
-
-.q-btn {
-  text-transform: none !important;
-  border: 0.5px solid;
-  padding: 4px 16px;
-  margin: 12px 0;
-}
-
-// no "elevation", no "box-shadow"
-.q-btn--actionable.q-btn--standard:before {
-  transition: none !important;
-}
-.q-btn:before {
-  box-shadow: none !important;
-}
-.q-card,
-.q-table__card {
-  box-shadow: 0 0 0 1px $border-grey !important;
-  border-radius: 2px !important;
-}
-
 
 /* --------------------------------------------------------- */
 /* crud_table specific */
+
+$green-text: #006600;
+$red: #e33944;
 
 $border-grey: #c0c0c0;
 $header-background-color: #f5f7f7;
@@ -76,11 +16,6 @@ $row-height: 42px;
 $font-size: 14px;
 $icon-size: 24px;
 $button-column-width: 45px;
-
-.q-card, .q-table__card {
-    box-shadow: 0 0 0 1px $border-grey !important;
-    border-radius: 2px !important;
-}
 
 .crudy-table {
     border: 1px solid $border-grey;

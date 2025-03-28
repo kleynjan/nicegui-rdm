@@ -1,9 +1,6 @@
-"""
-Common types used across the package.
-"""
+from typing import NamedTuple, Any, Callable, List, Optional
 
-from typing import Any, Callable, List, NamedTuple, Optional
-
+# helper classes
 class Validator(NamedTuple):
     """Optional element in a FieldSpec, for field validation"""
     message: str

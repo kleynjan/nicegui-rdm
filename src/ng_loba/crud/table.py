@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from nicegui import html, ui
 
-from .keyboard import ObservableKeyboard
+from ..utils.keyboard import ObservableKeyboard
 from ..store.base import Store
 
 CLASSES_PREFIX = "crudy"
@@ -44,13 +44,6 @@ class TableConfig:
             if col.name == col_name:
                 return col
         return None
-
-def init_page(ui: ModuleType):
-    import os
-    styles_path = os.path.join(os.path.dirname(__file__), 'styles.scss')
-    with open(styles_path) as f:
-        ui.add_scss(f.read())
-    ui.colors(primary="rgb(0,82,194)", secondary="#53B689", accent="#111B1E", positive="#53B689")
 
 
 async def confirm_dialog(prompts: dict = {}, item: dict = {}):
@@ -127,6 +120,9 @@ class TableRowEditor:
         """Create a nicegui/quasar compatible validation function for a given column."""
         def _validate(value: Any):
             partial = {col_name: value}
+            # if col.ui_type == ui.checkbox:      # type: ignore
+            #     partial = {col_name: not partial[col_name]}
+            #     print(f"Checkbox partial: {partial}")
             (valid, error_dict) = self.store.validate(partial)
             # always validate entire row -> enable/disable save button
             self.check_validity()

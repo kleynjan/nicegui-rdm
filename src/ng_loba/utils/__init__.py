@@ -1,8 +1,9 @@
 """
-Utility functions and common types.
+Utility functions/classes.
 """
 
-from .types import Validator, FieldSpec
 from .logging import logger, setup_logging
+from .keyboard import ObservableKeyboard
 
-__all__ = ['Validator', 'FieldSpec', 'logger', 'setup_logging']
+__all__ = ['logger', 'setup_logging',
+           'ObservableKeyboard']
