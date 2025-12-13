@@ -8,14 +8,14 @@ from typing import Any, Dict
 from nicegui import html, ui
 
 from .base import BaseCrudTable, CLASSES_PREFIX, TableConfig
-from ..store.base import Store
+from .protocol import CrudDataSource
 
 
 class DirectEditTable(BaseCrudTable):
     """Direct edit mode - inline editing with auto-save on blur"""
 
-    def __init__(self, state: dict, store: Store, config: TableConfig):
-        super().__init__(state, store, config)
+    def __init__(self, state: dict, data_source: CrudDataSource, config: TableConfig):
+        super().__init__(state, data_source, config)
         self.reset()
 
     def reset(self):
@@ -41,7 +41,7 @@ class DirectEditTable(BaseCrudTable):
         await self.load_data()
         with html.table().classes(f"{CLASSES_PREFIX}-table {CLASSES_PREFIX}-direct-mode"):
             self._build_header()
-            self._build_body()
+            self._build_body()  # type: ignore
 
     @ui.refreshable
     def _build_body(self):
@@ -125,11 +125,11 @@ class DirectEditTable(BaseCrudTable):
             partial = {col_name: item[col_name]}
 
         # Validate the blurred field
-        (valid, error_dict) = self.store.validate(partial)
+        (valid, error_dict) = self.data_source.validate(partial)
 
         if valid:
             # Check if entire row is valid
-            (valid_all, error_dict) = self.store.validate(item)
+            (valid_all, error_dict) = self.data_source.validate(item)
             if valid_all:
                 self.state["new_item_valid"] = True
         else:
@@ -141,18 +141,18 @@ class DirectEditTable(BaseCrudTable):
             self.state["new_item_valid"] = False
             self.state["current_error"] = error_dict
 
-        # Update store if valid and has id (existing item)
+        # Update data source if valid and has id (existing item)
         if valid and id is not None:
-            await self.store.update_item(id, partial)
+            await self.data_source.update_item(id, partial)
 
     async def _handle_add(self, new_item: Dict[str, Any]) -> None:
         """Handle adding new item"""
-        (valid, error_dict) = self.store.validate(new_item)
+        (valid, error_dict) = self.data_source.validate(new_item)
         if valid:
             if self.config.on_add:
                 await self.config.on_add(new_item)
             else:
-                await self.store.create_item(new_item)
+                await self.data_source.create_item(new_item)
             self.reset()
             self.build.refresh()
         else:
@@ -165,5 +165,5 @@ class DirectEditTable(BaseCrudTable):
 
     async def _handle_delete(self, row: Dict[str, Any]) -> None:
         """Handle row deletion"""
-        await self.store.delete_item(row)
+        await self.data_source.delete_item(row)
         self.build.refresh()

@@ -43,7 +43,7 @@ async def main():
     # Create table using factory
     table = create_crud_table(
         state={},
-        store=store,
+        data_source=store,
         config=config
     )
 
@@ -65,7 +65,7 @@ async def main():
     with ui.card().classes('w-full'):
         ui.label('Explicit Edit Mode Demo').classes('text-h5')
         ui.label('Click to select, double-click or click edit button to edit. Use arrow keys to navigate.').classes('text-caption')
-        await table.build()
+        await table.build()     # type: ignore
 
 
 if __name__ in {"__main__", "__mp_main__"}:

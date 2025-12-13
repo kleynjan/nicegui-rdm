@@ -4,12 +4,12 @@ Based on the original ng_loba CrudTable implementation.
 """
 
 import time
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable
 
 from nicegui import html, ui
 
-from .base import BaseCrudTable, CLASSES_PREFIX, TableConfig
-from ..store.base import Store
+from .base import CLASSES_PREFIX, BaseCrudTable, TableConfig
+from .protocol import CrudDataSource
 
 
 async def confirm_dialog(prompts: dict = {}, item: dict = {}):
@@ -36,9 +36,9 @@ async def confirm_dialog(prompts: dict = {}, item: dict = {}):
 
 class TableRowEditor:
     """Editor for a single table row"""
-    def __init__(self, state: dict, store: Store, config: TableConfig, on_ready: Callable):
+    def __init__(self, state: dict, data_source: CrudDataSource, config: TableConfig, on_ready: Callable):
         self.state = state
-        self.store = store
+        self.data_source = data_source
         self.config = config
         self.on_ready = on_ready
         self.old_item = {}
@@ -86,7 +86,7 @@ class TableRowEditor:
         """Create a nicegui/quasar compatible validation function for a given column."""
         def _validate(value: Any):
             partial = {col_name: value}
-            (valid, error_dict) = self.store.validate(partial)
+            (valid, error_dict) = self.data_source.validate(partial)
             # always validate entire row -> enable/disable save button
             self.check_validity()
             return None if valid else error_dict['error_msg']
@@ -105,7 +105,7 @@ class TableRowEditor:
 
     def check_validity(self) -> bool:
         """Check validity of entire current row"""
-        (valid_all, error_dict) = self.store.validate(self.item)
+        (valid_all, error_dict) = self.data_source.validate(self.item)
         self.state['is_valid'] = valid_all
         if valid_all:
             self.state['current_error'] = {}
@@ -117,17 +117,21 @@ class TableRowEditor:
             if self.item['id'] == -1:
                 # Create new item - remove the temporary id
                 item_data = {k: v for k, v in self.item.items() if k != 'id'}
-                await self.store.create_item(item_data)
-                ui.notify("Item added", type='positive')
+                ui.notify("Adding item", type='positive')
+                await self.data_source.create_item(item_data)
+                # Exit edit mode after save
+                self.on_ready()
             elif self.item != self.old_item:
                 # Update existing item - pass only changed fields (or all fields except id)
                 item_id = self.item['id']
                 item_data = {k: v for k, v in self.item.items() if k != 'id'}
-                await self.store.update_item(item_id, item_data)
-                ui.notify("Item updated", type='positive')
+                ui.notify("Saving changes", type='positive')
+                await self.data_source.update_item(item_id, item_data)
+                # Exit edit mode after save
+                self.on_ready()
             else:
                 ui.notify("No changes", type='info')
-            self.on_ready()
+                self.on_ready()
 
     def handle_cancel(self):
         """Handle cancel button click"""
@@ -148,11 +152,11 @@ class TableRowEditor:
 class ExplicitEditTable(BaseCrudTable):
     """Explicit edit mode - row selection with dedicated edit mode"""
 
-    def __init__(self, state: dict, store: Store, config: TableConfig):
-        super().__init__(state, store, config)
+    def __init__(self, state: dict, data_source: CrudDataSource, config: TableConfig):
+        super().__init__(state, data_source, config)
         self.reset()
         self.state['selected_row'] = None
-        self.editor = TableRowEditor(state=self.state['editor'], store=store,
+        self.editor = TableRowEditor(state=self.state['editor'], data_source=data_source,
                                      config=config, on_ready=self.handle_editor_ready)
         self.keyboard = ui.keyboard(on_key=self.handle_key)
 
@@ -181,7 +185,7 @@ class ExplicitEditTable(BaseCrudTable):
         await self.load_data()
         with html.table().classes(f"{CLASSES_PREFIX}-table {CLASSES_PREFIX}-explicit-mode show-refresh"):
             self._build_header()
-            self._build_body()
+            self._build_body()  # type: ignore
 
     @ui.refreshable
     def _build_body(self):
@@ -205,7 +209,7 @@ class ExplicitEditTable(BaseCrudTable):
                             row_element.classes(add="selected")
                             with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
                                 ui.button(icon="bi-pencil").classes(f"{CLASSES_PREFIX}-column-button") \
-                                    .on("click", lambda _, r=row_index: self.start_editing(r, self.config.focus_column))
+                                    .on("click", lambda _, r=row_index: self.start_editing(r, self.config.focus_column or self.config.columns[0].name))
                             if not self.config.skip_delete:
                                 with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
                                     ui.button(icon="bi-trash").classes(f"{CLASSES_PREFIX}-column-button") \
@@ -247,24 +251,24 @@ class ExplicitEditTable(BaseCrudTable):
         """Start editing a row"""
         self.state['editor']['current_col'] = col_name
         self.state['is_editing'] = True
-        self._build_body.refresh()
+        self._build_body.refresh()  # type: ignore
 
     def start_new_row(self):
         """Start adding a new row"""
         self.state['adding_new_item'] = True
         self.state['selected_row'] = None
-        self._build_body.refresh()
+        self._build_body.refresh()  # type: ignore
 
     def handle_editor_ready(self):
         """Handle editor completion"""
         self.reset()
-        self._build_body.refresh()
+        self._build_body.refresh()  # type: ignore
 
     def select_row(self, row_index: int) -> None:
         """Select a row"""
         if not self.state['is_editing']:
             self.state['selected_row'] = row_index
-            self._build_body.refresh()
+            self._build_body.refresh()  # type: ignore
 
     async def _handle_delete(self, row_index):
         """Handle row deletion"""
@@ -276,9 +280,9 @@ class ExplicitEditTable(BaseCrudTable):
                 'no_button': 'Cancel',
                 'yes_button': 'Delete'
             }, item):
-                await self.store.delete_item(item)
+                await self.data_source.delete_item(item)
         else:
-            await self.store.delete_item(item)
+            await self.data_source.delete_item(item)
 
     def handle_key(self, e):
         """Handle keyboard events at table level"""
@@ -292,8 +296,9 @@ class ExplicitEditTable(BaseCrudTable):
                 self._build_body.refresh()
             elif e.key.name == 'Enter':
                 selected_row = self.state['selected_row']
-                if selected_row is not None and self.config.focus_column:
-                    self.start_editing(selected_row, self.config.focus_column)
+                if selected_row is not None:
+                    focus_col = self.config.focus_column or self.config.columns[0].name
+                    self.start_editing(selected_row, focus_col)
             elif e.key.name in ['ArrowDown', 'ArrowUp']:
                 if not self.state['is_editing']:  # Only navigate when not editing
                     delta = 1 if e.key.name == 'ArrowDown' else -1
@@ -302,4 +307,4 @@ class ExplicitEditTable(BaseCrudTable):
                         ssr = -1
                     ssr = min(max(ssr + delta, 0), len(self.data) - 1)
                     self.state['selected_row'] = ssr
-                    self._build_body.refresh()
+                    self._build_body.refresh()  # type: ignore

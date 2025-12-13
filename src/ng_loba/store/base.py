@@ -10,9 +10,10 @@ A Store...
 - it is *not* meant for caching
 """
 
+import copy
 import inspect
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 from ..models import FieldSpec
 from ..utils import logger
@@ -29,23 +30,25 @@ class Store:
     """Base store providing core CRUD operations and validation.
     (includes Q and join_fields interface for ORM subclasses)"""
 
-    def __init__(self, field_specs: Optional[Dict[str, FieldSpec]] = None) -> None:
-        self._observers: List[Callable[[StoreEvent], Any]] = []
-        self._field_specs: Dict[str, FieldSpec] = field_specs or {}
-        self._sort_key: Optional[Callable[[dict], Any]] = None
+    def __init__(self, field_specs: dict[str, FieldSpec] | None = None) -> None:
+        self._observers: list[Callable[[StoreEvent], Any]] = []
+        self._field_specs: dict[str, FieldSpec] = field_specs or {}
+        self._sort_key: Callable[[dict], Any] | None = None
+        self._sort_reverse: bool = False
 
-    def set_sort_key(self, key_func: Callable[[dict], Any]) -> None:
+    def set_sort_key(self, key_func: Callable[[dict], Any], reverse: bool = False) -> None:
         """Set function to generate sort key from item"""
         self._sort_key = key_func
+        self._sort_reverse = reverse
 
-    def _sort_results(self, items: List[dict]) -> List[dict]:
+    def _sort_results(self, items: list[dict]) -> list[dict]:
         """Sort results if sort key is configured"""
         if self._sort_key and items:
-            return sorted(items, key=self._sort_key)
+            return sorted(items, key=self._sort_key, reverse=self._sort_reverse)
         return items
 
     @property
-    def field_specs(self) -> Dict[str, FieldSpec]:
+    def field_specs(self) -> dict[str, FieldSpec]:
         """Get field specs"""
         return self._field_specs
 
@@ -55,7 +58,9 @@ class Store:
         return len(self._observers)
 
     def validate(self, item: dict) -> tuple[bool, dict]:
-        """Validate an item or partial. Returns (True, {}) if valid, or (False, error_info) if invalid."""
+        """Validate and normalize an item or partial.
+        The item dict is modified in place for normalization.
+        Returns (True, {}) if valid, or (False, error_info) if invalid."""
         for field, config in self._field_specs.items():
             if field in item:
                 value = item[field]
@@ -72,23 +77,15 @@ class Store:
                             },
                         )
 
-                # # Normalize if normalizer exists -> moved to update & create functions
-                # if config.normalizer and value is not None:
-                #     item[field] = config.normalizer(value)
-
-        return (True, {})
-
-    def normalize(self, item: dict):
-        """Normalize an item in place"""
-        for field, config in self._field_specs.items():
-            if field in item:
-                value = item[field]
+                # Normalize if normalizer exists
                 if config.normalizer and value is not None:
                     item[field] = config.normalizer(value)
 
+        return (True, {})
+
     async def notify_observers(self, event: StoreEvent) -> None:
         """Notify observers of store events"""
-        logger.info(f"Notifying {len(self._observers)} observers: {self.__class__.__name__} {event}")
+        # logger.debug(f"Notifying {len(self._observers)} observers: {self.__class__.__name__} {event}")
         for observer in self._observers:
             if inspect.iscoroutinefunction(observer):
                 await observer(event)
@@ -100,48 +97,45 @@ class Store:
         self._observers.append(observer)
 
     # CRUD interface that subclasses must implement
-    async def _create_item(self, item: dict) -> Optional[dict]:
+    async def _create_item(self, item: dict) -> dict:
         raise NotImplementedError()
 
-    async def _read_items(self, filter_by: Optional[dict] = None, q: Optional[Any] = None, join_fields: List[str] = []) -> List[dict]:
+    async def _read_items(self, filter_by: dict | None = None, q: Any | None = None, join_fields: list[str] = []) -> list[dict]:
         raise NotImplementedError()
 
-    async def _update_item(self, id: int, partial_item: dict) -> Optional[dict]:
+    async def _update_item(self, id: int, partial_item: dict) -> dict | None:
         raise NotImplementedError()
 
     async def _delete_item(self, id: int) -> None:
         raise NotImplementedError()
 
-    async def read_item_by_id(self, id: int, join_fields: List[str] = []) -> Optional[dict]:
+    async def read_item_by_id(self, id: int, join_fields: list[str] = []) -> dict | None:
         raise NotImplementedError()
 
     # Public CRUD API with validation and events
-    async def create_item(self, item: dict) -> Optional[dict]:
+    async def create_item(self, item: dict) -> dict | None:
         """Create an item with validation"""
-        self.normalize(item)
         is_valid, error = self.validate(item)
         if not is_valid:
             logger.error(f"Validation error creating item: {error}")
             return None
-
-        if created_item := await self._create_item(item):
-            await self.notify_observers(StoreEvent(verb="create", item=created_item))
+        created_item = await self._create_item(item)
+        await self.notify_observers(StoreEvent(verb="create", item=created_item))
         return created_item
 
-    async def read_items(self, filter_by: Optional[dict] = None, q: Optional[Any] = None, join_fields: List[str] = []) -> List[dict]:
-        """Read items with optional filtering.
+    async def read_items(self, filter_by: dict | None = None, q: Any | None = None, join_fields: list[str] = []) -> list[dict]:
+        """Read items with optional filtering; sorts items if _sort_key is defined.
 
         Args:
-            filter_by: Dict of field=value pairs for equality filtering (AND)
-            q: Optional Q object for complex queries (for advanced use cases) (to implement in ORM subclass)
-            join_fields: List of fields to join (to implement in ORM subclass)
+            filter_by: dict of field=value pairs for equality filtering (AND)
+            q: Q object for complex queries (for advanced use cases) (to implement in ORM subclass)
+            join_fields: list of fields to join (to implement in ORM subclass)
         """
-        return await self._read_items(filter_by, q, join_fields)
+        items = await self._read_items(filter_by, q, join_fields)
+        return self._sort_results(items)
 
-    async def update_item(self, id: int, partial_item: dict) -> Optional[dict]:
+    async def update_item(self, id: int, partial_item: dict) -> dict | None:
         """Update an item with validation"""
-        print('normalize in update_item')
-        self.normalize(partial_item)
         is_valid, error = self.validate(partial_item)
         if not is_valid:
             logger.error(f"Validation error updating item: {error}")
@@ -161,9 +155,10 @@ class Store:
 
 
 # Example store implementation
+
 class DictStore(Store):
     """In-memory dictionary-based store implementation"""
-    def __init__(self, field_specs: Optional[Dict[str, FieldSpec]] = None) -> None:
+    def __init__(self, field_specs: dict[str, FieldSpec] | None = None) -> None:
         super().__init__(field_specs)
         self._items = []
 
@@ -180,11 +175,11 @@ class DictStore(Store):
         self._items.append(item)
         return item
 
-    async def _read_items(self, filter_by: dict | None = None, q: Optional[Any] = None, join_fields: List[str] = []) -> list[dict]:
+    async def _read_items(self, filter_by: dict | None = None, q: Any | None = None, join_fields: list[str] = []) -> list[dict]:
         if q or join_fields:
             raise NotImplementedError("ORM arguments q and join_fields not supported")
 
-        items = self._items.copy()
+        items = copy.deepcopy(self._items)
         if filter_by:
             filtered_items = []
             for item in items:

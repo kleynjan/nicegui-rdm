@@ -5,25 +5,25 @@ CRUD table component factory and re-exports.
 from .base import Column, TableConfig, CLASSES_PREFIX
 from .direct import DirectEditTable
 from .explicit import ExplicitEditTable, confirm_dialog
-from ..store.base import Store
+from .protocol import CrudDataSource
 
 
-def create_crud_table(state: dict, store: Store, config: TableConfig):
+def create_crud_table(state: dict, data_source: CrudDataSource, config: TableConfig):
     """
     Factory function to create appropriate table implementation based on mode.
 
     Args:
         state: Dictionary to store table state
-        store: Store instance for data operations
+        data_source: Data source implementing CrudDataSource protocol (e.g., Store, API client)
         config: TableConfig with mode setting
 
     Returns:
         DirectEditTable or ExplicitEditTable instance based on config.mode
     """
     if config.mode == "direct":
-        return DirectEditTable(state, store, config)
+        return DirectEditTable(state, data_source, config)
     else:
-        return ExplicitEditTable(state, store, config)
+        return ExplicitEditTable(state, data_source, config)
 
 
 # Backwards compatibility - CrudTable is now an alias for ExplicitEditTable

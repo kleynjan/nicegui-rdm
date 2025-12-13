@@ -7,7 +7,8 @@ from typing import Any, Callable, Dict, List, Optional
 
 from nicegui import html, ui
 
-from ..store.base import Store
+from .protocol import CrudDataSource
+from ..store.base import StoreEvent
 
 CLASSES_PREFIX = "crudy"
 
@@ -26,10 +27,10 @@ class TableConfig:
     """Configuration for CrudTable"""
     columns: List[Column]
     mode: str = "explicit"              # "explicit" or "direct"
-    focus_column: Optional[str] = None  # Default column for focus (explicit mode)
     on_add: Optional[Callable] = None   # Optional custom add handler
     skip_delete: bool = False           # Hide delete functionality
     add_button: Optional[str] = None    # Custom add button text
+    focus_column: Optional[str] = None  # Default column for focus (explicit mode)
     delete_confirmation: bool = True    # Confirm deletes (explicit mode)
 
     def __post_init__(self):
@@ -48,17 +49,30 @@ class TableConfig:
 class BaseCrudTable:
     """Base class for CRUD table implementations"""
 
-    def __init__(self, state: dict, store: Store, config: TableConfig):
-        self.store = store
+    def __init__(self, state: dict, data_source: CrudDataSource, config: TableConfig):
+        self.data_source = data_source
         self.state = state
         self.config = config
-        self.data: List[Dict[str, Any]] = []
+        self.data: list[dict[str, Any]] = []
+
+        # Subscribe to external changes if supported
+        if hasattr(data_source, 'add_observer'):
+            try:
+                data_source.add_observer(self._handle_external_change)
+            except (AttributeError, NotImplementedError):
+                # Data source doesn't support observers - that's ok
+                pass
 
     async def load_data(self):
-        """Load data from store"""
-        self.data = await self.store.read_items(
+        """Load data from data source"""
+        self.data = await self.data_source.read_items(
             join_fields=self.config.join_fields
         )
+
+    async def _handle_external_change(self, event: StoreEvent):
+        """Handle external data changes (from other components, background processes, etc.)"""
+        # Refresh the table to show the changes
+        await self.build.refresh()  # type: ignore
 
     def _build_header(self):
         """Build table header - common to both modes"""
@@ -80,4 +94,4 @@ class BaseCrudTable:
 
     def refresh(self):
         """Refresh the table"""
-        self.build.refresh()
+        self.build.refresh()  # type: ignore

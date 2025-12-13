@@ -1,4 +1,4 @@
-from typing import NamedTuple, Any, Callable, List, Optional
+from typing import NamedTuple, Any, Callable
 
 # helper classes
 class Validator(NamedTuple):
@@ -8,5 +8,5 @@ class Validator(NamedTuple):
 
 class FieldSpec(NamedTuple):
     """Field configuration for store initialization"""
-    validators: List[Validator]
-    normalizer: Optional[Callable[[Any], Any]] = None  # value -> normalized_value
+    validators: list[Validator]
+    normalizer: Callable[[Any], Any] | None = None  # value -> normalized_value
