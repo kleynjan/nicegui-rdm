@@ -12,31 +12,10 @@ from .base import CLASSES_PREFIX, BaseCrudTable, TableConfig
 from .protocol import CrudDataSource
 
 
-async def confirm_dialog(prompts: dict = {}, item: dict = {}):
-    """Show a confirmation dialog"""
-    dialog = ui.dialog().props('persistent').classes('confirm-dialog')
-
-    question = prompts.get('question', 'Are you sure?').format(**item)
-    explanation = prompts.get('explanation', '').format(**item)
-    yes_button = prompts.get('yes_button', 'Yes').format(**item)
-    no_button = prompts.get('no_button', 'No').format(**item)
-
-    with dialog as d, ui.card().classes('delete-card'):
-        ui.label(question).classes('question')
-        ui.label(explanation).classes('explanation')
-        with ui.row().classes('confirm-button-row'):
-            ui.button(no_button).on("click", lambda: d.submit(False)) \
-                .classes("confirm-button confirm-button-no")
-            ui.button(yes_button).on("click", lambda: d.submit(True)) \
-                .classes("confirm-button confirm-button-yes")
-
-    result = await dialog
-    return result
-
-
 class TableRowEditor:
     """Editor for a single table row"""
-    def __init__(self, state: dict, data_source: CrudDataSource, config: TableConfig, on_ready: Callable):
+    def __init__(self, table: 'ExplicitEditTable', state: dict, data_source: CrudDataSource, config: TableConfig, on_ready: Callable):
+        self.table = table
         self.state = state
         self.data_source = data_source
         self.config = config
@@ -117,7 +96,7 @@ class TableRowEditor:
             if self.item['id'] == -1:
                 # Create new item - remove the temporary id
                 item_data = {k: v for k, v in self.item.items() if k != 'id'}
-                ui.notify("Adding item", type='positive')
+                self.table._notify("Adding item", type='positive')
                 await self.data_source.create_item(item_data)
                 # Exit edit mode after save
                 self.on_ready()
@@ -125,12 +104,12 @@ class TableRowEditor:
                 # Update existing item - pass only changed fields (or all fields except id)
                 item_id = self.item['id']
                 item_data = {k: v for k, v in self.item.items() if k != 'id'}
-                ui.notify("Saving changes", type='positive')
+                self.table._notify("Saving changes", type='positive')
                 await self.data_source.update_item(item_id, item_data)
                 # Exit edit mode after save
                 self.on_ready()
             else:
-                ui.notify("No changes", type='info')
+                self.table._notify("No changes", type='info')
                 self.on_ready()
 
     def handle_cancel(self):
@@ -156,7 +135,7 @@ class ExplicitEditTable(BaseCrudTable):
         super().__init__(state, data_source, config)
         self.reset()
         self.state['selected_row'] = None
-        self.editor = TableRowEditor(state=self.state['editor'], data_source=data_source,
+        self.editor = TableRowEditor(table=self, state=self.state['editor'], data_source=data_source,
                                      config=config, on_ready=self.handle_editor_ready)
         self.keyboard = ui.keyboard(on_key=self.handle_key)
 
@@ -271,18 +250,10 @@ class ExplicitEditTable(BaseCrudTable):
             self._build_body.refresh()  # type: ignore
 
     async def _handle_delete(self, row_index):
-        """Handle row deletion"""
+        """Handle row deletion - respects config.delete_confirmation"""
         item = self.data[row_index]
-        if self.config.delete_confirmation:
-            if await confirm_dialog({
-                'question': 'Delete item?',
-                'explanation': 'This action cannot be undone',
-                'no_button': 'Cancel',
-                'yes_button': 'Delete'
-            }, item):
-                await self.data_source.delete_item(item)
-        else:
-            await self.data_source.delete_item(item)
+        # _delete checks config.delete_confirmation automatically and refreshes
+        await self._delete(item)
 
     def handle_key(self, e):
         """Handle keyboard events at table level"""

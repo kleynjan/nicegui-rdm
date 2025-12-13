@@ -4,7 +4,8 @@ CRUD table component factory and re-exports.
 
 from .base import Column, TableConfig, CLASSES_PREFIX
 from .direct import DirectEditTable
-from .explicit import ExplicitEditTable, confirm_dialog
+from .base import confirm_dialog
+from .explicit import ExplicitEditTable
 from .protocol import CrudDataSource
 
 

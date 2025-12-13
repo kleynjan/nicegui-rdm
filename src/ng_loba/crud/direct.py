@@ -1,6 +1,5 @@
 """
 Direct edit CRUD table - inline editing with auto-save on blur.
-Based on alarm/components/crud_table.py
 """
 
 from typing import Any, Dict
@@ -70,9 +69,8 @@ class DirectEditTable(BaseCrudTable):
                 with html.tr().classes(f"{CLASSES_PREFIX}-add-button-row") \
                         .bind_visibility_from(self.state, "show_new_item", backward=lambda x: not x):
                     with html.td().props(f"colspan={len(self.config.columns) + 1}"):
-                        ui.label(self.config.add_button) \
-                            .on("click", self._toggle_new_item) \
-                            .classes(f"{CLASSES_PREFIX}-add-button")
+                        ui.button(self.config.add_button, on_click=self._toggle_new_item) \
+                            .classes(f"{CLASSES_PREFIX}-button {CLASSES_PREFIX}-add-button")
 
     def _build_data_row(self, row_index: int | None, item: Dict[str, Any]) -> None:
         """Build a single data row (editable)"""
@@ -107,7 +105,7 @@ class DirectEditTable(BaseCrudTable):
 
     def _handle_change(self, new_item: Dict[str, Any]) -> None:
         """Handle change event (optional validation while typing)"""
-        # Optionally validate while typing
+        # Optionally validate while typing?
         # (valid, _) = self.store.validate(new_item)
         # self.state["new_item_valid"] = valid
         pass
@@ -147,23 +145,12 @@ class DirectEditTable(BaseCrudTable):
 
     async def _handle_add(self, new_item: Dict[str, Any]) -> None:
         """Handle adding new item"""
-        (valid, error_dict) = self.data_source.validate(new_item)
-        if valid:
-            if self.config.on_add:
-                await self.config.on_add(new_item)
-            else:
-                await self.data_source.create_item(new_item)
+        if await self._validate_and_create(new_item):
             self.reset()
-            self.build.refresh()
         else:
             self.state['new_item_valid'] = False
-            ui.notify(
-                f"{error_dict['col_name']} {error_dict['error_value']}: {error_dict['error_msg']}",
-                type="warning",
-                timeout=1500,
-            )
 
     async def _handle_delete(self, row: Dict[str, Any]) -> None:
-        """Handle row deletion"""
-        await self.data_source.delete_item(row)
-        self.build.refresh()
+        """Handle row deletion - direct mode uses no confirmation by default"""
+        # Direct mode typically deletes immediately without confirmation
+        await self._delete(row, confirm=False)

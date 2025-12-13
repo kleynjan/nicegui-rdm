@@ -27,11 +27,11 @@ class TableConfig:
     """Configuration for CrudTable"""
     columns: List[Column]
     mode: str = "explicit"              # "explicit" or "direct"
-    on_add: Optional[Callable] = None   # Optional custom add handler
     skip_delete: bool = False           # Hide delete functionality
     add_button: Optional[str] = None    # Custom add button text
     focus_column: Optional[str] = None  # Default column for focus (explicit mode)
     delete_confirmation: bool = True    # Confirm deletes (explicit mode)
+    notification_callback: Optional[Callable] = None  # Notification function (signature like ui.notify)
 
     def __post_init__(self):
         self.join_fields = [col.name for col in self.columns if "__" in col.name]
@@ -95,3 +95,99 @@ class BaseCrudTable:
     def refresh(self):
         """Refresh the table"""
         self.build.refresh()  # type: ignore
+
+    # ============= Helper Methods for Common CRUD Operations =============
+
+    def _notify(self, message: str, **kwargs) -> None:
+        """Show notification using configured callback or ui.notify.
+
+        Args:
+            message: Notification message
+            **kwargs: Additional arguments passed to notification function (e.g., type, timeout)
+        """
+        if self.config.notification_callback:
+            self.config.notification_callback(message, **kwargs)
+        else:
+            ui.notify(message, **kwargs)
+
+    def _validate(self, item: dict, notify: bool = True) -> tuple[bool, dict]:
+        """Validate item with optional error notification.
+
+        Args:
+            item: Item or partial item to validate
+            notify: If True, show notification on validation error
+
+        Returns:
+            Tuple of (is_valid, error_dict)
+        """
+        (valid, error_dict) = self.data_source.validate(item)
+
+        if not valid and notify:
+            self._notify(
+                f"{error_dict['col_name']} {error_dict['error_value']}: {error_dict['error_msg']}",
+                type="warning",
+                timeout=1500,
+            )
+
+        return (valid, error_dict)
+
+    async def _validate_and_create(self, item: dict) -> bool:
+        """Validate item, create it, and refresh the table."""
+        (valid, _) = self._validate(item)
+
+        if valid:
+            await self.data_source.create_item(item)
+            self._notify("Item created", type="positive")
+            self.build.refresh()  # type: ignore
+            return True
+
+        return False
+
+    async def _delete(self, item: dict, confirm: bool | None = None) -> bool:
+        """Delete item with optional confirmation dialog."""
+        confirm = confirm if confirm is not None else self.config.delete_confirmation
+
+        if confirm:
+            if not await confirm_dialog({
+                'question': 'Delete item?',
+                'explanation': 'This action cannot be undone',
+                'no_button': 'Cancel',
+                'yes_button': 'Delete'
+            }, item):
+                return False
+
+        await self.data_source.delete_item(item)
+        self._notify("Item deleted", type="info")
+        self.build.refresh()  # type: ignore
+        return True
+
+
+async def confirm_dialog(prompts: dict = {}, item: dict = {}):
+    """Show a confirmation dialog.
+
+    Args:
+        prompts: Dict with keys 'question', 'explanation', 'yes_button', 'no_button'
+                 Values can use {field_name} format strings that will be filled from item
+        item: Item data for format string substitution
+
+    Returns:
+        True if user confirmed, False if cancelled
+    """
+    dialog = ui.dialog().props('persistent').classes('confirm-dialog')
+
+    question = prompts.get('question', 'Are you sure?').format(**item)
+    explanation = prompts.get('explanation', '').format(**item)
+    yes_button = prompts.get('yes_button', 'Yes').format(**item)
+    no_button = prompts.get('no_button', 'No').format(**item)
+
+    with dialog as d, ui.card().classes('delete-card'):
+        ui.label(question).classes('question')
+        ui.label(explanation).classes('explanation')
+        with ui.row().classes('confirm-button-row'):
+            ui.button(no_button).on("click", lambda: d.submit(False)) \
+                .classes("confirm-button confirm-button-no")
+            ui.button(yes_button).on("click", lambda: d.submit(True)) \
+                .classes("confirm-button confirm-button-yes")
+
+    result = await dialog
+    return result
