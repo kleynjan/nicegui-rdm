@@ -1,12 +1,11 @@
 
 /* --------------------------------------------------------- */
-/* CRUD table styling - unified for both direct and explicit modes */
+/* crud_table specific */
 
 $green-text: #006600;
 $red: #e33944;
 
 $border-grey: #c0c0c0;
-$primary: rgb(0,82,194);
 $header-background-color: #f5f7f7;
 $header-foreground-color: rgba(0,0,0,0.54);
 $row-border-color: rgba(189, 195, 199, 0.58);
@@ -16,16 +15,15 @@ $odd-row-background-color: #fcfdfe;
 $row-height: 42px;
 $font-size: 14px;
 $icon-size: 24px;
-$button-column-width: 40px;
+$button-column-width: 45px;
 
 .crudy-table {
     border: 1px solid $border-grey;
     font-size: $font-size;
-    width: 100%;
-    text-align: left;
 
     tr {
         line-height: $row-height;
+        // header and data td's (excluding buttons)
 
         &.crudy-header-tr {
             background-color: $header-background-color; 
@@ -34,7 +32,6 @@ $button-column-width: 40px;
                 width: $button-column-width;
             }
         }
-        
         &.crudy-row-tr {
             border-bottom-width: 0.625px;
             border-bottom-color: $row-border-color;
@@ -48,64 +45,37 @@ $button-column-width: 40px;
         }
 
         .crudy-td, .crudy-th {
-            padding: 0 12px;
-            
             .q-field--dense .q-field__control, .q-field--dense .q-field__marginal {
                 height: $row-height;
             }
-            
             input.q-field__input, input.q-field__native  {
                 font-size: $font-size;
                 line-height: 24px;
             }
+            padding: 0 12px;
+
         }
-        
         .crudy-column-button {
             padding: 0;
-            border: none;
-            margin: 0;
-            
             i.q-icon {
                 color: grey !important;
                 line-height: 12px;
                 font-size: $icon-size;
                 padding: 0;
             }
-            
             &.positive {
                 i.q-icon {
-                    color: $green-text !important;
+                    color: $green-text;
                 }
             }
-            
             &.negative {
                 i.q-icon {
-                    color: $red !important;
+                    color: $red;
                 }
             }
         }
     }
-
-    // Mode-specific styling (if needed in future for different behaviors)
-    &.crudy-explicit-mode {
-        // Explicit mode uses base styling with selection
-    }
-
-    &.crudy-direct-mode {
-        // Direct mode uses base styling without selection highlights
-    }
-
-    // Add button styling (from alarm - cleaner approach)
-    .crudy-add-button {
-        font-weight: 600;
-        cursor: pointer !important;
-        padding-top: 0.75rem;
-        color: $primary;
-        font-size: 1rem;
-        line-height: 1.5rem;
-    }
-}
-
+}                
 .crudy-th-name, .crudy-td-name { text-align: left; width: 200px;}
 .crudy-th-age, .crudy-td-age { text-align: left; width: 100px; }
 

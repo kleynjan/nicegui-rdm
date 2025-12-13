@@ -22,7 +22,7 @@ def init_db(app, db_url: str, modules: Dict[str, List[str]]):
         app,
         db_url=db_url,
         modules=modules,  # type:ignore # eg, {"models": ["models"]}
-        generate_schemas=True,  # in production you should use version control migrations instead
+        generate_schemas=False,  # in production you should use version control migrations instead
     )
 
 

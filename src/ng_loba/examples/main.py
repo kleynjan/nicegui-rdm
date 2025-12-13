@@ -1,7 +1,9 @@
 from nicegui import ui
-from ng_loba import DictStore, Validator, FieldSpec
-from ng_loba import CrudTable, Column, TableConfig, init_page
-from ng_loba import StoreRefreshable
+from ng_loba.store import DictStore
+from ng_loba.models import Validator, FieldSpec
+from ng_loba.crud import CrudTable, Column, TableConfig
+from ng_loba.refreshable import StoreRefreshable
+from ng_loba import init_page
 
 # Define field validation
 name_validator = Validator(
@@ -46,10 +48,26 @@ class UserList(StoreRefreshable):
 
 user_list = UserList(state={}, store=store)
 
+unused = """
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css">
+"""
+
+
 # Build table in UI
 @ui.page('/')
 async def main():
-    init_page(ui)
+    # init_page()
+
+    ui.add_head_html("""
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    """)
+
+    import os
+    styles_path = os.path.join(os.path.dirname(__file__), 'crud.scss')
+    with open(styles_path) as f:
+        print("Loading CRUD styles from", styles_path)
+        ui.add_scss(f.read())
+
     await store.create_item({'name': 'Test', 'email': 'test@testy.com'})
     await store.create_item({'name': 'Test2', 'email': 'test2@testy.com'})
 
