@@ -1,6 +1,5 @@
 """
 Explicit edit CRUD table - row selection with dedicated edit mode.
-Based on the original ng_loba CrudTable implementation.
 """
 
 import time
@@ -14,12 +13,11 @@ from .protocol import CrudDataSource
 
 class TableRowEditor:
     """Editor for a single table row"""
-    def __init__(self, table: 'ExplicitEditTable', state: dict, data_source: CrudDataSource, config: TableConfig, on_ready: Callable):
+    def __init__(self, table: 'ExplicitEditTable', state: dict, data_source: CrudDataSource, config: TableConfig):
         self.table = table
         self.state = state
         self.data_source = data_source
         self.config = config
-        self.on_ready = on_ready
         self.old_item = {}
         self.elements = {}
 
@@ -99,7 +97,7 @@ class TableRowEditor:
                 await self.data_source.create_item(item_data)
                 self.table._notify("Item added", type='positive')
                 # Exit edit mode after save
-                self.on_ready()
+                self.table.exit_editing()
             elif self.item != self.old_item:
                 # Update existing item - pass only changed fields (or all fields except id)
                 item_id = self.item['id']
@@ -107,15 +105,15 @@ class TableRowEditor:
                 await self.data_source.update_item(item_id, item_data)
                 self.table._notify("Item updated", type='positive')
                 # Exit edit mode after save
-                self.on_ready()
+                self.table.exit_editing()
             else:
                 self.table._notify("No changes", type='info')
-                self.on_ready()
+                self.table.exit_editing()
 
     def handle_cancel(self):
         """Handle cancel button click"""
         self.item.update(self.old_item)
-        self.on_ready()
+        self.table.exit_editing()
 
     async def handle_key(self, e):
         """Handle keyboard events in editor"""
@@ -136,7 +134,7 @@ class ExplicitEditTable(BaseCrudTable):
         self.reset()
         self.state['selected_row'] = None
         self.editor = TableRowEditor(table=self, state=self.state['editor'], data_source=data_source,
-                                     config=config, on_ready=self.handle_editor_ready)
+                                     config=config)
         self.keyboard = ui.keyboard(on_key=self.handle_key)
 
     def reset(self):
@@ -238,8 +236,7 @@ class ExplicitEditTable(BaseCrudTable):
         self.state['selected_row'] = None
         self._build_body.refresh()  # type: ignore
 
-    def handle_editor_ready(self):
-        """Handle editor completion"""
+    def exit_editing(self):
         self.reset()
         self._build_body.refresh()  # type: ignore
 
