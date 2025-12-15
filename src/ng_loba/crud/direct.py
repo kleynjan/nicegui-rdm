@@ -2,7 +2,7 @@
 Direct edit CRUD table - inline editing with auto-save on blur.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from nicegui import html, ui
 
@@ -51,7 +51,7 @@ class DirectEditTable(BaseCrudTable):
                     self._build_data_row(row_index, row)
                     if not self.config.skip_delete:
                         with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
-                            ui.button(icon="delete") \
+                            ui.button(icon="delete").props('flat') \
                                 .on("click", lambda _, r=row: self._handle_delete(r)) \
                                 .classes(f"{CLASSES_PREFIX}-column-button")
 
@@ -62,6 +62,7 @@ class DirectEditTable(BaseCrudTable):
                     self._build_data_row(None, self.new_item)
                     with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
                         ui.button(icon="save", on_click=lambda: self._handle_add(self.new_item)) \
+                            .props('flat') \
                             .classes(f"{CLASSES_PREFIX}-column-button positive") \
                             .bind_enabled_from(self.state, "new_item_valid")
 
@@ -69,10 +70,10 @@ class DirectEditTable(BaseCrudTable):
                 with html.tr().classes(f"{CLASSES_PREFIX}-add-button-row") \
                         .bind_visibility_from(self.state, "show_new_item", backward=lambda x: not x):
                     with html.td().props(f"colspan={len(self.config.columns) + 1}"):
-                        ui.button(self.config.add_button, on_click=self._toggle_new_item) \
+                        ui.button(self.config.add_button, on_click=self._toggle_new_item).props('flat') \
                             .classes(f"{CLASSES_PREFIX}-button {CLASSES_PREFIX}-add-button")
 
-    def _build_data_row(self, row_index: int | None, item: Dict[str, Any]) -> None:
+    def _build_data_row(self, row_index: int | None, item: dict[str, Any]) -> None:
         """Build a single data row (editable)"""
         new_row = row_index is None
 
@@ -103,14 +104,14 @@ class DirectEditTable(BaseCrudTable):
         """Toggle new item row visibility"""
         self.state["show_new_item"] = not self.state["show_new_item"]
 
-    def _handle_change(self, new_item: Dict[str, Any]) -> None:
+    def _handle_change(self, new_item: dict[str, Any]) -> None:
         """Handle change event (optional validation while typing)"""
         # Optionally validate while typing?
         # (valid, _) = self.store.validate(new_item)
         # self.state["new_item_valid"] = valid
         pass
 
-    async def _handle_blur(self, col_name: str, item: Dict[str, Any]) -> None:
+    async def _handle_blur(self, col_name: str, item: dict[str, Any]) -> None:
         """Validate and save on blur"""
         id = item.get("id", None)
 
@@ -143,14 +144,14 @@ class DirectEditTable(BaseCrudTable):
         if valid and id is not None:
             await self.data_source.update_item(id, partial)
 
-    async def _handle_add(self, new_item: Dict[str, Any]) -> None:
+    async def _handle_add(self, new_item: dict[str, Any]) -> None:
         """Handle adding new item"""
         if await self._validate_and_create(new_item):
             self.reset()
         else:
             self.state['new_item_valid'] = False
 
-    async def _handle_delete(self, row: Dict[str, Any]) -> None:
+    async def _handle_delete(self, row: dict[str, Any]) -> None:
         """Handle row deletion - direct mode uses no confirmation by default"""
         # Direct mode typically deletes immediately without confirmation
         await self._delete(row, confirm=False)

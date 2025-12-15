@@ -23,6 +23,18 @@ def page_init():
         ui.add_scss(f.read())
     # ui.colors(primary="rgb(0,82,194)", secondary="#53B689", accent="#111B1E", positive="#53B689")
 
+def get_crud_css():
+    """
+    Return the CSS styles for the CRUD module.
+    """
+    import os
+
+    # read and return the local crud.css file as a string
+    css_path = os.path.join(os.path.dirname(__file__), 'crud.css')
+    with open(css_path) as f:
+        return f.read()
+
+    # return sass.compile(filename=os.path.join(os.path.dirname(__file__), 'crud.scss'))
 
 __all__ = [
     'create_crud_table',
@@ -33,4 +45,5 @@ __all__ = [
     'TableConfig',
     'confirm_dialog',
     'page_init',
+    'get_crud_css',
 ]

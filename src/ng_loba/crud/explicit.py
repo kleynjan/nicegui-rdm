@@ -51,11 +51,11 @@ class TableRowEditor:
                         self._register_element(el, col_name)
 
             with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
-                el = ui.button(icon='bi-check-square').classes(f"{CLASSES_PREFIX}-column-button positive")
+                el = ui.button(icon='bi-check-square').classes(f"{CLASSES_PREFIX}-column-button positive").props('flat')
                 el.on("click", self.handle_save).bind_enabled_from(self.state, "is_valid")
                 self._register_element(el, 'save_button')
             with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
-                el = ui.button(icon='bi-x-square').classes(f"{CLASSES_PREFIX}-column-button negative")
+                el = ui.button(icon='bi-x-square').classes(f"{CLASSES_PREFIX}-column-button negative").props('flat')
                 el.on('click', self.handle_cancel)
                 self._register_element(el, 'cancel_button')
 
@@ -96,16 +96,16 @@ class TableRowEditor:
             if self.item['id'] == -1:
                 # Create new item - remove the temporary id
                 item_data = {k: v for k, v in self.item.items() if k != 'id'}
-                self.table._notify("Adding item", type='positive')
                 await self.data_source.create_item(item_data)
+                self.table._notify("Item added", type='positive')
                 # Exit edit mode after save
                 self.on_ready()
             elif self.item != self.old_item:
                 # Update existing item - pass only changed fields (or all fields except id)
                 item_id = self.item['id']
                 item_data = {k: v for k, v in self.item.items() if k != 'id'}
-                self.table._notify("Saving changes", type='positive')
                 await self.data_source.update_item(item_id, item_data)
+                self.table._notify("Item updated", type='positive')
                 # Exit edit mode after save
                 self.on_ready()
             else:
@@ -187,11 +187,11 @@ class ExplicitEditTable(BaseCrudTable):
                         if row_index == self.state["selected_row"]:
                             row_element.classes(add="selected")
                             with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
-                                ui.button(icon="bi-pencil").classes(f"{CLASSES_PREFIX}-column-button") \
+                                ui.button(icon="bi-pencil").classes(f"{CLASSES_PREFIX}-column-button").props('flat') \
                                     .on("click", lambda _, r=row_index: self.start_editing(r, self.config.focus_column or self.config.columns[0].name))
                             if not self.config.skip_delete:
                                 with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
-                                    ui.button(icon="bi-trash").classes(f"{CLASSES_PREFIX}-column-button") \
+                                    ui.button(icon="bi-trash").classes(f"{CLASSES_PREFIX}-column-button").props('flat') \
                                         .on("click", lambda _, r=row_index: self._handle_delete(r))
 
             if self.state['adding_new_item']:
@@ -201,13 +201,13 @@ class ExplicitEditTable(BaseCrudTable):
             with html.tr().classes(f"{CLASSES_PREFIX}-add-button-row"):
                 with html.td().props(f"colspan={len(self.config.columns)}"):
                     btn_text = self.config.add_button or "Add new"
-                    ui.button(btn_text).on('click', self.start_new_row).classes(
-                        f"{CLASSES_PREFIX}-button {CLASSES_PREFIX}-add-button")
+                    ui.button(btn_text).classes(f"{CLASSES_PREFIX}-button {CLASSES_PREFIX}-add-button").props('flat') \
+                        .on('click', self.start_new_row)
 
                     if (row_index := self.state['selected_row']) is not None:
                         btn_text = "Delete"
-                        ui.button(btn_text).on('click', lambda _, r=row_index: self._handle_delete(r)).classes(
-                            f"{CLASSES_PREFIX}-button {CLASSES_PREFIX}-delete-button")
+                        ui.button(btn_text).classes(f"{CLASSES_PREFIX}-button {CLASSES_PREFIX}-delete-button").props('flat') \
+                            .on('click', lambda _, r=row_index: self._handle_delete(r))
 
     def row_click(self, row_index: int, col_name: str) -> None:
         """Handle row click"""

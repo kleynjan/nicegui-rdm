@@ -1,7 +1,7 @@
 # stores/tortoise.py
 # adds multitenancy to ng_loba TortoiseStore
 
-from typing import Generic, List, Optional, Type, TypeVar
+from typing import Generic, TypeVar
 
 from tortoise.expressions import Q
 
@@ -10,11 +10,11 @@ from ..utils.logging import logger
 from .orm import TortoiseStore
 
 # set this to a list of tenant identifiers in your app
-valid_tenants: List[str] = []
+valid_tenants: list[str] = []
 
 T = TypeVar('T', bound=QModel)
 
-def set_valid_tenants(tenants: List[str]):
+def set_valid_tenants(tenants: list[str]):
     global valid_tenants
     valid_tenants.extend(tenants)
     valid_tenants = list(set(valid_tenants))
@@ -26,7 +26,7 @@ class TenancyError(Exception):
 class MultitenantTortoiseStore(TortoiseStore, Generic[T]):
     """Extends TortoiseStore with tenant scoping"""
 
-    def __init__(self, model: Type[T], tenant: Optional[str] = None) -> None:
+    def __init__(self, model: type[T], tenant: str | None = None) -> None:
         super().__init__(model)
         self.tenant = tenant
         if tenant:
@@ -39,7 +39,7 @@ class MultitenantTortoiseStore(TortoiseStore, Generic[T]):
         if tenant not in valid_tenants:
             raise TenancyError(f'Invalid tenant: {tenant}')
 
-    def _build_query(self, filter_by: Optional[dict], q: Optional[Q]) -> Q:
+    def _build_query(self, filter_by: dict | None, q: Q | None) -> Q:
         """Build query from filter_by dict and optional Q object, adding tenant scope"""
         result = super()._build_query(filter_by, q)
         # Add tenant scope if configured
@@ -53,7 +53,7 @@ class MultitenantTortoiseStore(TortoiseStore, Generic[T]):
             item = {**item, "tenant": self.tenant}
         return await super()._create_item(item)
 
-    async def _update_item(self, id: int, partial_item: dict) -> Optional[dict]:
+    async def _update_item(self, id: int, partial_item: dict) -> dict | None:
         """Update item in database with tenant scope validation"""
         if self.tenant:
             if item_tenant := partial_item.get('tenant'):

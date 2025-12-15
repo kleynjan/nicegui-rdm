@@ -5,7 +5,7 @@ Example of ExplicitEditTable - row selection with dedicated edit mode.
 from nicegui import ui
 from ng_loba.store import DictStore
 from ng_loba.models import Validator, FieldSpec
-from ng_loba.crud import create_crud_table, Column, TableConfig
+from ng_loba.crud import create_crud_table, Column, TableConfig, get_crud_css
 
 
 @ui.page('/')
@@ -51,11 +51,7 @@ async def main():
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     """)
 
-    # Load styles
-    import os
-    styles_path = os.path.join(os.path.dirname(__file__), 'crud.scss')
-    with open(styles_path) as f:
-        ui.add_scss(f.read())
+    ui.add_css(get_crud_css())
 
     # Add some sample data
     await store.create_item({'name': 'Alice Smith', 'email': 'alice@example.com', 'age': 28})

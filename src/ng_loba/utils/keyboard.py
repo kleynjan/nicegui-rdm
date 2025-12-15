@@ -2,14 +2,14 @@
 Keyboard event handling for CRUD components.
 """
 
-from typing import Callable, List
+from typing import Callable
 from nicegui.events import KeyEventArguments
 
 class ObservableKeyboard:
     """Observable keyboard events"""
 
     def __init__(self):
-        self._observers: List[Callable[[KeyEventArguments], None]] = []
+        self._observers: list[Callable[[KeyEventArguments], None]] = []
 
     def add_observer(self, observer: Callable[[KeyEventArguments], None]) -> None:
         """Add an observer to receive keyboard events"""

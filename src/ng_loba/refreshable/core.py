@@ -6,7 +6,7 @@ It can be registered as an observer to one or more stores, so the UI can be upda
 Also, through on_state_change, it can notify other UI components of state changes.
 """
 
-from typing import Callable, Optional
+from typing import Callable
 from nicegui import ui
 
 from ..store.base import Store, StoreEvent
@@ -14,7 +14,7 @@ from ..store.base import Store, StoreEvent
 class StatefulRefreshable:
     """Container for UI components that are refreshed (=_rebuilt) whenever the state is updated (set_values)."""
 
-    def __init__(self, state: dict, on_state_change: Optional[Callable[[dict], None]] = None):
+    def __init__(self, state: dict, on_state_change: Callable[[dict], None] | None = None):
         self.state = state
         self.on_state_change = on_state_change
 
@@ -41,7 +41,7 @@ class StatefulRefreshable:
 class StoreRefreshable(StatefulRefreshable):
     """StatefulRefreshable with store registration, notification handling and filter option."""
 
-    def __init__(self, state: dict, store: Store, on_state_change: Optional[Callable[[dict], None]] = None):
+    def __init__(self, state: dict, store: Store, on_state_change: Callable[[dict], None] | None = None):
         super().__init__(state, on_state_change)
         #
         # store create/update/delete -> callback -> self.refresh(**kwargs)

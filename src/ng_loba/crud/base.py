@@ -3,9 +3,9 @@ Base class for CRUD table implementations.
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
-from nicegui import html, ui
+from nicegui import html, ui, context
 
 from .protocol import CrudDataSource
 from ..store.base import StoreEvent
@@ -19,13 +19,13 @@ class Column:
     label: Optional[str] = None
     ui_type: Optional[Any] = None
     default_value: Any = ""
-    parms: Dict[str, Any] = field(default_factory=dict)      # passed to the ui_type instance
+    parms: dict[str, Any] = field(default_factory=dict)      # passed to the ui_type instance
     props: Optional[str] = ""                                # passed to el.props()
 
 @dataclass
 class TableConfig:
     """Configuration for CrudTable"""
-    columns: List[Column]
+    columns: list[Column]
     mode: str = "explicit"              # "explicit" or "direct"
     skip_delete: bool = False           # Hide delete functionality
     add_button: Optional[str] = None    # Custom add button text
@@ -38,7 +38,7 @@ class TableConfig:
         if not self.focus_column and self.columns:
             self.focus_column = self.columns[0].name
 
-    def find_column(self, col_name: str) -> Optional[Column]:
+    def find_column(self, col_name: str) -> Column | None:
         """Find column by name"""
         for col in self.columns:
             if col.name == col_name:
@@ -54,6 +54,9 @@ class BaseCrudTable:
         self.state = state
         self.config = config
         self.data: list[dict[str, Any]] = []
+
+        # Capture client context early for notifications
+        self._client = context.client
 
         # Subscribe to external changes if supported
         if hasattr(data_source, 'add_observer'):
@@ -107,8 +110,20 @@ class BaseCrudTable:
         """
         if self.config.notification_callback:
             self.config.notification_callback(message, **kwargs)
+        elif self._client:
+            # Use stored client context to avoid context issues
+            with self._client:
+                ui.notify(message, **kwargs)
         else:
-            ui.notify(message, **kwargs)
+            # Fallback to direct call if no client stored
+            try:
+                ui.notify(message, **kwargs)
+            except RuntimeError:
+                # If context is invalid, try to get current client
+                from nicegui import context
+                if hasattr(context, 'client') and context.client:
+                    with context.client:
+                        ui.notify(message, **kwargs)
 
     def _validate(self, item: dict, notify: bool = True) -> tuple[bool, dict]:
         """Validate item with optional error notification.

@@ -1,49 +1,49 @@
-
-/* --------------------------------------------------------- */
 /* CRUD table styling - unified for both direct and explicit modes */
 
-$green-text: #006600;
-$red: #e33944;
+@layer quasar_importants {
 
-$border-grey: #c0c0c0;
-$primary: rgb(0,82,194);
-$header-background-color: #f5f7f7;
-$header-foreground-color: rgba(0,0,0,0.54);
-$row-border-color: rgba(189, 195, 199, 0.58);
-
-$selected-row-background-color: rgba(0, 145, 234, 0.12);
-$odd-row-background-color: #fcfdfe;
-$row-height: 42px;
-$font-size: 14px;
-$icon-size: 24px;
-$button-column-width: 40px;
+:root {
+    --green-text: #006600;
+    --red: #e33944;
+    --border-grey: #c0c0c0;
+    --primary: rgb(0,82,194);
+    --header-background-color: #f5f7f7;
+    --header-foreground-color: rgba(0,0,0,0.54);
+    --row-border-color: rgba(189, 195, 199, 0.58);
+    --selected-row-background-color: rgba(0, 145, 234, 0.12);
+    --odd-row-background-color: #fcfdfe;
+    --row-height: 42px;
+    --font-size: 14px;
+    --icon-size: 24px;
+    --button-column-width: 40px;
+}
 
 .crudy-table {
-    border: 1px solid $border-grey;
-    font-size: $font-size;
+    border: 1px solid var(--border-grey);
+    font-size: var(--font-size);
     width: 100%;
     text-align: left;
 
     tr {
-        line-height: $row-height;
+        line-height: var(--row-height);
 
         &.crudy-header-tr {
-            background-color: $header-background-color; 
-            color: $header-foreground-color;
+            background-color: var(--header-background-color); 
+            color: var(--header-foreground-color);
             .crudy-th-button {
-                width: $button-column-width;
+                width: var(--button-column-width);
             }
         }
         
         &.crudy-row-tr {
             border-bottom-width: 0.625px;
-            border-bottom-color: $row-border-color;
+            border-bottom-color: var(--row-border-color);
             border-bottom-style: solid;
             &:nth-child(even) {
-                background-color: $odd-row-background-color;
+                background-color: var(--odd-row-background-color);
             }
             &.selected, &:nth-child(even).selected {
-                background-color: $selected-row-background-color;
+                background-color: var(--selected-row-background-color);
             }
         }
 
@@ -51,11 +51,11 @@ $button-column-width: 40px;
             padding: 0 12px;
             
             .q-field--dense .q-field__control, .q-field--dense .q-field__marginal {
-                height: $row-height;
+                height: var(--row-height);
             }
             
             input.q-field__input, input.q-field__native  {
-                font-size: $font-size;
+                font-size: var(--font-size);
                 line-height: 24px;
             }
         }
@@ -68,39 +68,39 @@ $button-column-width: 40px;
             i.q-icon {
                 color: grey !important;
                 line-height: 12px;
-                font-size: $icon-size;
+                font-size: var(--icon-size);
                 padding: 0;
             }
             
             &.positive {
                 i.q-icon {
-                    color: $green-text !important;
+                    color: var(--green-text) !important;
                 }
             }
             
             &.negative {
                 i.q-icon {
-                    color: $red !important;
+                    color: var(--red) !important;
                 }
             }
         }
     }
 
-    // Mode-specific styling (if needed in future for different behaviors)
+    /* Mode-specific styling (if needed in future for different behaviors) */
     &.crudy-explicit-mode {
-        // Explicit mode uses base styling with selection
+        /* Explicit mode uses base styling with selection */
     }
 
     &.crudy-direct-mode {
-        // Direct mode uses base styling without selection highlights
+        /* Direct mode uses base styling without selection highlights */
     }
 
-    // Add button styling (from alarm - cleaner approach)
+    /* Add button styling (from alarm - cleaner approach) */
     .crudy-add-button {
         font-weight: 600;
         cursor: pointer !important;
         padding-top: 0.75rem;
-        color: $primary;
+        color: var(--primary);
         font-size: 1rem;
         line-height: 1.5rem;
     }
@@ -111,19 +111,20 @@ $button-column-width: 40px;
 
 .crudy-button {
     margin-right: 12px;
-    // font-weight: 600;
-    // cursor: pointer !important;
-    // padding-top: 0.75rem;
-    // color: $primary !important;
-    // font-size: 1rem !important;
-    // line-height: 1.5rem;
+    /* font-weight: 600; */
+    /* cursor: pointer !important; */
+    /* padding-top: 0.75rem; */
+    /* color: var(--primary) !important; */
+    /* font-size: 1rem !important; */
+    /* line-height: 1.5rem; */
 }
 
 .q-btn {
     &.crudy-column-button {
         border: none;
         margin: 0;
-        // margin: 0 0 14px 0; // lift slightly to keep with quasar-added padding on inputs
+        background: transparent !important;
+        /* margin: 0 0 14px 0; lift slightly to keep with quasar-added padding on inputs */
     }
 }
 
@@ -135,9 +136,9 @@ $button-column-width: 40px;
     .crudy-input {
         &.q-field--with-bottom {
             padding-bottom: 35px;
-            // input.q-field__native {
-            //     color: orange !important;
-            // }
+            /* input.q-field__native { */
+            /*     color: orange !important; */
+            /* } */
         }
     }
 }
@@ -159,11 +160,13 @@ $button-column-width: 40px;
                 font-weight: 600;
                 cursor: pointer !important;
                 padding-top: 0.75rem;
-                color: $primary;
+                color: var(--primary);
                 font-size: 1rem;
                 line-height: 1.5rem;
             }
             */
         }
     }
+}
+
 }
