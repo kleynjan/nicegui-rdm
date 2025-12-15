@@ -11,121 +11,6 @@ from .base import CLASSES_PREFIX, BaseCrudTable, TableConfig
 from .protocol import CrudDataSource
 
 
-class TableRowEditor:
-    """Editor for a single table row"""
-    def __init__(self, table: 'ExplicitEditTable', state: dict, data_source: CrudDataSource, config: TableConfig):
-        self.table = table
-        self.state = state
-        self.data_source = data_source
-        self.config = config
-        self.old_item = {}
-        self.elements = {}
-
-    def build(self, item: dict):
-        """Build the editor UI"""
-        self.item = item
-        self.old_item = item.copy()
-        self.check_validity()
-        if not self.state['current_col']:
-            self.state['current_col'] = self.config.focus_column
-
-        with html.tr().classes(f"{CLASSES_PREFIX}-row-tr"):
-            for col in self.config.columns:
-                col_name = col.name
-                if col.ui_type:
-                    cls = col.ui_type
-                    cls_parms = col.parms.copy()
-                    cls_parms["value"] = item[col_name]
-                    cls_parms["validation"] = self._validation_function_factory(col_name)
-                    props = col.props
-                    with html.td().classes(f"{CLASSES_PREFIX}-td {CLASSES_PREFIX}-td-{col_name}"):
-                        el = (
-                            cls(**cls_parms)
-                            .classes(f"{CLASSES_PREFIX}-input {CLASSES_PREFIX}-input-{col_name}")
-                            .bind_value(item, col_name)
-                        )
-                        el.props(props)
-                        el.on('keydown', self.handle_key)
-                        self._register_element(el, col_name)
-
-            with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
-                el = ui.button(icon='bi-check-square').classes(f"{CLASSES_PREFIX}-column-button positive").props('flat')
-                el.on("click", self.handle_save).bind_enabled_from(self.state, "is_valid")
-                self._register_element(el, 'save_button')
-            with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
-                el = ui.button(icon='bi-x-square').classes(f"{CLASSES_PREFIX}-column-button negative").props('flat')
-                el.on('click', self.handle_cancel)
-                self._register_element(el, 'cancel_button')
-
-        self.set_focus(self.state['current_col'])
-
-    def _validation_function_factory(self, col_name: str) -> Callable:
-        """Create a nicegui/quasar compatible validation function for a given column."""
-        def _validate(value: Any):
-            partial = {col_name: value}
-            (valid, error_dict) = self.data_source.validate(partial)
-            # always validate entire row -> enable/disable save button
-            self.check_validity()
-            return None if valid else error_dict['error_msg']
-        return _validate
-
-    def _register_element(self, element, col_name):
-        """Register an element for focus management"""
-        self.elements[col_name] = element
-
-    def set_focus(self, col_name):
-        """Move to given field and if possible, select current content."""
-        if el := self.elements.get(col_name):
-            el.run_method('focus')
-            if self.config.find_column(col_name):
-                el.run_method('select')
-
-    def check_validity(self) -> bool:
-        """Check validity of entire current row"""
-        (valid_all, error_dict) = self.data_source.validate(self.item)
-        self.state['is_valid'] = valid_all
-        if valid_all:
-            self.state['current_error'] = {}
-        return valid_all
-
-    async def handle_save(self):
-        """Handle save button click"""
-        if self.check_validity():
-            if self.item['id'] == -1:
-                # Create new item - remove the temporary id
-                item_data = {k: v for k, v in self.item.items() if k != 'id'}
-                await self.data_source.create_item(item_data)
-                self.table._notify("Item added", type='positive')
-                # Exit edit mode after save
-                self.table.exit_editing()
-            elif self.item != self.old_item:
-                # Update existing item - pass only changed fields (or all fields except id)
-                item_id = self.item['id']
-                item_data = {k: v for k, v in self.item.items() if k != 'id'}
-                await self.data_source.update_item(item_id, item_data)
-                self.table._notify("Item updated", type='positive')
-                # Exit edit mode after save
-                self.table.exit_editing()
-            else:
-                self.table._notify("No changes", type='info')
-                self.table.exit_editing()
-
-    def handle_cancel(self):
-        """Handle cancel button click"""
-        self.item.update(self.old_item)
-        self.table.exit_editing()
-
-    async def handle_key(self, e):
-        """Handle keyboard events in editor"""
-        key = e.args.get('key')
-        if key == 'Escape':
-            self.handle_cancel()
-        elif key == 'Enter':
-            # Save on Enter (if valid)
-            if self.state['is_valid']:
-                await self.handle_save()
-
-
 class ExplicitEditTable(BaseCrudTable):
     """Explicit edit mode - row selection with dedicated edit mode"""
 
@@ -133,9 +18,11 @@ class ExplicitEditTable(BaseCrudTable):
         super().__init__(state, data_source, config)
         self.reset()
         self.state['selected_row'] = None
-        self.editor = TableRowEditor(table=self, state=self.state['editor'], data_source=data_source,
-                                     config=config)
         self.keyboard = ui.keyboard(on_key=self.handle_key)
+        # row editor state
+        self.edit_elements = {}
+        self.current_item = {}
+        self.old_item = {}
 
     def reset(self):
         """Reset table state"""
@@ -148,6 +35,9 @@ class ExplicitEditTable(BaseCrudTable):
         self.new_item = {col.name: col.default_value for col in self.config.columns}
         self.new_item['id'] = -1
         self.last_click_time = 0  # Track last click time for double-click detection
+        self.edit_elements = {}
+        self.current_item = {}
+        self.old_item = {}
 
     def _build_header_buttons(self):
         """Add button column headers"""
@@ -174,7 +64,7 @@ class ExplicitEditTable(BaseCrudTable):
         with html.tbody().classes(f"{CLASSES_PREFIX}-tbody"):
             for row_index, row in enumerate(self.data):
                 if row_index == self.state['selected_row'] and self.state['is_editing']:
-                    self.editor.build(row)
+                    self._build_edit_row(row)
                 else:
                     with html.tr().classes(f"{CLASSES_PREFIX}-row-tr") as row_element:
                         for col in self.config.columns:
@@ -193,7 +83,7 @@ class ExplicitEditTable(BaseCrudTable):
                                         .on("click", lambda _, r=row_index: self._handle_delete(r))
 
             if self.state['adding_new_item']:
-                self.editor.build(item=self.new_item)
+                self._build_edit_row(item=self.new_item)
 
         if not self.state['adding_new_item']:
             with html.tr().classes(f"{CLASSES_PREFIX}-add-button-row"):
@@ -206,6 +96,114 @@ class ExplicitEditTable(BaseCrudTable):
                         btn_text = "Delete"
                         ui.button(btn_text).classes(f"{CLASSES_PREFIX}-button {CLASSES_PREFIX}-delete-button").props('flat') \
                             .on('click', lambda _, r=row_index: self._handle_delete(r))
+
+    # ============= Private Editor Methods =============
+
+    def _build_edit_row(self, item: dict):
+        """Build the editor UI for a single row"""
+        self.current_item = item
+        self.old_item = item.copy()
+        self._check_validity()
+        if not self.state['editor']['current_col']:
+            self.state['editor']['current_col'] = self.config.focus_column
+
+        with html.tr().classes(f"{CLASSES_PREFIX}-row-tr"):
+            for col in self.config.columns:
+                col_name = col.name
+                if col.ui_type:
+                    cls = col.ui_type
+                    cls_parms = col.parms.copy()
+                    cls_parms["value"] = item[col_name]
+                    cls_parms["validation"] = self._validation_function_factory(col_name)
+                    props = col.props
+                    with html.td().classes(f"{CLASSES_PREFIX}-td {CLASSES_PREFIX}-td-{col_name}"):
+                        el = (
+                            cls(**cls_parms)
+                            .classes(f"{CLASSES_PREFIX}-input {CLASSES_PREFIX}-input-{col_name}")
+                            .bind_value(item, col_name)
+                        )
+                        el.props(props)
+                        el.on('keydown', self._handle_editor_key)
+                        self._register_element(el, col_name)
+
+            with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
+                el = ui.button(icon='bi-check-square').classes(f"{CLASSES_PREFIX}-column-button positive").props('flat')
+                el.on("click", self._handle_editor_save).bind_enabled_from(self.state['editor'], "is_valid")
+                self._register_element(el, 'save_button')
+            with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
+                el = ui.button(icon='bi-x-square').classes(f"{CLASSES_PREFIX}-column-button negative").props('flat')
+                el.on('click', self._handle_editor_cancel)
+                self._register_element(el, 'cancel_button')
+
+        self._set_focus(self.state['editor']['current_col'])
+
+    def _validation_function_factory(self, col_name: str) -> Callable:
+        """Create a nicegui/quasar compatible validation function for a given column."""
+        def _validate(value: Any):
+            partial = {col_name: value}
+            (valid, error_dict) = self.data_source.validate(partial)
+            # always validate entire row -> enable/disable save button
+            self._check_validity()
+            return None if valid else error_dict['error_msg']
+        return _validate
+
+    def _register_element(self, element, col_name):
+        """Register an element for focus management"""
+        self.edit_elements[col_name] = element
+
+    def _set_focus(self, col_name):
+        """Move to given field and if possible, select current content."""
+        if el := self.edit_elements.get(col_name):
+            el.run_method('focus')
+            if self.config.find_column(col_name):
+                el.run_method('select')
+
+    def _check_validity(self) -> bool:
+        """Check validity of entire current row"""
+        (valid_all, error_dict) = self.data_source.validate(self.current_item)
+        self.state['editor']['is_valid'] = valid_all
+        if valid_all:
+            self.state['current_error'] = {}
+        return valid_all
+
+    async def _handle_editor_save(self):
+        """Handle save button click"""
+        if self._check_validity():
+            if self.current_item['id'] == -1:
+                # Create new item - remove the temporary id
+                item_data = {k: v for k, v in self.current_item.items() if k != 'id'}
+                success = await self._validate_and_create(item_data)
+                if success:
+                    # Exit edit mode after successful save - observers will refresh data automatically
+                    self.exit_editing()
+            elif self.current_item != self.old_item:
+                # Update existing item - pass only changed fields (or all fields except id)
+                item_id = self.current_item['id']
+                item_data = {k: v for k, v in self.current_item.items() if k != 'id'}
+                success = await self._update(item_id, item_data)
+                if success:
+                    # Exit edit mode after successful save - observers will refresh data automatically
+                    self.exit_editing()
+            else:
+                self._notify("No changes", type='info')
+                self.exit_editing()
+
+    def _handle_editor_cancel(self):
+        """Handle cancel button click"""
+        self.current_item.update(self.old_item)
+        self.exit_editing()
+
+    async def _handle_editor_key(self, e):
+        """Handle keyboard events in editor"""
+        key = e.args.get('key')
+        if key == 'Escape':
+            self._handle_editor_cancel()
+        elif key == 'Enter':
+            # Save on Enter (if valid)
+            if self.state['editor']['is_valid']:
+                await self._handle_editor_save()
+
+    # ============= Public Table Methods =============
 
     def row_click(self, row_index: int, col_name: str) -> None:
         """Handle row click"""

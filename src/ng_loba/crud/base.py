@@ -5,7 +5,7 @@ Base class for CRUD table implementations.
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 
-from nicegui import html, ui, context
+from nicegui import html, ui
 
 from .protocol import CrudDataSource
 from ..store.base import StoreEvent
@@ -31,7 +31,6 @@ class TableConfig:
     add_button: Optional[str] = None    # Custom add button text
     focus_column: Optional[str] = None  # Default column for focus (explicit mode)
     delete_confirmation: bool = True    # Confirm deletes (explicit mode)
-    notification_callback: Optional[Callable] = None  # Notification function (signature like ui.notify)
 
     def __post_init__(self):
         self.join_fields = [col.name for col in self.columns if "__" in col.name]
@@ -54,17 +53,10 @@ class BaseCrudTable:
         self.state = state
         self.config = config
         self.data: list[dict[str, Any]] = []
-
-        # Capture client context early for notifications
-        self._client = context.client
-
-        # Subscribe to external changes if supported
-        if hasattr(data_source, 'add_observer'):
-            try:
-                data_source.add_observer(self._handle_external_change)
-            except (AttributeError, NotImplementedError):
-                # Data source doesn't support observers - that's ok
-                pass
+        # capture client context for notifications
+        self._client = ui.context.client
+        # subscribe to data source changes - required to refresh table on data updates
+        data_source.add_observer(self._handle_datasource_change)
 
     async def load_data(self):
         """Load data from data source"""
@@ -72,9 +64,9 @@ class BaseCrudTable:
             join_fields=self.config.join_fields
         )
 
-    async def _handle_external_change(self, event: StoreEvent):
-        """Handle external data changes (from other components, background processes, etc.)"""
-        # Refresh the table to show the changes
+    async def _handle_datasource_change(self, event: StoreEvent):
+        """Handle data source changes (create/update/delete operations)"""
+        # Refresh the table to show the changes - this is the core of the observer pattern
         await self.build.refresh()  # type: ignore
 
     def _build_header(self):
@@ -95,35 +87,12 @@ class BaseCrudTable:
         """Build the table UI - to be implemented by subclasses"""
         raise NotImplementedError("Subclasses must implement build()")
 
-    def refresh(self):
-        """Refresh the table"""
-        self.build.refresh()  # type: ignore
-
     # ============= Helper Methods for Common CRUD Operations =============
 
     def _notify(self, message: str, **kwargs) -> None:
-        """Show notification using configured callback or ui.notify.
-
-        Args:
-            message: Notification message
-            **kwargs: Additional arguments passed to notification function (e.g., type, timeout)
-        """
-        if self.config.notification_callback:
-            self.config.notification_callback(message, **kwargs)
-        elif self._client:
-            # Use stored client context to avoid context issues
-            with self._client:
-                ui.notify(message, **kwargs)
-        else:
-            # Fallback to direct call if no client stored
-            try:
-                ui.notify(message, **kwargs)
-            except RuntimeError:
-                # If context is invalid, try to get current client
-                from nicegui import context
-                if hasattr(context, 'client') and context.client:
-                    with context.client:
-                        ui.notify(message, **kwargs)
+        """Show notification using ui.notify from context.client"""
+        with self._client:      # avoid issues with (eg button) event context disappearing
+            ui.notify(message, **kwargs)
 
     def _validate(self, item: dict, notify: bool = True) -> tuple[bool, dict]:
         """Validate item with optional error notification.
@@ -147,19 +116,33 @@ class BaseCrudTable:
         return (valid, error_dict)
 
     async def _validate_and_create(self, item: dict) -> bool:
-        """Validate item, create it, and refresh the table."""
+        """Validate item, create it - observers handle refresh automatically."""
         (valid, _) = self._validate(item)
 
         if valid:
             await self.data_source.create_item(item)
             self._notify("Item created", type="positive")
-            self.build.refresh()  # type: ignore
             return True
 
         return False
 
+    async def _update(self, item_id: int, partial_item: dict) -> bool:
+        """Validate and update item - observers handle refresh automatically."""
+        (valid, _) = self._validate(partial_item)
+
+        if valid:
+            updated_item = await self.data_source.update_item(item_id, partial_item)
+            if updated_item:
+                self._notify("Item updated", type="positive")
+                return True
+            else:
+                self._notify("Update failed", type="negative")
+                return False
+
+        return False
+
     async def _delete(self, item: dict, confirm: bool | None = None) -> bool:
-        """Delete item with optional confirmation dialog."""
+        """Delete item with optional confirmation dialog - observers handle refresh automatically."""
         confirm = confirm if confirm is not None else self.config.delete_confirmation
 
         if confirm:
@@ -173,7 +156,6 @@ class BaseCrudTable:
 
         await self.data_source.delete_item(item)
         self._notify("Item deleted", type="info")
-        self.build.refresh()  # type: ignore
         return True
 
 

@@ -142,7 +142,7 @@ class DirectEditTable(BaseCrudTable):
 
         # Update data source if valid and has id (existing item)
         if valid and id is not None:
-            await self.data_source.update_item(id, partial)
+            await self._update(id, partial)
 
     async def _handle_add(self, new_item: dict[str, Any]) -> None:
         """Handle adding new item"""

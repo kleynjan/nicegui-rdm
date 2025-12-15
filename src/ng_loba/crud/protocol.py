@@ -52,16 +52,19 @@ class CrudDataSource(Protocol):
         """
         ...
 
-    # Observer Pattern (Optional - for external changes)
-    # Note: This is optional. Data sources that don't support real-time updates
-    # can omit this method or provide a no-op implementation.
+    # Observer Pattern (Required - for automatic UI refresh)
+    # Note: This is now required for CRUD tables to work correctly.
+    # CRUD tables rely on data source notifications to refresh automatically
+    # after create/update/delete operations.
     def add_observer(self, observer: Callable[[StoreEvent], Any]) -> None:
         """Add an observer to receive store events.
 
-        This method is optional. Data sources that don't support 
-        real-time updates can provide a no-op implementation or omit it.
+        This method is required for CRUD tables to function correctly.
+        CRUD tables register as observers and automatically refresh when
+        data changes occur (create/update/delete operations).
 
         Args:
             observer: Async or sync function that receives StoreEvent notifications
+                     Called after each successful CRUD operation with details.
         """
         ...
