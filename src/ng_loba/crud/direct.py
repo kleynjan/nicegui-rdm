@@ -51,8 +51,9 @@ class DirectEditTable(BaseCrudTable):
                     self._build_data_row(row_index, row)
                     if not self.config.skip_delete:
                         with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
-                            ui.button(icon="delete").props('flat') \
+                            ui.button(icon="delete") \
                                 .on("click", lambda _, r=row: self._handle_delete(r)) \
+                                .props('flat') \
                                 .classes(f"{CLASSES_PREFIX}-column-button")
 
             # New item row (shown when toggled)
@@ -61,7 +62,8 @@ class DirectEditTable(BaseCrudTable):
                         .bind_visibility_from(self.state, "show_new_item"):
                     self._build_data_row(None, self.new_item)
                     with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
-                        ui.button(icon="save", on_click=lambda: self._handle_add(self.new_item)) \
+                        ui.button(icon="save") \
+                            .on("click", lambda: self._handle_add(self.new_item)) \
                             .props('flat') \
                             .classes(f"{CLASSES_PREFIX}-column-button positive") \
                             .bind_enabled_from(self.state, "new_item_valid")
@@ -70,7 +72,9 @@ class DirectEditTable(BaseCrudTable):
                 with html.tr().classes(f"{CLASSES_PREFIX}-add-button-row") \
                         .bind_visibility_from(self.state, "show_new_item", backward=lambda x: not x):
                     with html.td().props(f"colspan={len(self.config.columns) + 1}"):
-                        ui.button(self.config.add_button, on_click=self._toggle_new_item).props('flat') \
+                        ui.button(self.config.add_button) \
+                            .on("click", self._toggle_new_item) \
+                            .props('flat') \
                             .classes(f"{CLASSES_PREFIX}-button {CLASSES_PREFIX}-add-button")
 
     def _build_data_row(self, row_index: int | None, item: dict[str, Any]) -> None:
