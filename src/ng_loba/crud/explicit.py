@@ -66,7 +66,7 @@ class ExplicitEditTable(BaseCrudTable):
                 if row_index == self.state['selected_row'] and self.state['is_editing']:
                     self._build_edit_row(row)
                 else:
-                    with html.tr().classes(f"{CLASSES_PREFIX}-row-tr") as row_element:
+                    with html.tr().classes(f"{CLASSES_PREFIX}-row") as row_element:
                         for col in self.config.columns:
                             col_name = col.name
                             with html.td().classes(f"{CLASSES_PREFIX}-td {CLASSES_PREFIX}-td-{col_name}"):
@@ -74,36 +74,28 @@ class ExplicitEditTable(BaseCrudTable):
                                                            c=col_name: self.row_click(r, c))
                         if row_index == self.state["selected_row"]:
                             row_element.classes(add="selected")
-                            with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
+                            with html.td().classes(f"{CLASSES_PREFIX}-delete-button"):
                                 ui.button(icon="bi-pencil") \
                                     .on("click", lambda _, r=row_index: self.start_editing(r, self.config.focus_column or self.config.columns[0].name)) \
-                                    .props('flat') \
-                                    .classes(f"{CLASSES_PREFIX}-column-button")
+                                    .props('dense flat size=md') \
+                                    .classes(f"{CLASSES_PREFIX}-delete-button")
                             if not self.config.skip_delete:
-                                with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
+                                with html.td().classes(f"{CLASSES_PREFIX}-delete-button"):
                                     ui.button(icon="bi-trash") \
                                         .on("click", lambda _, r=row_index: self._handle_delete(r)) \
-                                        .props('flat') \
-                                        .classes(f"{CLASSES_PREFIX}-column-button")
+                                        .props('dense flat size=md') \
+                                        .classes(f"{CLASSES_PREFIX}-delete-button")
 
             if self.state['adding_new_item']:
                 self._build_edit_row(item=self.new_item)
 
         if not self.state['adding_new_item']:
             with html.tr().classes(f"{CLASSES_PREFIX}-add-button-row"):
-                with html.td().props(f"colspan={len(self.config.columns)}"):
+                with html.td().props(f"colspan={len(self.config.columns) + 2}"):
                     btn_text = self.config.add_button or "Add new"
-                    ui.button(btn_text) \
-                        .on('click', self.start_new_row) \
-                        .props('flat') \
-                        .classes(f"{CLASSES_PREFIX}-button {CLASSES_PREFIX}-add-button")
-
-                    if (row_index := self.state['selected_row']) is not None:
-                        btn_text = "Delete"
-                        ui.button(btn_text) \
-                            .on('click', lambda _, r=row_index: self._handle_delete(r)) \
-                            .props('flat') \
-                            .classes(f"{CLASSES_PREFIX}-button {CLASSES_PREFIX}-delete-button")
+                    ui.label(btn_text) \
+                        .on("click", self.start_new_row) \
+                        .classes(f"{CLASSES_PREFIX}-add-button")
 
     # ============= Private Editor Methods =============
 
@@ -115,7 +107,7 @@ class ExplicitEditTable(BaseCrudTable):
         if not self.state['editor']['current_col']:
             self.state['editor']['current_col'] = self.config.focus_column
 
-        with html.tr().classes(f"{CLASSES_PREFIX}-row-tr"):
+        with html.tr().classes(f"{CLASSES_PREFIX}-row"):
             for col in self.config.columns:
                 col_name = col.name
                 if col.ui_type:
@@ -130,22 +122,24 @@ class ExplicitEditTable(BaseCrudTable):
                             .classes(f"{CLASSES_PREFIX}-input {CLASSES_PREFIX}-input-{col_name}")
                             .bind_value(item, col_name)
                         )
-                        el.props(props)
+                        # Always add "dense flat " + existing props (for library use without global defaults)
+                        combined_props = f"dense flat {props}" if props else "dense flat"
+                        el.props(combined_props)
                         el.on('keydown', self._handle_editor_key)
                         self._register_element(el, col_name)
 
-            with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
+            with html.td().classes(f"{CLASSES_PREFIX}-save-button"):
                 el = ui.button(icon='bi-check-square') \
                     .on("click", self._handle_editor_save) \
-                    .props('flat') \
-                    .classes(f"{CLASSES_PREFIX}-column-button positive") \
+                    .props('dense flat size=md') \
+                    .classes(f"{CLASSES_PREFIX}-save-button") \
                     .bind_enabled_from(self.state['editor'], "is_valid")
                 self._register_element(el, 'save_button')
-            with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
+            with html.td().classes(f"{CLASSES_PREFIX}-save-button"):
                 el = ui.button(icon='bi-x-square') \
                     .on('click', self._handle_editor_cancel) \
-                    .props('flat') \
-                    .classes(f"{CLASSES_PREFIX}-column-button negative")
+                    .props('dense flat size=md') \
+                    .classes(f"{CLASSES_PREFIX}-save-button")
                 self._register_element(el, 'cancel_button')
 
         self._set_focus(self.state['editor']['current_col'])

@@ -58,9 +58,10 @@ async def main():
     await store.create_item({'name': 'Bob Jones', 'email': 'bob@example.com', 'age': 35})
     await store.create_item({'name': 'Carol White', 'email': 'carol@example.com', 'age': 42})
 
-    with ui.card().classes('w-full'):
-        ui.label('Explicit Edit Mode Demo').classes('text-h5')
-        ui.label('Click to select, double-click or click edit button to edit. Use arrow keys to navigate.').classes('text-caption')
+    ui.label('Explicit Edit Mode Demo').classes('text-h5')
+    ui.label('Click to select, double-click or click edit button to edit. Use arrow keys to navigate.').classes('text-caption')
+
+    with ui.card().classes('card w-full'):
         await table.build()     # type: ignore
 
 

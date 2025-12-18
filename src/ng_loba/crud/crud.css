@@ -1,5 +1,131 @@
-/* CRUD table styling - unified for both direct and explicit modes */
+/* CRUD table styling - simplified alarm-inspired approach for both direct and explicit modes */
 
+@layer quasar_importants {
+
+/* Quasar overrides to match alarm's minimal styling */
+.q-btn {
+    text-transform: none !important;
+}
+
+/* Remove elevation/box-shadow from buttons */
+.q-btn--actionable.q-btn--standard:before {
+    transition: none !important;
+}
+.q-btn:before {
+    box-shadow: none !important;
+}
+
+/* Card styling with border instead of shadow */
+.q-card {
+    box-shadow: 0 0 0 1px #c0c0c0 !important;
+    border-radius: 2px !important;
+}
+
+/* Table row height to match alarm */
+.q-table tbody td,
+.q-table thead tr {
+    height: 28px;
+}
+
+/* Basic table styling */
+table {
+    width: 100%;
+    text-align: left;
+}
+
+/* CRUDY table specific styling - simplified like alarm but with proper layout */
+.crudy-table {
+    text-align: left;
+    
+    /* CSS custom property for header top spacing */
+    --header-add-whitespace: 10px;
+    
+    tr {
+        &.crudy-header-tr {
+            /* background-color: #f5f7f7; 
+            color: rgba(0,0,0,0.54); */
+            line-height: 0.8rem !important;
+            
+            /* Add customizable top spacing using padding on header cells */
+            .crudy-th {
+                padding-bottom: var(--header-add-whitespace);
+            }
+        }
+        
+        line-height: 42px;  /* Restore row height for proper button fit */
+        
+        &.selected {
+            background-color: rgba(0, 145, 234, 0.12);  /* Restore selected row background */
+        }
+        
+        .crudy-td, .crudy-th {
+            padding: 1px;  /* Match alarm's minimal padding */
+            
+            .q-field--dense .q-field__control, .q-field--dense .q-field__marginal {
+                height: 42px;  /* Ensure form fields fit properly in rows */
+            }
+            
+            input.q-field__input, input.q-field__native {
+                font-size: 14px;
+                line-height: 24px;
+            }
+        }
+    }
+    
+    .crudy-th-button {
+        width: 40px;
+    }
+    
+    .crudy-delete-button {
+        width: 40px;
+    }
+    
+    .crudy-save-button {
+        width: 40px;
+    }
+    
+    .crudy-add-button {
+        font-weight: 600;
+        cursor: pointer !important;
+        padding-top: 0.75rem;
+        color: rgb(0,82,194);
+        font-size: 1rem;
+        line-height: 1.5rem;
+    }
+}
+
+/* Card styling matching alarm */
+.card {
+    width: 60rem;
+    gap: 0.75rem;
+    label {
+        width: 100%;
+    }
+    input {
+        width: 100%;
+    }
+}
+
+/* Confirmation dialog styling */
+.confirm-dialog {
+    .question {
+        font-size: 120%;
+        font-weight: 600;
+    }
+    .explanation {
+        line-height: 10px;
+    }
+    .q-card {
+        width: 400px;
+        .confirm-button-row {
+            column-gap: 20px;
+        }
+    }
+}
+
+}
+
+/* ===== COMMENTED OUT: Original complex styling (preserved for future reference) =====
 @layer quasar_importants {
 
 :root {
@@ -86,16 +212,6 @@
         }
     }
 
-    /* Mode-specific styling (if needed in future for different behaviors) */
-    &.crudy-explicit-mode {
-        /* Explicit mode uses base styling with selection */
-    }
-
-    &.crudy-direct-mode {
-        /* Direct mode uses base styling without selection highlights */
-    }
-
-    /* Add button styling (from alarm - cleaner approach) */
     .crudy-add-button {
         font-weight: 600;
         cursor: pointer !important;
@@ -111,12 +227,6 @@
 
 .crudy-button {
     margin-right: 12px;
-    /* font-weight: 600; */
-    /* cursor: pointer !important; */
-    /* padding-top: 0.75rem; */
-    /* color: var(--primary) !important; */
-    /* font-size: 1rem !important; */
-    /* line-height: 1.5rem; */
 }
 
 .q-btn {
@@ -124,7 +234,6 @@
         border: none;
         margin: 0;
         background: transparent !important;
-        /* margin: 0 0 14px 0; lift slightly to keep with quasar-added padding on inputs */
     }
 }
 
@@ -136,37 +245,10 @@
     .crudy-input {
         &.q-field--with-bottom {
             padding-bottom: 35px;
-            /* input.q-field__native { */
-            /*     color: orange !important; */
-            /* } */
-        }
-    }
-}
-
-.confirm-dialog {
-    .question {
-        font-size: 120%;
-        font-weight: 600;
-    }
-    .explanation {
-        line-height: 10px;
-    }
-    .q-card {
-        width: 400px;
-        .confirm-button-row {
-            column-gap: 20px;
-            /*
-            .confirm-button {
-                font-weight: 600;
-                cursor: pointer !important;
-                padding-top: 0.75rem;
-                color: var(--primary);
-                font-size: 1rem;
-                line-height: 1.5rem;
-            }
-            */
         }
     }
 }
 
 }
+===== END COMMENTED SECTION =====
+*/

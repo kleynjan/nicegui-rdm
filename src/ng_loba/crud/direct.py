@@ -47,35 +47,39 @@ class DirectEditTable(BaseCrudTable):
         """Build table body with always-editable rows"""
         with html.tbody().classes(f"{CLASSES_PREFIX}-tbody"):
             for row_index, row in enumerate(self.data):
-                with html.tr().classes(f"{CLASSES_PREFIX}-row-tr"):
+                with html.tr().classes(f"{CLASSES_PREFIX}-row"):
                     self._build_data_row(row_index, row)
                     if not self.config.skip_delete:
-                        with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
+                        with html.td().classes(f"{CLASSES_PREFIX}-delete-button"):
                             ui.button(icon="delete") \
                                 .on("click", lambda _, r=row: self._handle_delete(r)) \
-                                .props('flat') \
-                                .classes(f"{CLASSES_PREFIX}-column-button")
+                                .props('dense flat size=md') \
+                                .classes(f"{CLASSES_PREFIX}-delete-button")
 
             # New item row (shown when toggled)
             if self.config.add_button:
-                with html.tr().classes(f"{CLASSES_PREFIX}-row-tr") \
+                with html.tr().classes(f"{CLASSES_PREFIX}-new-row") \
                         .bind_visibility_from(self.state, "show_new_item"):
                     self._build_data_row(None, self.new_item)
-                    with html.td().classes(f"{CLASSES_PREFIX}-td-button"):
+                    with html.td().classes(f"{CLASSES_PREFIX}-save-button"):
                         ui.button(icon="save") \
                             .on("click", lambda: self._handle_add(self.new_item)) \
-                            .props('flat') \
-                            .classes(f"{CLASSES_PREFIX}-column-button positive") \
+                            .props('dense flat size=md') \
+                            .classes(f"{CLASSES_PREFIX}-save-button") \
                             .bind_enabled_from(self.state, "new_item_valid")
 
                 # Add button row (shown when new item row is hidden)
                 with html.tr().classes(f"{CLASSES_PREFIX}-add-button-row") \
                         .bind_visibility_from(self.state, "show_new_item", backward=lambda x: not x):
                     with html.td().props(f"colspan={len(self.config.columns) + 1}"):
-                        ui.button(self.config.add_button) \
+                        ui.label(self.config.add_button) \
                             .on("click", self._toggle_new_item) \
-                            .props('flat') \
-                            .classes(f"{CLASSES_PREFIX}-button {CLASSES_PREFIX}-add-button")
+                            .classes(f"{CLASSES_PREFIX}-add-button")
+
+                        # ui.button(self.config.add_button) \
+                        #     .on("click", self._toggle_new_item) \
+                        #     .props('flat') \
+                        #     .classes(f"{CLASSES_PREFIX}-button {CLASSES_PREFIX}-add-button")
 
     def _build_data_row(self, row_index: int | None, item: dict[str, Any]) -> None:
         """Build a single data row (editable)"""
@@ -101,7 +105,9 @@ class DirectEditTable(BaseCrudTable):
                         .classes(f"{CLASSES_PREFIX}-input {CLASSES_PREFIX}-input-{col_name}")
                         .bind_value(item, col_name)
                     )
-                    el.props(props)
+                    # Always add "dense flat " + existing props (for library use without global defaults)
+                    combined_props = f"dense flat {props}" if props else "dense flat"
+                    el.props(combined_props)
                     el.on("blur", lambda item=item, col_name=col_name: self._handle_blur(col_name, item))
 
     def _toggle_new_item(self) -> None:
