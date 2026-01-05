@@ -99,7 +99,10 @@ class DirectEditTable(BaseCrudTable):
                         # Don't disable columns in new item
                         props = props.replace("disable", "")
 
-                with html.td().classes(f"{CLASSES_PREFIX}-td {CLASSES_PREFIX}-td-{col_name}"):
+                td = html.td().classes(f"{CLASSES_PREFIX}-td {CLASSES_PREFIX}-td-{col_name}")
+                if col.width_percent is not None:
+                    td.style(f"width: {col.width_percent}%")
+                with td:
                     el = (
                         cls(**cls_parms)
                         .classes(f"{CLASSES_PREFIX}-input {CLASSES_PREFIX}-input-{col_name}")

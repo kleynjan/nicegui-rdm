@@ -30,9 +30,9 @@ async def main():
     # Define table configuration for explicit edit mode
     config = TableConfig(
         columns=[
-            Column(name='name', label='Name', ui_type=ui.input),
-            Column(name='email', label='Email', ui_type=ui.input),
-            Column(name='age', label='Age', ui_type=ui.number, default_value=0),
+            Column(name='name', label='Name', ui_type=ui.input, width_percent=40),
+            Column(name='email', label='Email', ui_type=ui.input, width_percent=40),
+            Column(name='age', label='Age', ui_type=ui.number, default_value=0, width_percent=18),
         ],
         mode='explicit',  # Explicit edit mode (default)
         focus_column='name',

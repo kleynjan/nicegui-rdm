@@ -21,6 +21,7 @@ class Column:
     default_value: Any = ""
     parms: dict[str, Any] = field(default_factory=dict)      # passed to the ui_type instance
     props: Optional[str] = ""                                # passed to el.props()
+    width_percent: Optional[float] = None                    # column width as percentage (0-100)
 
 @dataclass
 class TableConfig:
@@ -73,7 +74,10 @@ class BaseCrudTable:
         """Build table header - common to both modes"""
         with html.tr().classes(f"{CLASSES_PREFIX}-header-tr"):
             for column in self.config.columns:
-                with html.th().classes(f"{CLASSES_PREFIX}-th {CLASSES_PREFIX}-th-{column.name}"):
+                th = html.th().classes(f"{CLASSES_PREFIX}-th {CLASSES_PREFIX}-th-{column.name}")
+                if column.width_percent is not None:
+                    th.style(f"width: {column.width_percent}%")
+                with th:
                     ui.label(column.label or column.name)
             # Subclasses can override to add button columns
             self._build_header_buttons()

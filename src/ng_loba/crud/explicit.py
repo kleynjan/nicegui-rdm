@@ -69,7 +69,10 @@ class ExplicitEditTable(BaseCrudTable):
                     with html.tr().classes(f"{CLASSES_PREFIX}-row") as row_element:
                         for col in self.config.columns:
                             col_name = col.name
-                            with html.td().classes(f"{CLASSES_PREFIX}-td {CLASSES_PREFIX}-td-{col_name}"):
+                            td = html.td().classes(f"{CLASSES_PREFIX}-td {CLASSES_PREFIX}-td-{col_name}")
+                            if col.width_percent is not None:
+                                td.style(f"width: {col.width_percent}%")
+                            with td:
                                 ui.label(row[col_name]).on("click", lambda _, r=row_index,
                                                            c=col_name: self.row_click(r, c))
                         if row_index == self.state["selected_row"]:
@@ -116,7 +119,10 @@ class ExplicitEditTable(BaseCrudTable):
                     cls_parms["value"] = item[col_name]
                     cls_parms["validation"] = self._validation_function_factory(col_name)
                     props = col.props
-                    with html.td().classes(f"{CLASSES_PREFIX}-td {CLASSES_PREFIX}-td-{col_name}"):
+                    td = html.td().classes(f"{CLASSES_PREFIX}-td {CLASSES_PREFIX}-td-{col_name}")
+                    if col.width_percent is not None:
+                        td.style(f"width: {col.width_percent}%")
+                    with td:
                         el = (
                             cls(**cls_parms)
                             .classes(f"{CLASSES_PREFIX}-input {CLASSES_PREFIX}-input-{col_name}")

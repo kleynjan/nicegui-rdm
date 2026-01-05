@@ -2,7 +2,8 @@
 
 @layer quasar_importants {
 
-/* Quasar overrides to match alarm's minimal styling */
+/* ===== Global Quasar Overrides ===== */
+
 .q-btn {
     text-transform: none !important;
 }
@@ -33,9 +34,12 @@ table {
     text-align: left;
 }
 
-/* CRUDY table specific styling - simplified like alarm but with proper layout */
+/* ===== Common CRUDY Table Styles ===== */
+/* These styles apply to both direct and explicit modes */
+
 .crudy-table {
     text-align: left;
+    table-layout: fixed;  /* Prevent columns from shifting when content changes */
     
     /* CSS custom property for header top spacing */
     --header-add-whitespace: 10px;
@@ -122,6 +126,53 @@ table {
         }
     }
 }
+
+/* ===== Mode-Specific Overrides ===== */
+/* Add mode-specific customizations here using complete selector paths */
+/* This section allows easy customization per mode without deeply nested rules */
+
+/* Explicit mode: Prevent validation messages from expanding row height */
+.crudy-table.crudy-explicit-mode tr.crudy-row {
+    /* Maintain fixed row height even when validation messages appear */
+    height: 42px;
+}
+
+.crudy-table.crudy-explicit-mode .crudy-td {
+    /* Ensure table cells maintain structure */
+    position: relative;
+}
+
+.crudy-table.crudy-explicit-mode .crudy-td .q-field--with-bottom {
+    /* Remove bottom padding that Quasar adds for error messages */
+    padding-bottom: 0 !important;
+}
+
+.crudy-table.crudy-explicit-mode .crudy-td .q-field__bottom {
+    /* Make validation message overlay next row instead of expanding current row */
+    position: absolute;
+    z-index: 10;
+    /* The validation message will now overlap the next row's space */
+    /* This keeps the table stable when entering/exiting edit mode */
+}
+
+.crudy-table.crudy-explicit-mode .crudy-td .q-field__control {
+    /* Ensure the control container stays at fixed width */
+    position: relative;
+}
+
+.crudy-table.crudy-explicit-mode .crudy-td .q-field__append {
+    /* Make error icon overlay instead of expanding the column */
+    position: absolute;
+    right: 0;
+    /* The icon will overlay on the right side of the input field */
+    /* This prevents column width changes when error icons appear */
+}
+
+/* Direct mode: Add any direct-mode specific overrides here if needed */
+/* .crudy-table.crudy-direct-mode tr.crudy-row {
+    /* Example: different line height for direct mode */
+    /* line-height: 36px; */
+/* } */
 
 }
 
