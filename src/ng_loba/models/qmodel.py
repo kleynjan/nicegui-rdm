@@ -124,4 +124,4 @@ class QModel(Model):
 
             fields_for_select = {field: field for field in _fields}
 
-        return {return_as: getattr(self, k) for k, return_as in fields_for_select.items()}
+        return {return_as: getattr(self, field) for return_as, field in fields_for_select.items()}

@@ -25,6 +25,12 @@ venv/
 env/
 ENV/
 
+# AI assistant working files
+cline_docs/
+.clinerules
+CLAUDE.md
+.claude/
+
 # IDE files
 .idea/
 .vscode/

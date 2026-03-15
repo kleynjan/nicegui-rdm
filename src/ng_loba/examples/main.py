@@ -137,9 +137,4 @@ async def main():
     with ui.card().classes('w-full'):
         await table_explicit.build()  # type: ignore
 
-
-if __name__ in {"__main__", "__mp_main__"}:
-    print("Starting CRUD demo on http://localhost:8080")
-    print("This demo shows all three CRUD table modes in action.")
-    print("All tables share the same data store - try editing in one and see it update in the others!")
-    ui.run(show=False, port=8080)
+ui.run()
