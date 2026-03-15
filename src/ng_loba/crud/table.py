@@ -2,10 +2,10 @@
 CRUD table component factory and re-exports.
 """
 
-from .base import Column, TableConfig, CLASSES_PREFIX
+from .base import Column, TableConfig, RowAction, confirm_dialog
 from .direct import DirectEditTable
-from .base import confirm_dialog
 from .explicit import ExplicitEditTable
+from .modal import ModalEditTable
 from .protocol import CrudDataSource
 
 
@@ -19,10 +19,12 @@ def create_crud_table(state: dict, data_source: CrudDataSource, config: TableCon
         config: TableConfig with mode setting
 
     Returns:
-        DirectEditTable or ExplicitEditTable instance based on config.mode
+        DirectEditTable, ExplicitEditTable, or ModalEditTable instance based on config.mode
     """
     if config.mode == "direct":
         return DirectEditTable(state, data_source, config)
+    elif config.mode == "modal":
+        return ModalEditTable(state, data_source, config)
     else:
         return ExplicitEditTable(state, data_source, config)
 
@@ -36,8 +38,9 @@ __all__ = [
     'CrudTable',
     'DirectEditTable',
     'ExplicitEditTable',
+    'ModalEditTable',
     'Column',
     'TableConfig',
+    'RowAction',
     'confirm_dialog',
-    'CLASSES_PREFIX',
 ]

@@ -7,12 +7,12 @@ name = "ng_loba"
 version = "0.1.0"
 description = "Line of Business Application components for NiceGUI"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 license = "MIT"
 dependencies = [
     "nicegui>=1.4.0",
-    "sqlalchemy>=2.0.0",
-    "tortoise-orm>=0.20.0"
+    "tortoise-orm>=0.20.0",
+    "pytz",
 ]
 
 [project.optional-dependencies]

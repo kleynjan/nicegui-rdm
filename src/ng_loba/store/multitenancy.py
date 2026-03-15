@@ -7,6 +7,7 @@ from tortoise.expressions import Q
 
 from ..models import QModel
 from ..utils.logging import logger
+from .base import store_registry, StoreRegistry
 from .orm import TortoiseStore
 
 # set this to a list of tenant identifiers in your app
@@ -68,44 +69,3 @@ class MultitenantTortoiseStore(TortoiseStore, Generic[T]):
         if self.tenant:
             query &= Q(tenant=self.tenant)
         await self.model.filter(query).delete()
-
-
-class StoreRegistry:
-    """Registry for tenant-scoped singleton store instances"""
-
-    def __init__(self):
-        self._stores = {}
-
-    def register_store(self, tenant: str, name: str, store: MultitenantTortoiseStore) -> None:
-        """Register a store instance for a tenant.
-
-        Args:
-            tenant: The tenant identifier
-            name: Unique name for this store type
-            store: The store instance to register
-        """
-        if tenant not in self._stores:
-            self._stores[tenant] = {}
-        self._stores[tenant][name] = store
-        logger.info(f"Registered {name} store for tenant {tenant}")
-
-    def get_store(self, tenant: str, name: str) -> MultitenantTortoiseStore:
-        """Get the singleton store instance for a tenant.
-
-        Args:
-            tenant: The tenant identifier
-            name: The store type name
-
-        Returns:
-            The singleton store instance for this tenant
-
-        Raises:
-            KeyError: If no store exists for this tenant/name combination
-        """
-        try:
-            return self._stores[tenant][name]
-        except KeyError:
-            raise TenancyError(f"No store '{name}' found for tenant '{tenant}'")
-
-# Global registry instance
-store_registry = StoreRegistry()

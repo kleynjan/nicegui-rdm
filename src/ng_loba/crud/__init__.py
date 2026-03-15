@@ -1,49 +1,65 @@
 """
 CRUD components for data management.
 """
+from pathlib import Path
 from nicegui import ui
+
+from .base import CrudComponent, StoreComponent, Column, TableConfig, RowAction, confirm_dialog
+from .i18n import none_as_text
+from .dialog import CrudDialog
+from .detail import DetailCard
+from .edit_card import EditCard
+from .navigate import NavigateTable
+from .tabs import CrudTabs
+from .view_stack import ViewStack
+from .wizard import WizardStep, StepWizard
+from .checkbox import CheckboxTable
 from .table import (
     create_crud_table,
     CrudTable,
     DirectEditTable,
     ExplicitEditTable,
-    Column,
-    TableConfig,
-    confirm_dialog,
 )
+from .action import ActionButtonTable
+from .select import SelectTable
+
 
 def page_init():
     """
-    Initialize page styles and settings for the CRUD module.
+    Initialize page styles for CRUD module.
+    Loads Bootstrap icons and crud.css. Must be called per page render.
     """
-    import os
-    styles_path = os.path.join(os.path.dirname(__file__), 'crud.scss')
-    with open(styles_path) as f:
-        print("Loading CRUD styles from", styles_path)
-        ui.add_scss(f.read())
-    # ui.colors(primary="rgb(0,82,194)", secondary="#53B689", accent="#111B1E", positive="#53B689")
+    # Bootstrap icons CDN
+    ui.add_head_html(
+        '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">'
+    )
 
-def get_crud_css():
-    """
-    Return the CSS styles for the CRUD module.
-    """
-    import os
-
-    # read and return the local crud.css file as a string
-    css_path = os.path.join(os.path.dirname(__file__), 'crud.css')
-    with open(css_path) as f:
-        return f.read()
-
-    # return sass.compile(filename=os.path.join(os.path.dirname(__file__), 'crud.scss'))
+    # Load crud.css
+    css_path = Path(__file__).parent / 'crud.css'
+    ui.add_css(css_path)
 
 __all__ = [
+    'CrudComponent',
+    'StoreComponent',
+    'none_as_text',
+    'CrudDialog',
+    'DetailCard',
+    'EditCard',
+    'ViewStack',
+    'WizardStep',
+    'StepWizard',
+    'CheckboxTable',
     'create_crud_table',
     'CrudTable',
     'DirectEditTable',
     'ExplicitEditTable',
+    'ActionButtonTable',
+    'NavigateTable',
+    'CrudTabs',
+    'SelectTable',
     'Column',
     'TableConfig',
+    'RowAction',
     'confirm_dialog',
     'page_init',
-    'get_crud_css',
 ]

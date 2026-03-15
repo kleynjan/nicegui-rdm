@@ -1,12 +1,14 @@
 """
 Direct edit CRUD table - inline editing with auto-save on blur.
+Uses div-based flexbox layout with crudy-* classes.
 """
 
 from typing import Any
 
-from nicegui import html, ui
+from nicegui import ui
 
-from .base import BaseCrudTable, CLASSES_PREFIX, TableConfig
+from .base import TableConfig
+from ._table_base import BaseCrudTable
 from .protocol import CrudDataSource
 
 
@@ -29,57 +31,51 @@ class DirectEditTable(BaseCrudTable):
             for col in self.config.columns
         }
 
-    def _build_header_buttons(self):
-        """Add button column header"""
-        with html.th().classes(f"{CLASSES_PREFIX}-th-button"):
-            ui.label("")
+    def _build_header(self):
+        """Build header row using divs with flexbox pattern"""
+        with ui.row().classes("crudy-header"):
+            for column in self.config.columns:
+                ui.label(column.label or column.name).classes(f"crudy-col-{column.name}").style(column.width_style)
+            # Empty header for actions column - no width_style, fills remaining space
+            ui.label("").classes("crudy-col-actions")
 
     @ui.refreshable
     async def build(self):
-        """Build direct-edit table"""
+        """Build direct-edit table using divs with flexbox layout"""
         await self.load_data()
-        with html.table().classes(f"{CLASSES_PREFIX}-table {CLASSES_PREFIX}-direct-mode"):
+        with ui.card().classes("crudy-card crudy-direct-mode"):
             self._build_header()
             self._build_body()  # type: ignore
 
     @ui.refreshable
     def _build_body(self):
         """Build table body with always-editable rows"""
-        with html.tbody().classes(f"{CLASSES_PREFIX}-tbody"):
-            for row_index, row in enumerate(self.data):
-                with html.tr().classes(f"{CLASSES_PREFIX}-row"):
-                    self._build_data_row(row_index, row)
-                    if not self.config.skip_delete:
-                        with html.td().classes(f"{CLASSES_PREFIX}-delete-button"):
-                            ui.button(icon="delete") \
-                                .on("click", lambda _, r=row: self._handle_delete(r)) \
-                                .props('dense flat size=md') \
-                                .classes(f"{CLASSES_PREFIX}-delete-button")
+        for row_index, row in enumerate(self.data):
+            with ui.row().classes("crudy-row"):
+                self._build_data_row(row_index, row)
+                # Delete button
+                if self.config.show_delete_button:
+                    with ui.element("div").classes("crudy-col-actions"):
+                        ui.button(icon="bi-trash",
+                                  on_click=lambda _, r=row: self._handle_delete(r)) \
+                            .props("flat dense size=md").classes("crudy-btn-icon")
 
-            # New item row (shown when toggled)
-            if self.config.add_button:
-                with html.tr().classes(f"{CLASSES_PREFIX}-new-row") \
-                        .bind_visibility_from(self.state, "show_new_item"):
-                    self._build_data_row(None, self.new_item)
-                    with html.td().classes(f"{CLASSES_PREFIX}-save-button"):
-                        ui.button(icon="save") \
-                            .on("click", lambda: self._handle_add(self.new_item)) \
-                            .props('dense flat size=md') \
-                            .classes(f"{CLASSES_PREFIX}-save-button") \
-                            .bind_enabled_from(self.state, "new_item_valid")
+        # New item row (shown when toggled)
+        if self.state["show_new_item"]:
+            with ui.row().classes("crudy-row crudy-new-row"):
+                self._build_data_row(None, self.new_item)
+                with ui.element("div").classes("crudy-col-actions"):
+                    ui.button(icon="bi-check-square", color="grey",
+                              on_click=lambda: self._handle_add(self.new_item)) \
+                        .props("flat dense size=md").classes("crudy-btn-icon") \
+                        .bind_enabled_from(self.state, "new_item_valid")
 
-                # Add button row (shown when new item row is hidden)
-                with html.tr().classes(f"{CLASSES_PREFIX}-add-button-row") \
-                        .bind_visibility_from(self.state, "show_new_item", backward=lambda x: not x):
-                    with html.td().props(f"colspan={len(self.config.columns) + 1}"):
-                        ui.label(self.config.add_button) \
-                            .on("click", self._toggle_new_item) \
-                            .classes(f"{CLASSES_PREFIX}-add-button")
-
-                        # ui.button(self.config.add_button) \
-                        #     .on("click", self._toggle_new_item) \
-                        #     .props('flat') \
-                        #     .classes(f"{CLASSES_PREFIX}-button {CLASSES_PREFIX}-add-button")
+        # Add button row (shown when new item row is hidden)
+        if self.config.add_button and not self.state["show_new_item"]:
+            with ui.row().classes("crudy-add-row"):
+                ui.label(self.config.add_button) \
+                    .on("click", self._toggle_new_item) \
+                    .classes("crudy-add-button")
 
     def _build_data_row(self, row_index: int | None, item: dict[str, Any]) -> None:
         """Build a single data row (editable)"""
@@ -87,35 +83,28 @@ class DirectEditTable(BaseCrudTable):
 
         for col in self.config.columns:
             col_name = col.name
+
             if col.ui_type:
                 cls = col.ui_type
                 cls_parms = col.parms.copy()
                 cls_parms["value"] = item[col_name]
-                props = col.props
+                props = col.props or ""
 
                 if new_row:
                     cls_parms["on_change"] = lambda: self._handle_change(item)
-                    if props:
-                        # Don't disable columns in new item
-                        props = props.replace("disable", "")
+                    # Don't disable columns in new item
+                    props = props.replace("disable", "")
 
-                td = html.td().classes(f"{CLASSES_PREFIX}-td {CLASSES_PREFIX}-td-{col_name}")
-                if col.width_percent is not None:
-                    td.style(f"width: {col.width_percent}%")
-                with td:
-                    el = (
-                        cls(**cls_parms)
-                        .classes(f"{CLASSES_PREFIX}-input {CLASSES_PREFIX}-input-{col_name}")
-                        .bind_value(item, col_name)
-                    )
-                    # Always add "dense flat " + existing props (for library use without global defaults)
-                    combined_props = f"dense flat {props}" if props else "dense flat"
+                with ui.element("div").classes(f"crudy-col-{col_name}").style(col.width_style):
+                    el = cls(**cls_parms).classes("crudy-input").bind_value(item, col_name)
+                    combined_props = f"dense flat {props}".strip()
                     el.props(combined_props)
                     el.on("blur", lambda item=item, col_name=col_name: self._handle_blur(col_name, item))
 
     def _toggle_new_item(self) -> None:
         """Toggle new item row visibility"""
         self.state["show_new_item"] = not self.state["show_new_item"]
+        self._build_body.refresh()  # type: ignore
 
     def _handle_change(self, new_item: dict[str, Any]) -> None:
         """Handle change event (optional validation while typing)"""
@@ -161,10 +150,10 @@ class DirectEditTable(BaseCrudTable):
         """Handle adding new item"""
         if await self._validate_and_create(new_item):
             self.reset()
+            self._build_body.refresh()
         else:
             self.state['new_item_valid'] = False
 
     async def _handle_delete(self, row: dict[str, Any]) -> None:
         """Handle row deletion - direct mode uses no confirmation by default"""
-        # Direct mode typically deletes immediately without confirmation
         await self._delete(row, confirm=False)

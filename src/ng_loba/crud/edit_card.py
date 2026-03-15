@@ -1,0 +1,102 @@
+"""
+EditCard - in-place form for editing or creating a store item.
+
+Renders dialog_columns as form fields inside a card.
+Used by ViewStack as the "edit" view in the list → detail → edit flow.
+"""
+from typing import Any, Callable
+
+from nicegui import ui
+
+from .i18n import _
+from .base import CrudComponent, TableConfig
+from .fields import build_form_field
+from .protocol import CrudDataSource
+
+
+class EditCard(CrudComponent):
+    """In-place editing card using dialog_columns config.
+
+    Unlike EditDialog (modal), this renders inline and is managed by ViewStack.
+    """
+
+    def __init__(
+        self,
+        data_source: CrudDataSource,
+        config: TableConfig,
+        on_saved: Callable[[dict], None] | None = None,
+        on_cancel: Callable[[], None] | None = None,
+    ):
+        super().__init__()
+        self.data_source = data_source
+        self.config = config
+        self.on_saved = on_saved
+        self.on_cancel = on_cancel
+        self._form_state: dict[str, Any] = {}
+        self._item_id: int | None = None
+
+    @property
+    def is_new(self) -> bool:
+        return self._item_id is None
+
+    def set_item(self, item: dict | None):
+        """Load an item for editing, or None for new-item mode."""
+        self._form_state = {}
+        self._item_id = item.get("id") if item else None
+        for col in self.config.dialog_columns:
+            if item:
+                value = item.get(col.name, col.default_value)
+                if col.ui_type == ui.number:
+                    self._form_state[col.name] = value
+                else:
+                    self._form_state[col.name] = value or ""
+            else:
+                self._form_state[col.name] = col.default_value
+
+    async def _handle_save(self):
+        item_data = {}
+        for col in self.config.dialog_columns:
+            value = self._form_state.get(col.name, "")
+            if isinstance(value, str):
+                value = value.strip() or None
+            item_data[col.name] = value
+
+        valid, error_dict = self.data_source.validate(item_data)
+        if not valid:
+            self._notify(
+                f"{error_dict['col_name']} {error_dict['error_value']}: {error_dict['error_msg']}",
+                type="warning", timeout=1500,
+            )
+            return
+
+        if self._item_id is not None:
+            result = await self.data_source.update_item(self._item_id, item_data)
+            if result:
+                self._notify(_("Item updated"), type="positive")
+        else:
+            result = await self.data_source.create_item(item_data)
+            if result:
+                self._notify(_("Item created"), type="positive")
+
+        if result and self.on_saved:
+            self.on_saved(result)
+
+    def _handle_cancel(self):
+        if self.on_cancel:
+            self.on_cancel()
+
+    @ui.refreshable
+    async def build(self):
+        with ui.card().classes("edit-card"):
+            for col in self.config.dialog_columns:
+                build_form_field(col, self._form_state)
+
+            with ui.row().classes("edit-card-actions"):
+                ui.button(
+                    _("Save") if not self.is_new else _("Add"),
+                    on_click=self._handle_save,
+                ).classes("btn-primary")
+                ui.button(
+                    _("Cancel"),
+                    on_click=self._handle_cancel,
+                ).classes("btn-secondary")
