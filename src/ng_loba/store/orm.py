@@ -16,13 +16,20 @@ from .base import Store
 
 T = TypeVar('T', bound=QModel)
 
-def init_db(app, db_url: str, modules: dict[str, list[str]]):
-    """Initialize Tortoise ORM with FastAPI"""
+def init_db(app, db_url: str, modules: dict[str, list[str]], *, generate_schemas: bool = False):
+    """Initialize Tortoise ORM with FastAPI/NiceGUI app.
+
+    Args:
+        app: FastAPI app or NiceGUI app object
+        db_url: Database connection URL (e.g., 'sqlite://demo.db')
+        modules: Dict mapping module names to model module paths
+        generate_schemas: If True, auto-create tables (useful for demos, not production)
+    """
     register_tortoise(
         app,
         db_url=db_url,
         modules=modules,  # type:ignore # eg, {"models": ["models"]}
-        generate_schemas=False,  # in production you should use version control migrations instead
+        generate_schemas=generate_schemas,
     )
 
 async def close_db():
