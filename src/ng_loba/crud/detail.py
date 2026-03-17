@@ -6,7 +6,7 @@ with configurable handlers. Auto-refreshes on store changes.
 """
 from typing import Awaitable, Callable
 
-from nicegui import ui
+from nicegui import html, ui
 
 from .i18n import _
 from ..store.base import StoreEvent
@@ -92,16 +92,20 @@ class DetailCard(StoreComponent):
         if self.selected_item is None:
             return
 
-        with ui.element("div").classes("detail-card"):
+        with html.div().classes("nc-detail nc-component"):
             if self.render_callback:
                 await self.render_callback(self.selected_item)
 
             if self.show_edit or self.show_delete:
-                with ui.row().classes("detail-card-actions"):
+                with html.div().classes("nc-detail-actions"):
                     if self.show_edit and self.on_edit:
                         item = self.selected_item
-                        ui.button((_("Edit")),
-                                  on_click=lambda _, i=item: self.on_edit(i)).classes("btn-primary")  # type: ignore
+                        with html.button().classes("nc-btn nc-btn-primary").on(
+                            "click", lambda _, i=item: self.on_edit(i)  # type: ignore
+                        ):
+                            html.span(_(("Edit")))
                     if self.show_delete:
-                        ui.button(_("Delete"),
-                                  on_click=self._handle_delete).classes("btn-danger")
+                        with html.button().classes("nc-btn nc-btn-danger").on(
+                            "click", self._handle_delete
+                        ):
+                            html.span(_("Delete"))

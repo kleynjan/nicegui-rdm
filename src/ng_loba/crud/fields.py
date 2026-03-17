@@ -7,15 +7,25 @@ from nicegui import ui
 
 from .base import Column
 
+# Display-only types that should not be rendered as form fields
+DISPLAY_ONLY_TYPES = {ui.badge, ui.label, ui.html, ui.markdown}
 
-def build_form_field(col: Column, state: dict) -> ui.element:
+# Custom parameters used for display rendering, not widget construction
+DISPLAY_PARAMS = {"color_map"}
+
+
+def build_form_field(col: Column, state: dict) -> ui.element | None:
     """Build a single form field from a Column config, bound to state[col.name].
 
-    Returns the created UI element for further customization if needed.
+    Returns the created UI element, or None if the column type is display-only.
     """
-    label = col.label or col.name
     ui_type = col.ui_type or ui.input
 
+    # Skip display-only column types (badge, label, etc.)
+    if ui_type in DISPLAY_ONLY_TYPES:
+        return None
+
+    label = col.label or col.name
     kwargs: dict[str, Any] = {}
 
     if ui_type in (ui.input, ui.number, ui.textarea):
@@ -27,7 +37,9 @@ def build_form_field(col: Column, state: dict) -> ui.element:
     elif ui_type == ui.select:
         kwargs["label"] = label
 
-    kwargs.update(col.parms)
+    # Filter out display-only parameters before passing to widget
+    filtered_parms = {k: v for k, v in col.parms.items() if k not in DISPLAY_PARAMS}
+    kwargs.update(filtered_parms)
 
     el = ui_type(**kwargs).bind_value(state, col.name)
     el.classes("form-input")

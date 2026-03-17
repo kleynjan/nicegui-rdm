@@ -6,7 +6,7 @@ Used by ViewStack as the "edit" view in the list → detail → edit flow.
 """
 from typing import Any, Callable
 
-from nicegui import ui
+from nicegui import html, ui
 
 from .i18n import _
 from .base import CrudComponent, TableConfig
@@ -87,16 +87,17 @@ class EditCard(CrudComponent):
 
     @ui.refreshable
     async def build(self):
-        with ui.card().classes("edit-card"):
-            for col in self.config.dialog_columns:
-                build_form_field(col, self._form_state)
+        with html.div().classes("nc-card nc-edit-card nc-component"):
+            with html.div().classes("nc-card-body"):
+                for col in self.config.dialog_columns:
+                    build_form_field(col, self._form_state)
 
-            with ui.row().classes("edit-card-actions"):
-                ui.button(
-                    _("Save") if not self.is_new else _("Add"),
-                    on_click=self._handle_save,
-                ).classes("btn-primary")
-                ui.button(
-                    _("Cancel"),
-                    on_click=self._handle_cancel,
-                ).classes("btn-secondary")
+            with html.div().classes("nc-edit-actions"):
+                with html.button().classes("nc-btn nc-btn-primary").on(
+                    "click", self._handle_save
+                ):
+                    html.span(_("Save") if not self.is_new else _("Add"))
+                with html.button().classes("nc-btn nc-btn-secondary").on(
+                    "click", self._handle_cancel
+                ):
+                    html.span(_("Cancel"))

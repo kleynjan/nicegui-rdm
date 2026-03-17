@@ -1,17 +1,18 @@
 """
-CrudTabs - div-based tab switcher, replacing Quasar QTabs.
-Pure flexbox layout with crudy-tab-* CSS classes.
+Tabs - div-based tab switcher.
+
+Uses nc-* CSS classes for consistent styling.
 """
 from typing import Awaitable, Callable
 
-from nicegui import ui
+from nicegui import html, ui
 
 
-class CrudTabs:
-    """Div-based tab bar + panel renderer.
+class Tabs:
+    """Tab bar + panel renderer using native HTML elements.
 
     Usage:
-        tabs = CrudTabs([
+        tabs = Tabs([
             ("guests", "Guests", render_guests),
             ("admins", "Admins", render_admins),
         ])
@@ -32,13 +33,18 @@ class CrudTabs:
 
     @ui.refreshable
     async def build(self):
-        with ui.row().classes("crudy-tab-bar"):
+        with html.div().classes("nc-tabs nc-component"):
             for key, label, _ in self.tabs:
-                cls = "crudy-tab-active" if key == self.active else "crudy-tab"
-                ui.label(label).classes(cls).on("click", lambda _, k=key: self._select(k))
+                cls = "nc-tab nc-active" if key == self.active else "nc-tab"
+                with html.button().classes(cls).on("click", lambda _, k=key: self._select(k)):
+                    html.span(label)
 
         for key, _, render in self.tabs:
             if key == self.active:
-                with ui.column().classes("crudy-tab-panel"):
+                with html.div().classes("nc-tab-panel"):
                     await render()
                 break
+
+
+# Backwards compatibility alias
+CrudTabs = Tabs

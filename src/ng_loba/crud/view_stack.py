@@ -6,13 +6,13 @@ renders breadcrumb navigation, and wires up transitions between views.
 """
 from typing import Any, Awaitable, Callable
 
-from nicegui import ui
+from nicegui import html, ui
 
 from .i18n import _
 from .base import TableConfig, confirm_dialog
 from .detail import DetailCard
 from .edit_card import EditCard
-from .navigate import NavigateTable
+from .list import ListTable
 from .protocol import CrudDataSource
 from ..store.base import StoreEvent
 
@@ -68,7 +68,7 @@ class ViewStack:
         self._select_state: dict[str, Any] = {}
         self._detail_state: dict[str, Any] = {}
 
-        self._table: NavigateTable | None = None
+        self._table: ListTable | None = None
         self._detail: DetailCard | None = None
         self._edit: EditCard | None = None
 
@@ -159,28 +159,29 @@ class ViewStack:
     # ── Breadcrumb ──
 
     def _build_breadcrumb(self):
-        with ui.row().classes("view-stack-breadcrumb"):
+        with html.div().classes("nc-breadcrumb nc-component"):
             if self._view == "list":
-                # ui.label(self.breadcrumb_root).classes("breadcrumb-root breadcrumb-current")
-                ui.label('')
+                html.span("")
             else:
-                ui.button(icon="arrow_back", on_click=self._breadcrumb_back) \
-                    .props("flat dense").classes("breadcrumb-back")
-                ui.label(self.breadcrumb_root) \
-                    .classes("breadcrumb-root breadcrumb-link") \
-                    .on("click", lambda: self.show_list())
+                with html.button().classes("nc-btn nc-btn-icon nc-breadcrumb-back").on(
+                    "click", self._breadcrumb_back
+                ):
+                    html.i().classes("bi bi-arrow-left")
+                html.span(self.breadcrumb_root).classes("nc-breadcrumb-item nc-link").on(
+                    "click", lambda: self.show_list()
+                )
                 if self._item:
-                    ui.label("›").classes("breadcrumb-separator")
+                    html.span("›").classes("nc-breadcrumb-separator")
                     label_text = self.item_label(self._item)
                     if self._view == "edit":
-                        ui.label(label_text) \
-                            .classes("breadcrumb-item breadcrumb-link") \
-                            .on("click", lambda: self.show_detail(self._item))  # type: ignore
+                        html.span(label_text).classes("nc-breadcrumb-item nc-link").on(
+                            "click", lambda: self.show_detail(self._item)  # type: ignore
+                        )
                     else:
-                        ui.label(label_text).classes("breadcrumb-item breadcrumb-current")
+                        html.span(label_text).classes("nc-breadcrumb-item nc-current")
                 elif self._view == "edit":
-                    ui.label("›").classes("breadcrumb-separator")
-                    ui.label(_("New")).classes("breadcrumb-item breadcrumb-current")
+                    html.span("›").classes("nc-breadcrumb-separator")
+                    html.span(_("New")).classes("nc-breadcrumb-item nc-current")
 
     def _breadcrumb_back(self):
         if self._view == "edit" and self._item:
@@ -202,7 +203,7 @@ class ViewStack:
             await self._build_edit_view()
 
     async def _build_list_view(self):
-        self._table = NavigateTable(
+        self._table = ListTable(
             state=self._select_state,
             data_source=self.data_source,
             config=self.select_config,
@@ -211,19 +212,17 @@ class ViewStack:
         await self._table.build()  # type: ignore
 
         # Toolbar with add button and optional list_footer content
-        with ui.row().classes("view-stack-toolbar"):
+        with html.div().classes("nc-view-stack-toolbar"):
             if self.show_add:
                 add_handler = self.on_add if self.on_add else self.show_edit_new
-                ui.button(
-                    self.select_config.add_button or _("Add new"),
-                    on_click=add_handler,
-                ).classes("btn-primary")
+                with html.button().classes("nc-btn nc-btn-primary").on("click", add_handler):
+                    html.span(self.select_config.add_button or _("Add new"))
 
             if self.list_footer:
                 await self.list_footer()
 
     async def _build_detail_view(self):
-        with ui.card().classes('view-stack-outer-detail'):
+        with html.div().classes('nc-card nc-component'):
             self._detail = DetailCard(
                 state=self._detail_state,
                 data_source=self.data_source,
@@ -235,15 +234,17 @@ class ViewStack:
             self._detail.set_item(self._item)
             await self._detail.build()  # type: ignore
 
-            with ui.row().classes("view-stack-actions"):
+            with html.div().classes("nc-detail-actions"):
                 if self.show_edit:
-                    ui.button(_("Edit"),
-                              on_click=lambda: self.show_edit_existing()) \
-                        .classes("btn-primary")
+                    with html.button().classes("nc-btn nc-btn-primary").on(
+                        "click", lambda: self.show_edit_existing()
+                    ):
+                        html.span(_("Edit"))
                 if self.show_delete:
-                    ui.button(_("Delete"),
-                              on_click=self._on_delete) \
-                        .classes("btn-secondary")
+                    with html.button().classes("nc-btn nc-btn-secondary").on(
+                        "click", self._on_delete
+                    ):
+                        html.span(_("Delete"))
 
         if self.detail_footer and self._item:
             await self.detail_footer(self._item)
