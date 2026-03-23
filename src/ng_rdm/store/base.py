@@ -185,8 +185,6 @@ class Store:
             logger.error(f"Cannot delete item without id: {item}")
 
 
-# Example store implementation
-
 class StoreRegistry:
     """Registry for tenant-scoped singleton store instances"""
 

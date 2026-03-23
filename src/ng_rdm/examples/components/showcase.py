@@ -18,6 +18,9 @@ Components demonstrated:
 - ViewStack: Master-detail navigation pattern
 - Dialog: Modal overlay
 - Tabs: Tab-based content switching
+
+Key concept demonstrated:
+- StoreRegistry: Singleton store pattern for cross-session reactivity
 """
 
 from pathlib import Path
@@ -28,7 +31,7 @@ from ng_rdm.components import (
     DataTable, ListTable, SelectionTable,
     ViewStack, Dialog, Tabs, Button,
 )
-from ng_rdm.store import TortoiseStore, init_db, close_db
+from ng_rdm.store import TortoiseStore, init_db, close_db, store_registry
 from ng_rdm.models import QModel, FieldSpec, Validator
 
 
@@ -86,10 +89,6 @@ DB_URL = f"sqlite://{DB_PATH}"
 init_db(app, DB_URL, modules={"models": [__name__]}, generate_schemas=True)
 app.on_shutdown(close_db)
 
-# Create stores (shared across all browser sessions)
-category_store = TortoiseStore(Category)
-product_store = TortoiseStore(Product)
-
 
 async def seed_data():
     """Seed sample data if database is empty."""
@@ -100,18 +99,29 @@ async def seed_data():
     clothing = await Category.create(name="Clothing", description="Apparel and accessories")
     books = await Category.create(name="Books", description="Reading materials")
 
+    # One product per category - keep it minimal for demo clarity
     await Product.create(name="Laptop Pro", price=1299.00, stock=15, category=electronics)
-    await Product.create(name="Wireless Mouse", price=29.99, stock=150, category=electronics)
-    await Product.create(name="USB-C Cable", price=12.99, stock=500, category=electronics)
     await Product.create(name="T-Shirt Classic", price=24.99, stock=200, category=clothing)
-    await Product.create(name="Jeans Slim", price=59.99, stock=75, category=clothing)
     await Product.create(name="Python Cookbook", price=49.99, stock=30, category=books)
-    await Product.create(name="Clean Code", price=39.99, stock=25, category=books)
 
 
 @app.on_startup
 async def startup():
     await seed_data()
+
+    # =============================================================================
+    # STORE REGISTRY - Singleton Pattern for Cross-Session Reactivity
+    # =============================================================================
+    # Stores must be registered at server startup as singletons.
+    # This ensures all browser sessions share the same store instance,
+    # enabling real-time reactivity: when one user modifies data,
+    # all connected users see the update automatically.
+    #
+    # Without this pattern, each page request would create its own store,
+    # and observers in different sessions would not be notified of changes.
+    # =============================================================================
+    store_registry.register_store("default", "category", TortoiseStore(Category))
+    store_registry.register_store("default", "product", TortoiseStore(Product))
 
 
 # =============================================================================
@@ -137,7 +147,7 @@ category_columns = [
 # Demo Sections
 # =============================================================================
 
-async def demo_datatable():
+async def demo_datatable(product_store):
     """DataTable - Editable table with modal dialogs."""
     ui.label("DataTable").classes("text-h5")
     ui.markdown("""
@@ -146,6 +156,16 @@ async def demo_datatable():
     - Click **Edit** button on any row to modify
     - Click **Delete** to remove items
     """)
+
+    # Reactivity test instructions
+    with ui.element("div").classes("q-pa-sm q-mb-sm").style("background: #e3f2fd; border-radius: 4px;"):
+        ui.label("🔄 Test Cross-Session Reactivity:").classes("text-weight-bold")
+        ui.label("1. Click 'Open Second Window' below").classes("text-caption")
+        ui.label("2. Add or edit a product in one window").classes("text-caption")
+        ui.label("3. Watch the table update automatically in the other window!").classes("text-caption")
+
+    ui.link("↗ Open Second Window", target="/").props("target=_blank").classes(
+        "rdm-btn rdm-btn-secondary q-mb-sm")
 
     config = TableConfig(
         columns=product_columns,
@@ -162,7 +182,7 @@ async def demo_datatable():
     await table.build()
 
 
-async def demo_listtable():
+async def demo_listtable(category_store):
     """ListTable - Read-only clickable rows."""
     ui.label("ListTable").classes("text-h5")
     ui.markdown("""
@@ -182,7 +202,7 @@ async def demo_listtable():
     await table.build()
 
 
-async def demo_selectiontable():
+async def demo_selectiontable(product_store):
     """SelectionTable - Multi-select with checkboxes."""
     ui.label("SelectionTable").classes("text-h5")
     ui.markdown("""
@@ -206,11 +226,11 @@ async def demo_selectiontable():
     await table.build()
 
     with ui.row():
-        Button("Select All", on_click=table.select_all)
-        Button("Clear", on_click=table.clear_selection, variant="secondary")
+        Button("Select All", on_click=lambda: table.select_all())  # type: ignore[arg-type]
+        Button("Clear", on_click=lambda: table.clear_selection(), variant="secondary")  # type: ignore[arg-type]
 
 
-async def demo_viewstack():
+async def demo_viewstack(category_store, product_store):
     """ViewStack - Master-detail navigation."""
     ui.label("ViewStack").classes("text-h5")
     ui.markdown("""
@@ -282,7 +302,7 @@ def demo_dialog():
     Button("Open Dialog", on_click=dlg.open)
 
 
-async def demo_tabs():
+async def demo_tabs(product_store, category_store):
     """Tabs - Tab-based content switching."""
     ui.label("Tabs").classes("text-h5")
     ui.markdown("""
@@ -333,6 +353,15 @@ async def main():
     </style>
     """)
 
+    # =============================================================================
+    # RETRIEVE STORES FROM REGISTRY
+    # =============================================================================
+    # Get singleton store instances registered at startup.
+    # All browser sessions share these same store instances, enabling reactivity.
+    # =============================================================================
+    product_store = store_registry.get_store("default", "product")
+    category_store = store_registry.get_store("default", "category")
+
     with ui.column().classes("w-full max-w-4xl mx-auto q-pa-md"):
         ui.label("🎨 ng_rdm Component Showcase").classes("text-h4")
         ui.label("A tutorial introduction to ng_rdm UI components").classes("text-subtitle1 text-grey")
@@ -341,15 +370,15 @@ async def main():
 
         # DataTable
         with ui.element("div").classes("showcase-section"):
-            await demo_datatable()
+            await demo_datatable(product_store)
 
         # ListTable
         with ui.element("div").classes("showcase-section"):
-            await demo_listtable()
+            await demo_listtable(category_store)
 
         # SelectionTable
         with ui.element("div").classes("showcase-section"):
-            await demo_selectiontable()
+            await demo_selectiontable(product_store)
 
         # Dialog
         with ui.element("div").classes("showcase-section"):
@@ -357,11 +386,11 @@ async def main():
 
         # Tabs
         with ui.element("div").classes("showcase-section"):
-            await demo_tabs()
+            await demo_tabs(product_store, category_store)
 
         # ViewStack
         with ui.element("div").classes("showcase-section"):
-            await demo_viewstack()
+            await demo_viewstack(category_store, product_store)
 
         ui.separator()
         ui.markdown("""
@@ -375,8 +404,6 @@ async def main():
         | **ViewStack** | Master-detail navigation |
         | **Dialog** | Modal overlay |
         | **Tabs** | Tab-based navigation |
-
-        See the other examples in this directory for more detailed demonstrations.
         """)
 
 

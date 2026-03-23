@@ -4,21 +4,17 @@ Reactive Data(base) Management for NiceGUI
 
 ## Overview
 
-This project is based on two main ideas:
+The objective of this project is to make it easier to build beautiful and responsive &lsquo;CRUD&rsquo; database applications with NiceGUI. 
 
-1. The importance of **reactivity to database applications**: data mutations should be reflected in UI components, *without* the user having to refresh a page. Imagine a typical table showing items, counts, stock being updated in near real-time as data is changing.<br>
+It is based on two main ideas:
 
-2. NiceGUI architecture allows us to build composite **&ldquo;macro-level&rdquo; UI components** such as tables, dialogs, cards etc. with elegant, simple HTML elements and move the &lsquo;composite&rsquo; behavior to the server &mdash; and to Python. We can sidestep the Quasar garbage produced by ui.table, ui.dialog, etc.
+1. The importance of **reactivity to database applications**: data mutations should be reflected in UI components, *without* the user having to refresh a page. Imagine a typical table showing items, counts, stock being updated in near real-time as data is changing.<br><br>
+This is implemented in the **Store layer**, which performs coarse-grained state management for persistent &lsquo;back-end&rsquo; data, notifying registered observers of any changes. Stores also map non-normalized business objects to the ORM/database layer, performing validation, (de)hydration and providing computed fields. While the store performs a type of state management, it is separate from (and possibly complementary to) the typical transient &lsquo;front-end&rsquo; user state - as managed by `ui.state` or `reaktiv`.<br><br> 
+Below the Store layer, the async Tortoise ORM adds a thin **Model layer** that describes our data - and drives our database.
 
-The first idea is implemented in the **Store layer**, which performs coarse-grained state management for persistent &lsquo;back-end&rsquo; data, notifying registered observers of changes. It also maps non-normalized business objects to the ORM/database layer, performing validation, (de)hydration and provides computed fields.
-
-We use Tortoise as our async ORM to drive the database, adding a thin **Model layer** that describes our data.
-
-The second idea is implemented in a handful of reactive **components** — tables, dialogs, forms that act as observers of the Store layer. Their `build` method is called to refresh, whenever data relevant to that component changes. For those wanting to create other 
-
-
-- **Model Helpers** — Validation, field specs, and extended Tortoise ORM base class
-- **Multi-tenancy** — Built-in tenant scoping for SaaS applications
+2. The second idea: NiceGUI architecture allows us to build composite **&ldquo;macro-level&rdquo; UI components** such as tables, dialogs, cards etc. using just elegant, simple HTML elements and move the &lsquo;composite&rsquo; behavior to the server &mdash; and to Python. This way, we can sidestep the Quasar garbage produced by ui.table, ui.dialog, etc.
+<br><br>
+This is implemented here in a handful of reactive **components** on top of (in fact: observers of) the Store layer. Their `build` member is called to refresh whenever data relevant to that component changes. The refresh typically recreates a large part of (or the entire) component - relying on local user state to reproduce it correctly.
 
 ## Installation
 
@@ -29,27 +25,42 @@ pip install nicegui-rdm
 ## Quick Start
 
 ```python
-from nicegui import ui
-from ng_rdm import DictStore, FieldSpec, Validator
+from nicegui import app, ui
+from ng_rdm import TortoiseStore, init_db, store_registry, FieldSpec, Validator
+from ng_rdm.models import QModel
 from ng_rdm.components import rdm_init, DataTable, Column, TableConfig
+from tortoise import fields
 
-# Define validation
-name_validator = Validator(
-    message="Name cannot be empty",
-    validator=lambda v, _: bool(v.strip()) if v else False
-)
+# Define your model
+class Task(QModel):
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=100)
+    
+    field_specs = {
+        'name': FieldSpec(validators=[
+            Validator("Name cannot be empty", lambda v, _: bool(v.strip()) if v else False)
+        ])
+    }
 
-# Create a store with field specs
-store = DictStore({'name': FieldSpec(validators=[name_validator])})
+# Initialize database at module level
+init_db(app, 'sqlite://tasks.db', modules={'models': [__name__]}, generate_schemas=True)
+
+@app.on_startup
+async def startup():
+    # Register stores as singletons at server startup
+    # This ensures all browser sessions share the same store instance
+    store_registry.register_store("default", "task", TortoiseStore(Task))
 
 @ui.page('/')
 async def main():
     rdm_init()  # Load styles and icons
     
+    # Get singleton store from registry (same instance for all sessions)
+    store = store_registry.get_store("default", "task")
+    
     # Configure table
     config = TableConfig(
-        table_columns=[Column('name', 'Name')],
-        dialog_columns=[Column('name', 'Name', required=True)],
+        columns=[Column('name', 'Name')],
     )
     
     # Create reactive table - auto-refreshes on data changes
@@ -58,6 +69,8 @@ async def main():
 
 ui.run()
 ```
+
+See the `examples` directory for further inspiration, especially `components/showcase.py`.
 
 ## Architecture
 
@@ -119,6 +132,8 @@ flowchart BT
 
 ## Store Types
 
+Note that for reactivity to work, stores have to be instantiated as shared singletons per *store type* and (if you use a `MultitenantTortoiseStore`) per *tenant*. Only in that way can we make sure that mutations made by one store observer get forwarded to the other observes (within that tenant). See `ng_rdm.store.store_registry` for a generic helper.
+
 ### DictStore
 
 In-memory store for prototyping and testing:
@@ -143,40 +158,48 @@ await store.delete_item({'id': 1})
 Database-backed store with Tortoise ORM:
 
 ```python
-from ng_rdm import TortoiseStore, init_db
+from nicegui import app
+from ng_rdm import TortoiseStore, init_db, store_registry
+from ng_rdm.models import QModel
 from tortoise import fields
-from tortoise.models import Model
 
-class Person(Model):
+class Person(QModel):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=100)
     email = fields.CharField(max_length=100, null=True)
 
 # Initialize database
-await init_db('sqlite://:memory:', modules={'models': ['__main__']})
+init_db(app, 'sqlite://app.db', modules={'models': [__name__]}, generate_schemas=True)
 
-# Create store
-store = TortoiseStore(model=Person)
+@app.on_startup
+async def startup():
+    # Register as singleton for cross-session reactivity
+    store_registry.register_store("default", "person", TortoiseStore(Person))
+
+# In your page function, retrieve from registry:
+# store = store_registry.get_store("default", "person")
 ```
 
 ### MultitenantTortoiseStore
 
-Automatic tenant scoping for SaaS:
+Practically any app I make nowadays is multi-tenant SaaS, so if you need it we have automatic tenant scoping:
 
 ```python
-from ng_rdm import MultitenantTortoiseStore
+from ng_rdm import MultitenantTortoiseStore, store_registry
+from ng_rdm.store.multitenancy import set_valid_tenants
 
-store = MultitenantTortoiseStore(
-    model=Person,
-    tenant_field='org_id'
-)
+# Set valid tenants at startup
+set_valid_tenants(["tenant_a", "tenant_b"])
 
-# Set valid tenants for the current user
-store.set_valid_tenants([1, 2, 3])
-store.set_tenant(1)
+@app.on_startup
+async def startup():
+    # Register one store per tenant for reactivity within each tenant
+    for tenant in ["tenant_a", "tenant_b"]:
+        store_registry.register_store(tenant, "person", MultitenantTortoiseStore(Person, tenant=tenant))
 
-# All queries now automatically filter by org_id=1
-items = await store.read_items()
+# In your page function, get the store for the current tenant:
+# store = store_registry.get_store(current_tenant, "person")
+# All queries automatically filter by the tenant field
 ```
 
 ## Components
