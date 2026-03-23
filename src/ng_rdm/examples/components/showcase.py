@@ -26,7 +26,7 @@ from nicegui import app, ui
 from ng_rdm.components import (
     rdm_init, Column, TableConfig,
     DataTable, ListTable, SelectionTable,
-    ViewStack, Dialog, Tabs,
+    ViewStack, Dialog, Tabs, Button,
 )
 from ng_rdm.store import TortoiseStore, init_db, close_db
 from ng_rdm.models import QModel, FieldSpec, Validator
@@ -206,8 +206,8 @@ async def demo_selectiontable():
     await table.build()
 
     with ui.row():
-        ui.button("Select All", on_click=table.select_all)
-        ui.button("Clear", on_click=table.clear_selection)
+        Button("Select All", on_click=table.select_all)
+        Button("Clear", on_click=table.clear_selection, variant="secondary")
 
 
 async def demo_viewstack():
@@ -276,10 +276,10 @@ def demo_dialog():
         ui.label("Confirm Action").classes("text-h6")
         ui.label("Are you sure you want to proceed?")
         with dlg.actions():
-            ui.button("Cancel", on_click=dlg.close).props("flat")
-            ui.button("Confirm", on_click=dlg.close, color="primary")
+            Button("Cancel", on_click=dlg.close, variant="secondary")
+            Button("Confirm", on_click=dlg.close)
 
-    ui.button("Open Dialog", on_click=dlg.open)
+    Button("Open Dialog", on_click=dlg.open)
 
 
 async def demo_tabs():

@@ -8,7 +8,7 @@ RDM helpers with validation, and notification utilities.
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Optional
 
-from nicegui import ui
+from nicegui import html, ui
 
 from .i18n import _
 from .protocol import RdmDataSource
@@ -224,7 +224,7 @@ class RdmComponent(ClientComponent):
 
 
 async def confirm_dialog(prompts: dict = {}, item: dict = {}):
-    """Show a confirmation dialog.
+    """Show a confirmation dialog with RDM styling.
 
     Args:
         prompts: Dict with keys 'question', 'explanation', 'yes_button', 'no_button'
@@ -234,21 +234,32 @@ async def confirm_dialog(prompts: dict = {}, item: dict = {}):
     Returns:
         True if user confirmed, False if cancelled
     """
-    dialog = ui.dialog().props('persistent').classes('confirm-dialog')
+    dialog = ui.dialog().props('persistent')
 
     question = prompts.get('question', _('Are you sure?')).format(**item)
     explanation = prompts.get('explanation', '').format(**item)
     yes_button = prompts.get('yes_button', _('Yes')).format(**item)
     no_button = prompts.get('no_button', _('No')).format(**item)
 
-    with dialog as d, ui.card().classes('delete-card'):
-        ui.label(question).classes('question')
-        ui.label(explanation).classes('explanation')
-        with ui.row().classes('confirm-button-row'):
-            ui.button(yes_button).on("click", lambda: d.submit(True)) \
-                .classes("confirm-button confirm-button-yes btn-confirm")
-            ui.button(no_button).on("click", lambda: d.submit(False)) \
-                .classes("confirm-button confirm-button-no btn-cancel")
+    with dialog as d:
+        with html.div().classes("rdm-dialog-backdrop rdm-component"):
+            with html.div().classes("rdm-dialog").style("max-width: 400px"):
+                # Body with question and explanation
+                with html.div().classes("rdm-dialog-body"):
+                    html.div(question).classes("rdm-confirm-question")
+                    if explanation:
+                        html.div(explanation).classes("rdm-confirm-explanation")
+
+                # Footer with action buttons
+                with html.div().classes("rdm-dialog-footer"):
+                    with html.button().classes("rdm-btn rdm-btn-danger").on(
+                        "click", lambda: d.submit(True)
+                    ):
+                        html.span(yes_button)
+                    with html.button().classes("rdm-btn rdm-btn-secondary").on(
+                        "click", lambda: d.submit(False)
+                    ):
+                        html.span(no_button)
 
     result = await dialog
     return result

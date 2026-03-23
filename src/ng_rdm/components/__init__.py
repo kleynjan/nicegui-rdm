@@ -17,7 +17,7 @@ from pathlib import Path
 from nicegui import ui
 
 from .base import ClientComponent, RdmComponent, Column, TableConfig, RowAction, confirm_dialog
-from .i18n import _, none_as_text, set_language
+from .i18n import _, none_as_text, set_language, set_translations
 from .protocol import RdmDataSource
 from ..store import StoreEvent
 
@@ -32,20 +32,25 @@ from .detail import DetailCard
 from .edit_card import EditCard
 from .view_stack import ViewStack
 from .wizard import WizardStep, StepWizard
+from .button import Button, IconButton
 
 
-def rdm_init(language: str | None = None):
-    """Initialize RDM module - styles and optional language.
+def rdm_init(
+    custom_translations: dict[str, dict[str, str]] | None = None,
+    extra_css: str | None = None,
+):
+    """Initialize RDM module - styles and optional customizations.
 
     Loads Bootstrap icons CDN and ng_rdm.css stylesheet.
     Must be called once per page render.
 
     Args:
-        language: Optional language code (e.g., 'nl', 'en').
-                  If provided, sets the i18n language for RDM components.
+        custom_translations: Optional dict to update/extend built-in translations.
+                             Structure: {'lang_code': {'key': 'translation', ...}, ...}
+        extra_css: Optional CSS string to add after ng_rdm.css.
     """
-    if language:
-        set_language(language)
+    if custom_translations:
+        set_translations(custom_translations)
 
     # Bootstrap icons CDN
     ui.add_head_html(
@@ -55,6 +60,10 @@ def rdm_init(language: str | None = None):
     # Load ng_rdm.css (design system)
     css_path = Path(__file__).parent / 'ng_rdm.css'
     ui.add_css(css_path)
+
+    # Extra CSS (after native styles)
+    if extra_css:
+        ui.add_css(extra_css)
 
 
 __all__ = [
@@ -83,8 +92,11 @@ __all__ = [
     'ViewStack',
     'WizardStep',
     'StepWizard',
+    'Button',
+    'IconButton',
 
     # Page initialization
     'rdm_init',
     'set_language',
+    'set_translations',
 ]
