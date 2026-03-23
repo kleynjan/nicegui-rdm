@@ -1,18 +1,18 @@
 # pyright: reportUnusedImport=false
 """
-Shared pytest fixtures for ng_loba tests.
+Shared pytest fixtures for ng_store tests.
 """
 import pytest
 from tortoise import Tortoise
 
-from ng_loba.store import DictStore, StoreRegistry
-from ng_loba.models import FieldSpec, Validator
+from ng_store.store import DictStore, StoreRegistry
+from ng_store.models import FieldSpec, Validator
 
 
 # --- Test models for ORM tests ---
 
 from tortoise import fields
-from ng_loba.models import QModel
+from ng_store.models import QModel
 
 
 class Author(QModel):

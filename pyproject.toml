@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ng_loba"
+name = "ng-store"
 version = "0.1.0"
-description = "Line of Business Application components for NiceGUI"
+description = "Reactive state management for NiceGUI with Tortoise ORM"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

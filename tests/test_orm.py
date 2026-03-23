@@ -1,9 +1,10 @@
 """
 Tests for TortoiseStore: ORM CRUD, hydration/dehydration, join fields.
 """
+from ng_store.models import FieldSpec
 from datetime import date, datetime
 
-from ng_loba.store import TortoiseStore
+from ng_store.store import TortoiseStore
 from tests.conftest import Author, Book
 
 
@@ -275,4 +276,3 @@ async def test_qmodel_values_with_rename():
 
 
 # import needed for type reference in test_auto_required_validators
-from ng_loba.models import FieldSpec

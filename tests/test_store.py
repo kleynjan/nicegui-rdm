@@ -2,8 +2,8 @@
 Tests for DictStore: CRUD operations, validation, observers, sorting, derived fields.
 """
 import pytest
-from ng_loba.store import DictStore, StoreEvent, StoreRegistry
-from ng_loba.models import FieldSpec, Validator
+from ng_store.store import DictStore, StoreEvent, StoreRegistry
+from ng_store.models import FieldSpec, Validator
 
 
 # --- Basic CRUD ---
