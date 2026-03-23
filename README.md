@@ -1,13 +1,22 @@
 # nicegui-rdm
 
-Reactive Database Management for NiceGUI applications with Tortoise ORM.
+Reactive Data(base) Management for NiceGUI
 
 ## Overview
 
-nicegui-rdm provides a reactive state management layer that bridges Tortoise ORM and NiceGUI:
+This project is based on two main ideas:
 
-- **Store Layer** — Observer pattern for database-backed state with automatic UI refresh
-- **Reactive Components** — Tables, dialogs, forms that auto-update on data changes
+1. The importance of **reactivity to database applications**: data mutations should be reflected in UI components, *without* the user having to refresh a page. Imagine a typical table showing items, counts, stock being updated in near real-time as data is changing.<br>
+
+2. NiceGUI architecture allows us to build composite **&ldquo;macro-level&rdquo; UI components** such as tables, dialogs, cards etc. with elegant, simple HTML elements and move the &lsquo;composite&rsquo; behavior to the server &mdash; and to Python. We can sidestep the Quasar garbage produced by ui.table, ui.dialog, etc.
+
+The first idea is implemented in the **Store layer**, which performs coarse-grained state management for persistent &lsquo;back-end&rsquo; data, notifying registered observers of changes. It also maps non-normalized business objects to the ORM/database layer, performing validation, (de)hydration and provides computed fields.
+
+We use Tortoise as our async ORM to drive the database, adding a thin **Model layer** that describes our data.
+
+The second idea is implemented in a handful of reactive **components** — tables, dialogs, forms that act as observers of the Store layer. Their `build` method is called to refresh, whenever data relevant to that component changes. For those wanting to create other 
+
+
 - **Model Helpers** — Validation, field specs, and extended Tortoise ORM base class
 - **Multi-tenancy** — Built-in tenant scoping for SaaS applications
 
