@@ -1,7 +1,7 @@
 """
 Dialog - Positioned card overlay, alternative to ui.dialog.
 
-Uses nc-* CSS classes for consistent styling.
+Uses rdm-* CSS classes for consistent styling.
 Positions the card at a fixed location (default: top center),
 which can feel more natural in master/detail layouts.
 
@@ -17,13 +17,13 @@ from contextlib import contextmanager
 
 from nicegui import html, ui
 
-from .base import CrudComponent
+from .base import ClientComponent
 
 
-class Dialog(CrudComponent):
+class Dialog(ClientComponent):
     """Positioned card overlay with backdrop.
 
-    Uses native HTML elements with nc-* CSS classes.
+    Uses native HTML elements with rdm-* CSS classes.
     Unlike ui.dialog which centers content, this positions the card
     at a fixed location for a more app-like feel.
     """
@@ -41,20 +41,20 @@ class Dialog(CrudComponent):
     def __enter__(self):
         """Enter context manager - create dialog structure."""
         # Backdrop (click to close) - contains the dialog
-        self._backdrop_div = html.div().classes('nc-dialog-backdrop nc-component')
+        self._backdrop_div = html.div().classes('rdm-dialog-backdrop rdm-component')
         self._backdrop_div.on('click', self._on_backdrop_click)
         self._backdrop_div.style('display: none')
         self._backdrop_div.__enter__()
 
         # Dialog container INSIDE the backdrop
-        size_class = "nc-dialog-lg" if self.large else ""
-        self._dialog_div = html.div().classes(f'nc-dialog {size_class} {self.dialog_class}'.strip())
+        size_class = "rdm-dialog-lg" if self.large else ""
+        self._dialog_div = html.div().classes(f'rdm-dialog {size_class} {self.dialog_class}'.strip())
         # Prevent clicks on dialog from closing it (stop propagation via JS)
         self._dialog_div.on('click', lambda _: None, ['stop'])
         self._dialog_div.__enter__()
 
         # Body section for content
-        self._body_div = html.div().classes('nc-dialog-body')
+        self._body_div = html.div().classes('rdm-dialog-body')
         self._body_div.__enter__()
 
         # Keyboard handler for ESC - created once, toggled active on open/close
@@ -88,7 +88,7 @@ class Dialog(CrudComponent):
             raise RuntimeError("actions() must be called within Dialog context")
 
         with self._dialog_div:
-            footer = html.div().classes('nc-dialog-footer')
+            footer = html.div().classes('rdm-dialog-footer')
             with footer:
                 yield
 
@@ -107,7 +107,3 @@ class Dialog(CrudComponent):
             self._is_open = False
             if self._keyboard:
                 self._keyboard.active = False
-
-
-# Backwards compatibility alias
-CrudDialog = Dialog

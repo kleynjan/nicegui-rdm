@@ -2,7 +2,7 @@
 Base component for store-connected UI elements.
 
 Provides observer pattern for automatic refresh on store changes,
-CRUD helpers with validation, and notification utilities.
+RDM helpers with validation, and notification utilities.
 """
 
 from dataclasses import dataclass, field
@@ -11,12 +11,12 @@ from typing import Any, Awaitable, Callable, Optional
 from nicegui import ui
 
 from .i18n import _
-from .protocol import CrudDataSource
+from .protocol import RdmDataSource
 from ..store import StoreEvent
 
 
-class CrudComponent:
-    """Base for ng_crud UI components needing client context capture.
+class ClientComponent:
+    """Base for ng_rdm UI components needing client context capture.
 
     Captures ui.context.client at construction for safe notifications
     in async callbacks that run after UI may have been rebuilt.
@@ -139,7 +139,7 @@ class TableConfig:
         return None
 
 
-class StoreComponent(CrudComponent):
+class RdmComponent(ClientComponent):
     """Base class for UI components connected to a data source.
 
     Provides:
@@ -148,7 +148,7 @@ class StoreComponent(CrudComponent):
     - State management via shared state dict
     """
 
-    def __init__(self, state: dict, data_source: CrudDataSource):
+    def __init__(self, state: dict, data_source: RdmDataSource):
         super().__init__()
         self.data_source = data_source
         self.state = state

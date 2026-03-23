@@ -1,5 +1,5 @@
 """
-ng_store - Reactive state management for NiceGUI with Tortoise ORM
+ng_rdm - Reactive state management for NiceGUI with Tortoise ORM
 
 Provides:
 - Store layer: DictStore, TortoiseStore, MultitenantTortoiseStore

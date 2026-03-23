@@ -2,8 +2,8 @@
 Tests for MultitenantTortoiseStore: tenant scoping and isolation.
 """
 import pytest
-from ng_store.store import MultitenantTortoiseStore, TenancyError
-from ng_store.store.multitenancy import set_valid_tenants, valid_tenants
+from ng_rdm.store import MultitenantTortoiseStore, TenancyError
+from ng_rdm.store.multitenancy import set_valid_tenants, valid_tenants
 from tests.conftest import TenantItem
 
 
@@ -99,7 +99,7 @@ async def test_store_without_tenant():
 
 async def test_set_valid_tenants_deduplicates():
     """set_valid_tenants deduplicates entries"""
-    import ng_store.store.multitenancy as mt
+    import ng_rdm.store.multitenancy as mt
     mt.valid_tenants.clear()
     set_valid_tenants(["a", "b", "a"])
     assert len(mt.valid_tenants) == 2

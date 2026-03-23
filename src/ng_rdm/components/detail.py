@@ -9,12 +9,12 @@ from typing import Awaitable, Callable
 from nicegui import html, ui
 
 from .i18n import _
-from .base import StoreComponent, TableConfig, confirm_dialog
-from .protocol import CrudDataSource
+from .base import RdmComponent, TableConfig, confirm_dialog
+from .protocol import RdmDataSource
 from ..store import StoreEvent
 
 
-class DetailCard(StoreComponent):
+class DetailCard(RdmComponent):
     """Detail card showing a selected item with optional action buttons.
 
     Uses a render callback for flexible layout — the callback receives
@@ -24,7 +24,7 @@ class DetailCard(StoreComponent):
     def __init__(
         self,
         state: dict,
-        data_source: CrudDataSource,
+        data_source: RdmDataSource,
         config: TableConfig,
         state_key: str = "selected_item",
         render: Callable[[dict], Awaitable[None]] | None = None,
@@ -92,20 +92,20 @@ class DetailCard(StoreComponent):
         if self.selected_item is None:
             return
 
-        with html.div().classes("nc-detail nc-component"):
+        with html.div().classes("rdm-detail rdm-component"):
             if self.render_callback:
                 await self.render_callback(self.selected_item)
 
             if self.show_edit or self.show_delete:
-                with html.div().classes("nc-detail-actions"):
+                with html.div().classes("rdm-detail-actions"):
                     if self.show_edit and self.on_edit:
                         item = self.selected_item
-                        with html.button().classes("nc-btn nc-btn-primary").on(
+                        with html.button().classes("rdm-btn rdm-btn-primary").on(
                             "click", lambda _, i=item: self.on_edit(i)  # type: ignore
                         ):
                             html.span(_(("Edit")))
                     if self.show_delete:
-                        with html.button().classes("nc-btn nc-btn-danger").on(
+                        with html.button().classes("rdm-btn rdm-btn-danger").on(
                             "click", self._handle_delete
                         ):
                             html.span(_("Delete"))

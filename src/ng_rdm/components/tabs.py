@@ -1,7 +1,7 @@
 """
 Tabs - div-based tab switcher.
 
-Uses nc-* CSS classes for consistent styling.
+Uses rdm-* CSS classes for consistent styling.
 """
 from typing import Awaitable, Callable
 
@@ -33,18 +33,14 @@ class Tabs:
 
     @ui.refreshable
     async def build(self):
-        with html.div().classes("nc-tabs nc-component"):
+        with html.div().classes("rdm-tabs rdm-component"):
             for key, label, _ in self.tabs:
-                cls = "nc-tab nc-active" if key == self.active else "nc-tab"
+                cls = "rdm-tab rdm-active" if key == self.active else "rdm-tab"
                 with html.button().classes(cls).on("click", lambda _, k=key: self._select(k)):
                     html.span(label)
 
         for key, _, render in self.tabs:
             if key == self.active:
-                with html.div().classes("nc-tab-panel"):
+                with html.div().classes("rdm-tab-panel"):
                     await render()
                 break
-
-
-# Backwards compatibility alias
-CrudTabs = Tabs

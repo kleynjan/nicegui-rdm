@@ -22,7 +22,7 @@ from typing import Callable, Awaitable, Any
 
 from nicegui import ui
 
-from .dialog import CrudDialog
+from .dialog import Dialog
 from .i18n import _
 
 
@@ -66,7 +66,7 @@ class StepWizard:
 
     _state: dict = field(default_factory=dict, init=False)
     _current_step: int = field(default=0, init=False)
-    _dlg: CrudDialog | None = field(default=None, init=False)
+    _dlg: Dialog | None = field(default=None, init=False)
     _content: Any = field(default=None, init=False)
 
     @property
@@ -125,7 +125,7 @@ class StepWizard:
         """Show the wizard dialog."""
         self._current_step = 0
 
-        with CrudDialog() as self._dlg:
+        with Dialog() as self._dlg:
             @ui.refreshable
             async def _content():
                 step = self.current_step

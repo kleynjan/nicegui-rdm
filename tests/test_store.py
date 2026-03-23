@@ -2,8 +2,8 @@
 Tests for DictStore: CRUD operations, validation, observers, sorting, derived fields.
 """
 import pytest
-from ng_store.store import DictStore, StoreEvent, StoreRegistry
-from ng_store.models import FieldSpec, Validator
+from ng_rdm.store import DictStore, StoreEvent, StoreRegistry
+from ng_rdm.models import FieldSpec, Validator
 
 
 # --- Basic CRUD ---
@@ -258,7 +258,7 @@ def test_registry_register_and_get(registry):
     assert retrieved is store
 
 
-def test_registry_missing_store(registry):
+def test_registry_missing_rdm(registry):
     """KeyError when store not found"""
     with pytest.raises(KeyError, match="No store"):
         registry.get_store("tenant_a", "nonexistent")

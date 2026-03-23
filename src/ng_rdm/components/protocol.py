@@ -1,18 +1,18 @@
 """
-Protocol defining the interface needed by CRUD components.
+Protocol defining the interface needed by RDM components.
 
-This allows CRUD components to work with any data source that implements
+This allows RDM components to work with any data source that implements
 the required methods, not just Store instances.
 """
 
 from typing import Protocol, Any, Callable
 
 
-class CrudDataSource(Protocol):
-    """Protocol defining the interface needed by CRUD components.
+class RdmDataSource(Protocol):
+    """Protocol defining the interface needed by RDM components.
 
     Any class implementing these methods can be used as a data source
-    for CRUD components, including Store, REST API clients, mock data sources, etc.
+    for RDM components, including Store, REST API clients, mock data sources, etc.
 
     The protocol uses structural subtyping - classes don't need to explicitly
     inherit from this protocol, they just need to implement the methods.
@@ -50,19 +50,19 @@ class CrudDataSource(Protocol):
         ...
 
     # Observer Pattern (Required - for automatic UI refresh)
-    # Note: This is now required for CRUD tables to work correctly.
-    # CRUD tables rely on data source notifications to refresh automatically
+    # Note: This is now required for RDM tables to work correctly.
+    # RDM tables rely on data source notifications to refresh automatically
     # after create/update/delete operations.
     def add_observer(self, observer: Callable[[Any], Any]) -> None:
-        """Add an observer to receive CRUD events.
+        """Add an observer to receive RDM events.
 
-        This method is required for CRUD components to function correctly.
-        CRUD components register as observers and automatically refresh when
+        This method is required for RDM components to function correctly.
+        RDM components register as observers and automatically refresh when
         data changes occur (create/update/delete operations).
 
         Args:
             observer: Async or sync function that receives event notifications.
                      Called after each successful CRUD operation.
-                     Event is StoreEvent (from ng_store.store).
+                     Event is StoreEvent (from ng_rdm.store).
         """
         ...

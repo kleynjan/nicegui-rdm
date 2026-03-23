@@ -9,19 +9,19 @@ from typing import Any, Awaitable, Callable
 from nicegui import html, ui
 
 from .i18n import _
-from .base import Column, CrudComponent
+from .base import ClientComponent, Column
 from .fields import build_form_field
-from .protocol import CrudDataSource
+from .protocol import RdmDataSource
 
 
-class EditDialog(CrudComponent):
+class EditDialog(ClientComponent):
     """Standalone modal dialog for add/edit operations.
 
     Configured via Column definitions for form fields.
-    Saves via CrudDataSource or custom callbacks.
+    Saves via RdmDataSource or custom callbacks.
 
     Args:
-        data_source: CrudDataSource for validation and save operations
+        data_source: RdmDataSource for validation and save operations
         columns: List of Column definitions for form fields
         dialog_class: Optional CSS class for dialog styling
         title_add: Dialog title for add mode (default: "Add")
@@ -32,7 +32,7 @@ class EditDialog(CrudComponent):
 
     def __init__(
         self,
-        data_source: CrudDataSource,
+        data_source: RdmDataSource,
         columns: list[Column],
         dialog_class: str | None = None,
         title_add: str | None = None,
@@ -85,26 +85,26 @@ class EditDialog(CrudComponent):
         title = self.title_edit if self._is_edit else self.title_add
 
         with ui.dialog() as dlg:
-            with html.div().classes("nc-dialog-backdrop"):
-                with html.div().classes(f"nc-dialog {self.dialog_class or ''}"):
+            with html.div().classes("rdm-dialog-backdrop"):
+                with html.div().classes(f"rdm-dialog {self.dialog_class or ''}"):
                     # Header
-                    with html.div().classes("nc-dialog-header"):
-                        ui.label(title).classes("nc-dialog-title")
-                        with html.button().classes("nc-dialog-close").on("click", self._handle_cancel):
+                    with html.div().classes("rdm-dialog-header"):
+                        ui.label(title).classes("rdm-dialog-title")
+                        with html.button().classes("rdm-dialog-close").on("click", self._handle_cancel):
                             html.i().classes("bi bi-x-lg")
 
                     # Body - form fields
-                    with html.div().classes("nc-dialog-body"):
+                    with html.div().classes("rdm-dialog-body"):
                         for col in self.columns:
                             build_form_field(col, self.state)
 
                     # Footer - action buttons
-                    with html.div().classes("nc-dialog-footer"):
-                        with html.button().classes("nc-btn nc-btn-primary").on(
+                    with html.div().classes("rdm-dialog-footer"):
+                        with html.button().classes("rdm-btn rdm-btn-primary").on(
                             "click", self._handle_save
                         ):
                             html.span(_("Save") if self._is_edit else _("Add"))
-                        with html.button().classes("nc-btn nc-btn-secondary").on(
+                        with html.button().classes("rdm-btn rdm-btn-secondary").on(
                             "click", self._handle_cancel
                         ):
                             html.span(_("Cancel"))

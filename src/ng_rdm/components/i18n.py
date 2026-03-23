@@ -1,5 +1,5 @@
 """
-Minimal i18n for ng_crud components.
+Minimal i18n for ng_rdm components.
 
 Self-contained translations for generic CRUD UI strings.
 Separate from app-level services/i18n.py to keep this package portable.

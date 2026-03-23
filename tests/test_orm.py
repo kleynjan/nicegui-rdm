@@ -1,10 +1,10 @@
 """
 Tests for TortoiseStore: ORM CRUD, hydration/dehydration, join fields.
 """
-from ng_store.models import FieldSpec
+from ng_rdm.models import FieldSpec
 from datetime import date, datetime
 
-from ng_store.store import TortoiseStore
+from ng_rdm.store import TortoiseStore
 from tests.conftest import Author, Book
 
 

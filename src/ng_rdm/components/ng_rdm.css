@@ -1,0 +1,900 @@
+/* =============================================================================
+   nicecrud.css - Design System for NiceGUI CRUD Components
+   
+   Inspired by Element UI and Bootstrap - clean, professional, light with subtle shadows.
+   Uses native HTML elements where possible.
+   ============================================================================= */
+
+/* =============================================================================
+   CSS Custom Properties (Design Tokens)
+   ============================================================================= */
+
+:root {
+    /* Primary Colors - matching edupersona blue */
+    --rdm-primary: #3b82f6;
+    --rdm-primary-hover: #60a5fa;
+    --rdm-primary-active: #2563eb;
+    --rdm-primary-light: #dbeafe;
+    
+    /* Semantic Colors */
+    --rdm-success: #67c23a;
+    --rdm-success-light: #f0f9eb;
+    --rdm-warning: #e6a23c;
+    --rdm-warning-light: #fdf6ec;
+    --rdm-danger: #f56c6c;
+    --rdm-danger-light: #fef0f0;
+    --rdm-info: #909399;
+    --rdm-info-light: #f4f4f5;
+    
+    /* Text Colors */
+    --rdm-text: #303133;
+    --rdm-text-regular: #606266;
+    --rdm-text-secondary: #909399;
+    --rdm-text-placeholder: #c0c4cc;
+    --rdm-text-white: #ffffff;
+    
+    /* Border Colors */
+    --rdm-border: #dcdfe6;
+    --rdm-border-light: #e4e7ed;
+    --rdm-border-lighter: #ebeef5;
+    --rdm-border-extra-light: #f2f6fc;
+    
+    /* Background Colors */
+    --rdm-bg: #ffffff;
+    --rdm-bg-page: #f5f7fa;
+    --rdm-bg-hover: #f5f7fa;
+    --rdm-bg-selected: #ecf5ff;
+    
+    /* Typography */
+    --rdm-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --rdm-font-size-xs: 12px;
+    --rdm-font-size-sm: 14px;
+    --rdm-font-size: 18px;
+    --rdm-font-size-lg: 20px;
+    --rdm-font-size-xl: 24px;
+    --rdm-font-weight-normal: 400;
+    --rdm-font-weight-medium: 500;
+    --rdm-font-weight-bold: 600;
+    --rdm-line-height: 1.5;
+    
+    /* Spacing */
+    --rdm-spacing-xs: 4px;
+    --rdm-spacing-sm: 8px;
+    --rdm-spacing-md: 12px;
+    --rdm-spacing-lg: 16px;
+    --rdm-spacing-xl: 24px;
+    
+    /* Border Radius */
+    --rdm-radius-sm: 2px;
+    --rdm-radius: 4px;
+    --rdm-radius-lg: 6px;
+    --rdm-radius-xl: 8px;
+    
+    /* Shadows */
+    --rdm-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+    --rdm-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    --rdm-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
+    
+    /* Transitions */
+    --rdm-transition: all 0.2s ease;
+    --rdm-transition-fast: all 0.1s ease;
+    
+    /* Component Sizes */
+    --rdm-row-height: 52px;
+    --rdm-row-height-sm: 44px;
+    --rdm-input-height: 40px;
+    --rdm-btn-height: 40px;
+    --rdm-btn-height-sm: 32px;
+}
+
+/* =============================================================================
+   Base Reset & Typography
+   ============================================================================= */
+
+.rdm-component {
+    font-family: var(--rdm-font-family);
+    font-size: var(--rdm-font-size);
+    color: var(--rdm-text);
+    line-height: var(--rdm-line-height);
+    box-sizing: border-box;
+}
+
+.rdm-component *,
+.rdm-component *::before,
+.rdm-component *::after {
+    box-sizing: inherit;
+}
+
+/* =============================================================================
+   Buttons
+   ============================================================================= */
+
+.rdm-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--rdm-spacing-xs);
+    height: var(--rdm-btn-height);
+    padding: 0 var(--rdm-spacing-lg);
+    font-family: var(--rdm-font-family);
+    font-size: var(--rdm-font-size);
+    font-weight: var(--rdm-font-weight-medium);
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: var(--rdm-radius);
+    transition: var(--rdm-transition);
+    outline: none;
+}
+
+.rdm-btn:focus-visible {
+    box-shadow: 0 0 0 2px var(--rdm-primary-light);
+}
+
+.rdm-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* Primary Button */
+.rdm-btn-primary {
+    background-color: var(--rdm-primary);
+    border-color: var(--rdm-primary);
+    color: var(--rdm-text-white);
+}
+
+.rdm-btn-primary:hover:not(:disabled) {
+    background-color: var(--rdm-primary-hover);
+    border-color: var(--rdm-primary-hover);
+}
+
+.rdm-btn-primary:active:not(:disabled) {
+    background-color: var(--rdm-primary-active);
+    border-color: var(--rdm-primary-active);
+}
+
+/* Secondary Button (Default) */
+.rdm-btn-secondary,
+.rdm-btn-default {
+    background-color: var(--rdm-bg);
+    border-color: var(--rdm-border);
+    color: var(--rdm-text-regular);
+}
+
+.rdm-btn-secondary:hover:not(:disabled),
+.rdm-btn-default:hover:not(:disabled) {
+    background-color: var(--rdm-bg);
+    border-color: var(--rdm-primary);
+    color: var(--rdm-primary);
+}
+
+.rdm-btn-secondary:active:not(:disabled),
+.rdm-btn-default:active:not(:disabled) {
+    border-color: var(--rdm-primary-active);
+    color: var(--rdm-primary-active);
+}
+
+/* Success Button */
+.rdm-btn-success {
+    background-color: var(--rdm-success);
+    border-color: var(--rdm-success);
+    color: var(--rdm-text-white);
+}
+
+.rdm-btn-success:hover:not(:disabled) {
+    background-color: #85ce61;
+    border-color: #85ce61;
+}
+
+/* Danger Button */
+.rdm-btn-danger {
+    background-color: var(--rdm-danger);
+    border-color: var(--rdm-danger);
+    color: var(--rdm-text-white);
+}
+
+.rdm-btn-danger:hover:not(:disabled) {
+    background-color: #f78989;
+    border-color: #f78989;
+}
+
+/* Warning Button */
+.rdm-btn-warning {
+    background-color: var(--rdm-warning);
+    border-color: var(--rdm-warning);
+    color: var(--rdm-text-white);
+}
+
+.rdm-btn-warning:hover:not(:disabled) {
+    background-color: #ebb563;
+    border-color: #ebb563;
+}
+
+/* Text Button (no background) */
+.rdm-btn-text {
+    background-color: transparent;
+    border-color: transparent;
+    color: var(--rdm-primary);
+    padding: 0 var(--rdm-spacing-sm);
+}
+
+.rdm-btn-text:hover:not(:disabled) {
+    background-color: var(--rdm-primary-light);
+}
+
+/* Small Button */
+.rdm-btn-sm {
+    height: var(--rdm-btn-height-sm);
+    padding: 0 var(--rdm-spacing-md);
+    font-size: var(--rdm-font-size-sm);
+}
+
+/* Icon Button */
+.rdm-btn-icon {
+    width: var(--rdm-btn-height);
+    padding: 0;
+    color: var(--rdm-text-secondary);
+    background: transparent;
+    border: none;
+}
+
+.rdm-btn-icon:hover:not(:disabled) {
+    color: var(--rdm-primary);
+    background-color: var(--rdm-bg-hover);
+}
+
+.rdm-btn-icon i {
+    font-size: 18px;
+}
+
+/* =============================================================================
+   Tables
+   ============================================================================= */
+
+.rdm-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: var(--rdm-bg);
+    font-size: var(--rdm-font-size);
+}
+
+.rdm-table th,
+.rdm-table td {
+    padding: var(--rdm-spacing-md) var(--rdm-spacing-lg);
+    text-align: left;
+    border-bottom: 1px solid var(--rdm-border-light);
+}
+
+.rdm-table th {
+    background-color: var(--rdm-bg-page);
+    color: var(--rdm-text-secondary);
+    font-weight: var(--rdm-font-weight-medium);
+    font-size: var(--rdm-font-size);
+    text-transform: none;
+}
+
+.rdm-table tbody tr {
+    transition: var(--rdm-transition-fast);
+}
+
+.rdm-table tbody tr:hover {
+    background-color: var(--rdm-bg-hover);
+}
+
+.rdm-table tbody tr.rdm-selected {
+    background-color: var(--rdm-bg-selected);
+}
+
+/* Clickable rows */
+.rdm-table tbody tr.rdm-clickable {
+    cursor: pointer;
+}
+
+.rdm-table tbody tr.rdm-clickable:hover {
+    background-color: var(--rdm-bg-hover);
+}
+
+/* Table with card wrapper */
+.rdm-table-card {
+    width: 100%;
+    background-color: var(--rdm-bg);
+    border: 1px solid var(--rdm-border-light);
+    border-radius: var(--rdm-radius);
+    overflow: hidden;
+}
+
+.rdm-table-card .rdm-table {
+    margin: 0;
+}
+
+.rdm-table-card .rdm-table th:first-child,
+.rdm-table-card .rdm-table td:first-child {
+    padding-left: var(--rdm-spacing-xl);
+}
+
+.rdm-table-card .rdm-table th:last-child,
+.rdm-table-card .rdm-table td:last-child {
+    padding-right: var(--rdm-spacing-xl);
+}
+
+/* Actions column */
+.rdm-table .rdm-col-actions {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+}
+
+.rdm-table .rdm-actions {
+    display: flex;
+    gap: var(--rdm-spacing-xs);
+    justify-content: flex-end;
+}
+
+/* Empty state */
+.rdm-table-empty {
+    padding: var(--rdm-spacing-xl);
+    text-align: center;
+    color: var(--rdm-text-secondary);
+}
+
+/* Link in table cell */
+.rdm-table .rdm-link {
+    color: var(--rdm-primary);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.rdm-table .rdm-link:hover {
+    color: var(--rdm-primary-hover);
+    text-decoration: underline;
+}
+
+/* =============================================================================
+   Cards
+   ============================================================================= */
+
+.rdm-card {
+    width: 100%;
+    background-color: var(--rdm-bg);
+    border: 1px solid var(--rdm-border-light);
+    border-radius: var(--rdm-radius);
+    box-shadow: var(--rdm-shadow-sm);
+}
+
+.rdm-card-header {
+    padding: var(--rdm-spacing-lg) var(--rdm-spacing-xl);
+    border-bottom: 1px solid var(--rdm-border-light);
+}
+
+.rdm-card-title {
+    margin: 0;
+    font-size: var(--rdm-font-size-lg);
+    font-weight: var(--rdm-font-weight-bold);
+    color: var(--rdm-text);
+}
+
+.rdm-card-body {
+    padding: var(--rdm-spacing-xl);
+}
+
+.rdm-card-footer {
+    padding: var(--rdm-spacing-lg) var(--rdm-spacing-xl);
+    border-top: 1px solid var(--rdm-border-light);
+    background-color: var(--rdm-bg-page);
+}
+
+/* =============================================================================
+   Form Inputs
+   ============================================================================= */
+
+.rdm-input {
+    width: 100%;
+    height: var(--rdm-input-height);
+    padding: 0 var(--rdm-spacing-md);
+    font-family: var(--rdm-font-family);
+    font-size: var(--rdm-font-size);
+    color: var(--rdm-text);
+    background-color: var(--rdm-bg);
+    border: 1px solid var(--rdm-border);
+    border-radius: var(--rdm-radius);
+    outline: none;
+    transition: var(--rdm-transition);
+}
+
+.rdm-input::placeholder {
+    color: var(--rdm-text-placeholder);
+}
+
+.rdm-input:hover:not(:disabled) {
+    border-color: var(--rdm-border);
+}
+
+.rdm-input:focus {
+    border-color: var(--rdm-primary);
+    box-shadow: 0 0 0 2px var(--rdm-primary-light);
+}
+
+.rdm-input:disabled {
+    background-color: var(--rdm-bg-page);
+    cursor: not-allowed;
+}
+
+.rdm-input.rdm-error {
+    border-color: var(--rdm-danger);
+}
+
+.rdm-input.rdm-error:focus {
+    box-shadow: 0 0 0 2px var(--rdm-danger-light);
+}
+
+/* Textarea */
+.rdm-textarea {
+    min-height: 80px;
+    padding: var(--rdm-spacing-sm) var(--rdm-spacing-md);
+    resize: vertical;
+}
+
+/* Form Group */
+.rdm-form-group {
+    margin-bottom: var(--rdm-spacing-lg);
+}
+
+.rdm-form-label {
+    display: block;
+    margin-bottom: var(--rdm-spacing-xs);
+    font-size: var(--rdm-font-size-sm);
+    font-weight: var(--rdm-font-weight-medium);
+    color: var(--rdm-text-regular);
+}
+
+.rdm-form-label.rdm-required::after {
+    content: " *";
+    color: var(--rdm-danger);
+}
+
+.rdm-form-hint {
+    margin-top: var(--rdm-spacing-xs);
+    font-size: var(--rdm-font-size-xs);
+    color: var(--rdm-text-secondary);
+}
+
+.rdm-form-error {
+    margin-top: var(--rdm-spacing-xs);
+    font-size: var(--rdm-font-size-xs);
+    color: var(--rdm-danger);
+}
+
+/* =============================================================================
+   Dialog / Modal
+   ============================================================================= */
+
+.rdm-dialog-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 10vh;
+}
+
+.rdm-dialog {
+    background-color: var(--rdm-bg);
+    border-radius: var(--rdm-radius-lg);
+    box-shadow: var(--rdm-shadow-lg);
+    width: 100%;
+    max-width: 500px;
+    max-height: calc(100vh - 20vh);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.rdm-dialog-lg {
+    max-width: 800px;
+}
+
+.rdm-dialog-header {
+    padding: var(--rdm-spacing-lg) var(--rdm-spacing-xl);
+    border-bottom: 1px solid var(--rdm-border-light);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.rdm-dialog-title {
+    margin: 0;
+    font-size: var(--rdm-font-size-lg);
+    font-weight: var(--rdm-font-weight-bold);
+    color: var(--rdm-text);
+}
+
+.rdm-dialog-close {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: var(--rdm-radius);
+    color: var(--rdm-text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rdm-dialog-close:hover {
+    background-color: var(--rdm-bg-hover);
+    color: var(--rdm-text);
+}
+
+.rdm-dialog-body {
+    padding: var(--rdm-spacing-xl);
+    overflow-y: auto;
+    flex: 1;
+}
+
+.rdm-dialog-footer {
+    padding: var(--rdm-spacing-lg) var(--rdm-spacing-xl);
+    border-top: 1px solid var(--rdm-border-light);
+    display: flex;
+    gap: var(--rdm-spacing-sm);
+    justify-content: flex-end;
+}
+
+/* =============================================================================
+   Tabs
+   ============================================================================= */
+
+.rdm-tabs {
+    border-bottom: 2px solid var(--rdm-border-light);
+    display: flex;
+    gap: 0;
+}
+
+.rdm-tab {
+    padding: var(--rdm-spacing-md) var(--rdm-spacing-xl);
+    font-size: var(--rdm-font-size);
+    font-weight: var(--rdm-font-weight-normal);
+    color: var(--rdm-text-regular);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    transition: var(--rdm-transition);
+}
+
+.rdm-tab:hover {
+    color: var(--rdm-primary);
+}
+
+.rdm-tab.rdm-active {
+    color: var(--rdm-primary);
+    font-weight: var(--rdm-font-weight-medium);
+    border-bottom-color: var(--rdm-primary);
+}
+
+.rdm-tab-panel {
+    width: 100%;
+    padding: var(--rdm-spacing-xl) 0;
+}
+
+/* =============================================================================
+   Breadcrumbs
+   ============================================================================= */
+
+.rdm-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: var(--rdm-spacing-sm);
+    padding: var(--rdm-spacing-md) 0;
+    font-size: var(--rdm-font-size);
+}
+
+.rdm-breadcrumb-item {
+    color: var(--rdm-text-secondary);
+}
+
+.rdm-breadcrumb-item.rdm-link {
+    color: var(--rdm-primary);
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.rdm-breadcrumb-item.rdm-link:hover {
+    text-decoration: underline;
+}
+
+.rdm-breadcrumb-item.rdm-current {
+    color: var(--rdm-text);
+    font-weight: var(--rdm-font-weight-medium);
+}
+
+.rdm-breadcrumb-separator {
+    color: var(--rdm-text-placeholder);
+}
+
+.rdm-breadcrumb-back {
+    margin-right: var(--rdm-spacing-xs);
+}
+
+/* =============================================================================
+   Detail Card
+   ============================================================================= */
+
+.rdm-detail-outer {
+    width: 100%;
+    padding: 1.5rem;
+}
+
+.rdm-detail {
+    width: 100%;
+}
+
+.rdm-detail-header {
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.rdm-detail-icon {
+    color: var(--rdm-text-secondary);
+    font-size: 2rem;
+}
+
+.rdm-detail-image {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    border-radius: var(--rdm-radius);
+    background-color: var(--rdm-bg-page);
+}
+
+.rdm-detail-title-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.rdm-detail-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: var(--rdm-font-weight-bold);
+    color: var(--rdm-text);
+}
+
+.rdm-detail-subtitle {
+    margin: 0;
+    font-size: 14px;
+    color: rgb(75, 85, 99);
+}
+
+.rdm-detail-columns {
+    width: 100%;
+    display: flex;
+    gap: 4rem;
+    flex-wrap: wrap;
+}
+
+.rdm-detail-column {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: var(--rdm-font-size);
+}
+
+.rdm-detail-section-label {
+    font-size: var(--rdm-font-size-sm);
+    font-weight: var(--rdm-font-weight-bold);
+    color: rgb(107, 114, 128);
+    margin-bottom: 0.5rem;
+}
+
+.rdm-detail-text-sm {
+    font-size: var(--rdm-font-size-sm);
+}
+
+.rdm-detail-actions {
+    display: flex;
+    gap: var(--rdm-spacing-sm);
+    margin-top: var(--rdm-spacing-xl);
+    padding-top: 0.75rem;
+}
+
+/* =============================================================================
+   Edit Card / Form
+   ============================================================================= */
+
+.rdm-edit-card {
+    padding: var(--rdm-spacing-xl);
+}
+
+.rdm-edit-actions {
+    display: flex;
+    gap: var(--rdm-spacing-sm);
+    margin-top: var(--rdm-spacing-xl);
+    padding-top: var(--rdm-spacing-lg);
+    border-top: 1px solid var(--rdm-border-light);
+}
+
+/* =============================================================================
+   View Stack
+   ============================================================================= */
+
+.rdm-view-stack {
+    width: 100%;
+}
+
+.rdm-view-stack-toolbar {
+    display: flex;
+    gap: var(--rdm-spacing-sm);
+    padding: var(--rdm-spacing-lg) 0;
+}
+
+/* =============================================================================
+   Confirm Dialog
+   ============================================================================= */
+
+.rdm-confirm-dialog .rdm-dialog {
+    max-width: 400px;
+}
+
+.rdm-confirm-question {
+    font-size: var(--rdm-font-size-lg);
+    font-weight: var(--rdm-font-weight-medium);
+    color: var(--rdm-text);
+    margin-bottom: var(--rdm-spacing-sm);
+}
+
+.rdm-confirm-explanation {
+    color: var(--rdm-text-secondary);
+    margin-bottom: var(--rdm-spacing-lg);
+}
+
+/* =============================================================================
+   Empty State
+   ============================================================================= */
+
+.rdm-empty {
+    padding: var(--rdm-spacing-xl);
+    text-align: center;
+    color: var(--rdm-text-secondary);
+}
+
+.rdm-empty-icon {
+    font-size: 48px;
+    color: var(--rdm-border);
+    margin-bottom: var(--rdm-spacing-md);
+}
+
+.rdm-empty-text {
+    font-size: var(--rdm-font-size);
+}
+
+/* =============================================================================
+   Badges
+   ============================================================================= */
+
+.rdm-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--rdm-spacing-sm);
+    font-size: var(--rdm-font-size-xs);
+    font-weight: var(--rdm-font-weight-medium);
+    border-radius: var(--rdm-radius-sm);
+    white-space: nowrap;
+}
+
+.rdm-badge-primary {
+    background-color: var(--rdm-primary-light);
+    color: var(--rdm-primary);
+}
+
+.rdm-badge-success {
+    background-color: var(--rdm-success-light);
+    color: var(--rdm-success);
+}
+
+.rdm-badge-warning {
+    background-color: var(--rdm-warning-light);
+    color: var(--rdm-warning);
+}
+
+.rdm-badge-danger {
+    background-color: var(--rdm-danger-light);
+    color: var(--rdm-danger);
+}
+
+.rdm-badge-info {
+    background-color: var(--rdm-info-light);
+    color: var(--rdm-info);
+}
+
+/* =============================================================================
+   Utilities
+   ============================================================================= */
+
+.rdm-text-muted {
+    color: var(--rdm-text-secondary);
+}
+
+.rdm-text-primary {
+    color: var(--rdm-primary);
+}
+
+.rdm-text-success {
+    color: var(--rdm-success);
+}
+
+.rdm-text-warning {
+    color: var(--rdm-warning);
+}
+
+.rdm-text-danger {
+    color: var(--rdm-danger);
+}
+
+.rdm-separator {
+    height: 1px;
+    background-color: var(--rdm-border-light);
+    margin: var(--rdm-spacing-lg) 0;
+}
+
+/* =============================================================================
+   Quasar Overrides (when NiceGUI components are used)
+   
+   These override Quasar's default styles to match our design system.
+   Only needed when using ui.select, ui.checkbox, etc.
+   ============================================================================= */
+
+@layer quasar_overrides {
+    /* Remove Quasar button text transform */
+    .rdm-component .q-btn {
+        text-transform: none !important;
+    }
+    
+    /* Remove Quasar card shadow, use our styling */
+    .rdm-component .q-card {
+        box-shadow: none !important;
+        border: 1px solid var(--rdm-border-light);
+        border-radius: var(--rdm-radius);
+    }
+    
+    /* Style Quasar inputs to match our design */
+    .rdm-component .q-field--outlined .q-field__control {
+        border-radius: var(--rdm-radius);
+    }
+    
+    .rdm-component .q-field--outlined .q-field__control:before {
+        border-color: var(--rdm-border);
+    }
+    
+    .rdm-component .q-field--outlined .q-field__control:hover:before {
+        border-color: var(--rdm-border);
+    }
+    
+    .rdm-component .q-field--outlined.q-field--focused .q-field__control:before {
+        border-color: var(--rdm-primary);
+    }
+    
+    /* Dense inputs */
+    .rdm-component .q-field--dense .q-field__control,
+    .rdm-component .q-field--dense .q-field__marginal {
+        height: var(--rdm-input-height);
+    }
+    
+    /* Notification styling */
+    .q-notification {
+        font-family: var(--rdm-font-family);
+    }
+}

@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ng-store"
+name = "nicegui-rdm"
 version = "0.1.0"
-description = "Reactive state management for NiceGUI with Tortoise ORM"
+description = "Reactive Database Management for NiceGUI with Tortoise ORM"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -20,6 +20,9 @@ dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21.0",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ng_rdm"]
 
 [tool.pytest.ini_options]
 addopts = "-W ignore::DeprecationWarning -W ignore::PendingDeprecationWarning -W ignore::pytest.PytestDeprecationWarning -v"

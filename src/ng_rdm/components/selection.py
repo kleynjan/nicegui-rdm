@@ -8,20 +8,19 @@ from typing import Any, Callable
 
 from nicegui import html, ui
 
-from .base import TableConfig
-from ._table_base import BaseCrudTable
-from .protocol import CrudDataSource
+from .base import RdmComponent, TableConfig
+from .protocol import RdmDataSource
 
 
-class SelectionTable(BaseCrudTable):
+class SelectionTable(RdmComponent):
     """Table with checkbox selection in first column.
 
-    Uses native HTML table elements with nc-* CSS classes.
+    Uses native HTML table elements with rdm-* CSS classes.
     Tracks selected row IDs via the selected_ids property.
 
     Args:
         state: Shared state dict
-        data_source: CrudDataSource (typically a Store)
+        data_source: RdmDataSource (typically a Store)
         config: TableConfig with column definitions
         filter_by: Optional filter dict for data loading
         transform: Optional transform function for loaded data
@@ -33,7 +32,7 @@ class SelectionTable(BaseCrudTable):
     def __init__(
         self,
         state: dict,
-        data_source: CrudDataSource,
+        data_source: RdmDataSource,
         config: TableConfig,
         filter_by: dict[str, Any] | None = None,
         transform: Callable[[list[dict]], list[dict]] | None = None,
@@ -41,7 +40,8 @@ class SelectionTable(BaseCrudTable):
         join_fields: list[str] | None = None,
         on_selection_change: Callable[[set[int]], None] | None = None,
     ):
-        super().__init__(state, data_source, config)
+        super().__init__(state, data_source)
+        self.config = config
         self.filter_by = filter_by
         self.transform = transform
         self.row_key = row_key
@@ -103,12 +103,12 @@ class SelectionTable(BaseCrudTable):
 
         if not self.data:
             if self.config.empty_message:
-                with html.div().classes("nc-empty"):
-                    html.span(self.config.empty_message).classes("nc-empty-text")
+                with html.div().classes("rdm-empty"):
+                    html.span(self.config.empty_message).classes("rdm-empty-text")
             return
 
-        with html.div().classes("nc-table-card nc-component"):
-            with html.table().classes("nc-table"):
+        with html.div().classes("rdm-table-card rdm-component"):
+            with html.table().classes("rdm-table"):
                 # Header
                 with html.thead():
                     with html.tr():
@@ -127,7 +127,7 @@ class SelectionTable(BaseCrudTable):
                             continue
                         is_checked = key in self._selected_ids
 
-                        with html.tr().classes("nc-selected" if is_checked else ""):
+                        with html.tr().classes("rdm-selected" if is_checked else ""):
                             # Checkbox cell
                             with html.td().style("width: 48px;"):
                                 ui.checkbox(
@@ -139,7 +139,3 @@ class SelectionTable(BaseCrudTable):
                             for col in self.config.table_columns:
                                 with html.td():
                                     self._render_cell(col, item.get(col.name, ""), item)
-
-
-# Backwards compatibility alias
-CheckboxTable = SelectionTable

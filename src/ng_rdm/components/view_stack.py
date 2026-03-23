@@ -13,7 +13,7 @@ from .base import TableConfig, confirm_dialog
 from .detail import DetailCard
 from .edit_card import EditCard
 from .list import ListTable
-from .protocol import CrudDataSource
+from .protocol import RdmDataSource
 from ..store import StoreEvent
 
 
@@ -34,7 +34,7 @@ class ViewStack:
 
     def __init__(
         self,
-        data_source: CrudDataSource,
+        data_source: RdmDataSource,
         select_config: TableConfig,
         detail_config: TableConfig,
         render_detail: Callable[[dict], Awaitable[None]],
@@ -159,29 +159,29 @@ class ViewStack:
     # ── Breadcrumb ──
 
     def _build_breadcrumb(self):
-        with html.div().classes("nc-breadcrumb nc-component"):
+        with html.div().classes("rdm-breadcrumb rdm-component"):
             if self._view == "list":
                 html.span("")
             else:
-                with html.button().classes("nc-btn nc-btn-icon nc-breadcrumb-back").on(
+                with html.button().classes("rdm-btn rdm-btn-icon rdm-breadcrumb-back").on(
                     "click", self._breadcrumb_back
                 ):
                     html.i().classes("bi bi-arrow-left")
-                html.span(self.breadcrumb_root).classes("nc-breadcrumb-item nc-link").on(
+                html.span(self.breadcrumb_root).classes("rdm-breadcrumb-item rdm-link").on(
                     "click", lambda: self.show_list()
                 )
                 if self._item:
-                    html.span("›").classes("nc-breadcrumb-separator")
+                    html.span("›").classes("rdm-breadcrumb-separator")
                     label_text = self.item_label(self._item)
                     if self._view == "edit":
-                        html.span(label_text).classes("nc-breadcrumb-item nc-link").on(
+                        html.span(label_text).classes("rdm-breadcrumb-item rdm-link").on(
                             "click", lambda: self.show_detail(self._item)  # type: ignore
                         )
                     else:
-                        html.span(label_text).classes("nc-breadcrumb-item nc-current")
+                        html.span(label_text).classes("rdm-breadcrumb-item rdm-current")
                 elif self._view == "edit":
-                    html.span("›").classes("nc-breadcrumb-separator")
-                    html.span(_("New")).classes("nc-breadcrumb-item nc-current")
+                    html.span("›").classes("rdm-breadcrumb-separator")
+                    html.span(_("New")).classes("rdm-breadcrumb-item rdm-current")
 
     def _breadcrumb_back(self):
         if self._view == "edit" and self._item:
@@ -212,18 +212,18 @@ class ViewStack:
         await self._table.build()  # type: ignore
 
         # Toolbar with add button and optional list_footer content
-        with html.div().classes("nc-view-stack-toolbar"):
+        with html.div().classes("rdm-view-stack-toolbar"):
             if self.show_add:
                 add_handler = self.on_add if self.on_add else self.show_edit_new
-                with html.button().classes("nc-btn nc-btn-primary").on("click", add_handler):
+                with html.button().classes("rdm-btn rdm-btn-primary").on("click", add_handler):
                     html.span(self.select_config.add_button or _("Add new"))
 
             if self.list_footer:
                 await self.list_footer()
 
     async def _build_detail_view(self):
-        with html.div().classes('nc-card nc-component'):
-            with html.div().classes('nc-detail-outer'):
+        with html.div().classes('rdm-card rdm-component'):
+            with html.div().classes('rdm-detail-outer'):
                 self._detail = DetailCard(
                     state=self._detail_state,
                     data_source=self.data_source,
@@ -235,14 +235,14 @@ class ViewStack:
                 self._detail.set_item(self._item)
                 await self._detail.build()  # type: ignore
 
-                with html.div().classes("nc-detail-actions"):
+                with html.div().classes("rdm-detail-actions"):
                     if self.show_edit:
-                        with html.button().classes("nc-btn nc-btn-primary").on(
+                        with html.button().classes("rdm-btn rdm-btn-primary").on(
                             "click", lambda: self.show_edit_existing()
                         ):
                             html.span(_("Edit"))
                     if self.show_delete:
-                        with html.button().classes("nc-btn nc-btn-secondary").on(
+                        with html.button().classes("rdm-btn rdm-btn-secondary").on(
                             "click", self._on_delete
                         ):
                             html.span(_("Delete"))

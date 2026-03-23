@@ -9,12 +9,12 @@ from typing import Any, Callable
 from nicegui import html, ui
 
 from .i18n import _
-from .base import CrudComponent, TableConfig
+from .base import ClientComponent, TableConfig
 from .fields import build_form_field
-from .protocol import CrudDataSource
+from .protocol import RdmDataSource
 
 
-class EditCard(CrudComponent):
+class EditCard(ClientComponent):
     """In-place editing card using dialog_columns config.
 
     Unlike EditDialog (modal), this renders inline and is managed by ViewStack.
@@ -22,7 +22,7 @@ class EditCard(CrudComponent):
 
     def __init__(
         self,
-        data_source: CrudDataSource,
+        data_source: RdmDataSource,
         config: TableConfig,
         on_saved: Callable[[dict], None] | None = None,
         on_cancel: Callable[[], None] | None = None,
@@ -87,17 +87,17 @@ class EditCard(CrudComponent):
 
     @ui.refreshable
     async def build(self):
-        with html.div().classes("nc-card nc-edit-card nc-component"):
-            with html.div().classes("nc-card-body"):
+        with html.div().classes("rdm-card rdm-edit-card rdm-component"):
+            with html.div().classes("rdm-card-body"):
                 for col in self.config.dialog_columns:
                     build_form_field(col, self._form_state)
 
-            with html.div().classes("nc-edit-actions"):
-                with html.button().classes("nc-btn nc-btn-primary").on(
+            with html.div().classes("rdm-edit-actions"):
+                with html.button().classes("rdm-btn rdm-btn-primary").on(
                     "click", self._handle_save
                 ):
                     html.span(_("Save") if not self.is_new else _("Add"))
-                with html.button().classes("nc-btn nc-btn-secondary").on(
+                with html.button().classes("rdm-btn rdm-btn-secondary").on(
                     "click", self._handle_cancel
                 ):
                     html.span(_("Cancel"))

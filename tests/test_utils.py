@@ -1,9 +1,9 @@
 """
-Tests for utility functions in ng_store.utils.helpers.
+Tests for utility functions in ng_rdm.utils.helpers.
 """
 from datetime import date, datetime
 
-from ng_store.utils.helpers import (
+from ng_rdm.utils.helpers import (
     date_to_str,
     str_to_date,
     utc_datetime_to_str,

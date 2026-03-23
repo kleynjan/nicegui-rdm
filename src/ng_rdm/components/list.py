@@ -8,20 +8,19 @@ from typing import Any, Callable
 
 from nicegui import html, ui
 
-from .base import TableConfig
-from ._table_base import BaseCrudTable
-from .protocol import CrudDataSource
+from .base import RdmComponent, TableConfig
+from .protocol import RdmDataSource
 
 
-class ListTable(BaseCrudTable):
+class ListTable(RdmComponent):
     """Read-only table with clickable rows for navigation.
 
-    Uses native HTML table elements with nc-* CSS classes.
+    Uses native HTML table elements with rdm-* CSS classes.
     Integrates with store for automatic refresh on data changes.
 
     Args:
         state: Shared state dict
-        data_source: CrudDataSource (typically a Store)
+        data_source: RdmDataSource (typically a Store)
         config: TableConfig with column definitions
         filter_by: Optional filter dict for data loading
         on_click: Callback when row is clicked, receives row key (id)
@@ -33,7 +32,7 @@ class ListTable(BaseCrudTable):
     def __init__(
         self,
         state: dict,
-        data_source: CrudDataSource,
+        data_source: RdmDataSource,
         config: TableConfig,
         filter_by: dict[str, Any] | None = None,
         on_click: Callable[[int | None], None] | None = None,
@@ -41,7 +40,8 @@ class ListTable(BaseCrudTable):
         row_key: str = "id",
         join_fields: list[str] | None = None,
     ):
-        super().__init__(state, data_source, config)
+        super().__init__(state, data_source)
+        self.config = config
         self.filter_by = filter_by
         self.on_click = on_click
         self.transform = transform
@@ -78,12 +78,12 @@ class ListTable(BaseCrudTable):
 
         if not self.data:
             if self.config.empty_message:
-                with html.div().classes("nc-empty"):
-                    html.span(self.config.empty_message).classes("nc-empty-text")
+                with html.div().classes("rdm-empty"):
+                    html.span(self.config.empty_message).classes("rdm-empty-text")
             return
 
-        with html.div().classes("nc-table-card nc-component"):
-            with html.table().classes("nc-table"):
+        with html.div().classes("rdm-table-card rdm-component"):
+            with html.table().classes("rdm-table"):
                 # Header
                 with html.thead():
                     with html.tr():
@@ -96,7 +96,7 @@ class ListTable(BaseCrudTable):
                 with html.tbody():
                     for item in self.data:
                         key = item.get(self.row_key)
-                        tr = html.tr().classes("nc-clickable")
+                        tr = html.tr().classes("rdm-clickable")
                         if self.on_click:
                             tr.on("click", lambda _, k=key: self.on_click(k))  # type: ignore
 
@@ -104,7 +104,3 @@ class ListTable(BaseCrudTable):
                             for col in self.config.table_columns:
                                 with html.td():
                                     self._render_cell(col, item.get(col.name, ""), item)
-
-
-# Backwards compatibility alias
-NavigateTable = ListTable

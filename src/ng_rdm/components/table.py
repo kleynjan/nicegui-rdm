@@ -9,22 +9,21 @@ from typing import Any, Awaitable, Callable, Literal
 from nicegui import html, ui
 
 from .i18n import _
-from .base import TableConfig
+from .base import RdmComponent, TableConfig, confirm_dialog
 from .fields import build_form_field
-from ._table_base import BaseCrudTable
-from .protocol import CrudDataSource
+from .protocol import RdmDataSource
 
 
-class DataTable(BaseCrudTable):
+class DataTable(RdmComponent):
     """Primary editable table with configurable action rendering.
 
-    Uses native HTML table elements with nc-* CSS classes.
+    Uses native HTML table elements with rdm-* CSS classes.
     Supports icon or button styles for Edit/Delete actions.
     Can use built-in modal dialog or delegate to external callbacks.
 
     Args:
         state: Shared state dict
-        data_source: CrudDataSource (typically a Store)
+        data_source: RdmDataSource (typically a Store)
         config: TableConfig with column definitions
         filter_by: Optional filter dict for data loading
         action_style: "icon" for icon buttons, "button" for text buttons
@@ -37,7 +36,7 @@ class DataTable(BaseCrudTable):
     def __init__(
         self,
         state: dict,
-        data_source: CrudDataSource,
+        data_source: RdmDataSource,
         config: TableConfig,
         filter_by: dict[str, Any] | None = None,
         action_style: Literal["icon", "button"] = "icon",
@@ -46,7 +45,8 @@ class DataTable(BaseCrudTable):
         edit_label: str | None = None,
         delete_label: str | None = None,
     ):
-        super().__init__(state, data_source, config)
+        super().__init__(state, data_source)
+        self.config = config
         self.filter_by = filter_by
         self.action_style = action_style
         self.on_edit = on_edit
@@ -72,7 +72,7 @@ class DataTable(BaseCrudTable):
             raw_value = row.get(col.name, "") or ""
             display = col.formatter(raw_value) if col.formatter else str(raw_value)
             handler = col.on_click
-            html.span(display).classes("nc-link").on(
+            html.span(display).classes("rdm-link").on(
                 "click", lambda _, r=row, h=handler: h(r)
             )
         else:
@@ -84,8 +84,8 @@ class DataTable(BaseCrudTable):
         """Build the table using native HTML elements."""
         await self.load_data()
 
-        with html.div().classes("nc-table-card nc-component"):
-            with html.table().classes("nc-table"):
+        with html.div().classes("rdm-table-card rdm-component"):
+            with html.table().classes("rdm-table"):
                 # Header
                 with html.thead():
                     with html.tr():
@@ -95,7 +95,7 @@ class DataTable(BaseCrudTable):
                                 th.style(f"width: {col.width_percent}%")
                         # Actions column header
                         if self.config.show_edit_button or self.config.show_delete_button:
-                            html.th("").classes("nc-col-actions")
+                            html.th("").classes("rdm-col-actions")
 
                 # Body
                 with html.tbody():
@@ -107,7 +107,7 @@ class DataTable(BaseCrudTable):
                             with html.td().props(f"colspan={colspan}"):
                                 html.span(
                                     self.config.empty_message or _("No data")
-                                ).classes("nc-text-muted")
+                                ).classes("rdm-text-muted")
                     else:
                         for row in self.data:
                             self._build_row(row)
@@ -122,8 +122,8 @@ class DataTable(BaseCrudTable):
 
             # Action buttons column
             if self.config.show_edit_button or self.config.show_delete_button or self.config.custom_actions:
-                with html.td().classes("nc-col-actions"):
-                    with html.div().classes("nc-actions"):
+                with html.td().classes("rdm-col-actions"):
+                    with html.div().classes("rdm-actions"):
                         # Custom actions first
                         for action in self.config.custom_actions:
                             self._render_custom_action(action, row)
@@ -152,7 +152,7 @@ class DataTable(BaseCrudTable):
 
         # Render based on style
         if effective_style == "icon" and action.icon:
-            btn = html.button().classes("nc-btn nc-btn-icon").on(
+            btn = html.button().classes("rdm-btn rdm-btn-icon").on(
                 "click", lambda _, r=row, a=action: self._handle_custom_action(a, r)
             )
             with btn:
@@ -161,26 +161,26 @@ class DataTable(BaseCrudTable):
                 btn.props(f'title="{action.tooltip}"')
         elif effective_style in ("primary", "secondary", "danger") and action.label:
             # Explicit variant with label
-            btn_class = f"nc-btn nc-btn-{effective_style} nc-btn-sm"
+            btn_class = f"rdm-btn rdm-btn-{effective_style} rdm-btn-sm"
             with html.button().classes(btn_class).on(
                 "click", lambda _, r=row, a=action: self._handle_custom_action(a, r)
             ):
                 html.span(action.label)
         elif effective_style == "button" and action.label:
             # Generic button style - default to primary
-            with html.button().classes("nc-btn nc-btn-primary nc-btn-sm").on(
+            with html.button().classes("rdm-btn rdm-btn-primary rdm-btn-sm").on(
                 "click", lambda _, r=row, a=action: self._handle_custom_action(a, r)
             ):
                 html.span(action.label)
         elif action.label:
             # Fallback: have label but no matching style, render as primary button
-            with html.button().classes("nc-btn nc-btn-primary nc-btn-sm").on(
+            with html.button().classes("rdm-btn rdm-btn-primary rdm-btn-sm").on(
                 "click", lambda _, r=row, a=action: self._handle_custom_action(a, r)
             ):
                 html.span(action.label)
         elif action.icon:
             # Fallback: have icon but button style requested, render as icon anyway
-            btn = html.button().classes("nc-btn nc-btn-icon").on(
+            btn = html.button().classes("rdm-btn rdm-btn-icon").on(
                 "click", lambda _, r=row, a=action: self._handle_custom_action(a, r)
             )
             with btn:
@@ -191,12 +191,12 @@ class DataTable(BaseCrudTable):
     def _render_edit_button(self, row: dict):
         """Render edit button based on action_style."""
         if self.action_style == "icon":
-            with html.button().classes("nc-btn nc-btn-icon").on(
+            with html.button().classes("rdm-btn rdm-btn-icon").on(
                 "click", lambda _, r=row: self._handle_edit(r)
             ):
                 html.i().classes("bi bi-pencil")
         else:
-            with html.button().classes("nc-btn nc-btn-primary nc-btn-sm").on(
+            with html.button().classes("rdm-btn rdm-btn-primary rdm-btn-sm").on(
                 "click", lambda _, r=row: self._handle_edit(r)
             ):
                 html.span(self.edit_label)
@@ -204,12 +204,12 @@ class DataTable(BaseCrudTable):
     def _render_delete_button(self, row: dict):
         """Render delete button based on action_style."""
         if self.action_style == "icon":
-            with html.button().classes("nc-btn nc-btn-icon").on(
+            with html.button().classes("rdm-btn rdm-btn-icon").on(
                 "click", lambda _, r=row: self._handle_delete(r)
             ):
                 html.i().classes("bi bi-trash")
         else:
-            with html.button().classes("nc-btn nc-btn-secondary nc-btn-sm").on(
+            with html.button().classes("rdm-btn rdm-btn-secondary rdm-btn-sm").on(
                 "click", lambda _, r=row: self._handle_delete(r)
             ):
                 html.span(self.delete_label)
@@ -217,7 +217,7 @@ class DataTable(BaseCrudTable):
     def render_add_button(self):
         """Render the add button - call from page code to position alongside other buttons."""
         if self.config.add_button and self.config.show_add_button:
-            with html.button().classes("nc-btn nc-btn-primary").on(
+            with html.button().classes("rdm-btn rdm-btn-primary").on(
                 "click", self._open_add_dialog
             ):
                 html.span(self.config.add_button)
@@ -279,26 +279,26 @@ class DataTable(BaseCrudTable):
                 (_("Edit") if is_edit else _("Add"))
 
         with ui.dialog() as dlg:
-            with html.div().classes("nc-dialog-backdrop"):
-                with html.div().classes(f"nc-dialog {self.config.dialog_class or ''}"):
+            with html.div().classes("rdm-dialog-backdrop"):
+                with html.div().classes(f"rdm-dialog {self.config.dialog_class or ''}"):
                     # Header
-                    with html.div().classes("nc-dialog-header"):
-                        ui.label(title).classes("nc-dialog-title")
-                        with html.button().classes("nc-dialog-close").on("click", dlg.close):
+                    with html.div().classes("rdm-dialog-header"):
+                        ui.label(title).classes("rdm-dialog-title")
+                        with html.button().classes("rdm-dialog-close").on("click", dlg.close):
                             html.i().classes("bi bi-x-lg")
 
                     # Body - form fields
-                    with html.div().classes("nc-dialog-body"):
+                    with html.div().classes("rdm-dialog-body"):
                         for col in self.config.dialog_columns:
                             build_form_field(col, self.dialog_state)
 
                     # Footer - action buttons
-                    with html.div().classes("nc-dialog-footer"):
-                        with html.button().classes("nc-btn nc-btn-primary").on(
+                    with html.div().classes("rdm-dialog-footer"):
+                        with html.button().classes("rdm-btn rdm-btn-primary").on(
                             "click", lambda: self._handle_save(dlg, is_edit)
                         ):
                             html.span(_("Save") if is_edit else _("Add"))
-                        with html.button().classes("nc-btn nc-btn-secondary").on(
+                        with html.button().classes("rdm-btn rdm-btn-secondary").on(
                             "click", dlg.close
                         ):
                             html.span(_("Cancel"))
@@ -328,9 +328,3 @@ class DataTable(BaseCrudTable):
 
         if success:
             dialog.close()
-
-
-# Backwards compatibility aliases
-ModalEditTable = DataTable
-ActionButtonTable = DataTable
-ActionTable = DataTable

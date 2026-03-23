@@ -1,5 +1,5 @@
 # stores/tortoise.py
-# adds multitenancy to ng_loba TortoiseStore
+# adds multitenancy to ng_rdm TortoiseStore
 
 from typing import Generic, TypeVar
 
