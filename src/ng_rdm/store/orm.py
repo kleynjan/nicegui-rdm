@@ -51,9 +51,9 @@ class TortoiseStore(Store, Generic[T]):
         },
     }
 
-    def __init__(self, model: Type[T]) -> None:
+    def __init__(self, model: Type[T], debounce_ms: int = 100) -> None:
         self.model = model
-        super().__init__(model.get_all_field_specs())
+        super().__init__(model.get_all_field_specs(), debounce_ms)
         logger.debug(f"Creating store for {model.__name__}")
 
     # metamodel methods

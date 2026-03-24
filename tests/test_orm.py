@@ -45,6 +45,7 @@ async def test_read_item_by_id():
     """Read single item by ID"""
     store = TortoiseStore(Author)
     created = await store.create_item({"name": "Jane Austen"})
+    assert created
     found = await store.read_item_by_id(created["id"])
 
     assert found is not None
@@ -55,7 +56,7 @@ async def test_update_item():
     """Update an existing item"""
     store = TortoiseStore(Author)
     created = await store.create_item({"name": "Jane Austen"})
-
+    assert created
     updated = await store.update_item(created["id"], {"name": "J. Austen"})
     assert updated is not None
     assert updated["name"] == "J. Austen"
@@ -65,6 +66,7 @@ async def test_delete_item():
     """Delete an item"""
     store = TortoiseStore(Author)
     created = await store.create_item({"name": "Jane Austen"})
+    assert created
 
     await store.delete_item(created)
     items = await store.read_items()
@@ -102,9 +104,10 @@ async def test_date_hydration():
     """Date fields are hydrated to string format on read"""
     author_store = TortoiseStore(Author)
     author = await author_store.create_item({"name": "Test Author"})
+    assert author
 
     book_store = TortoiseStore(Book)
-    book = await book_store.create_item({
+    await book_store.create_item({
         "title": "Test Book",
         "published_date": "2024-06-15",
         "author_id": author["id"],
@@ -118,9 +121,10 @@ async def test_date_dehydration_empty_string():
     """Empty string dates are dehydrated to None for DB"""
     author_store = TortoiseStore(Author)
     author = await author_store.create_item({"name": "Test Author"})
+    assert author
 
     book_store = TortoiseStore(Book)
-    book = await book_store.create_item({
+    await book_store.create_item({
         "title": "Test Book",
         "published_date": "",
         "author_id": author["id"],
@@ -134,7 +138,7 @@ async def test_date_dehydration_empty_string():
 async def test_null_char_field_hydrated_to_empty_string():
     """Null CharField values hydrate to empty string"""
     store = TortoiseStore(Author)
-    author = await store.create_item({"name": "Test"})
+    await store.create_item({"name": "Test"})
     # email is null=True, so DB has None
 
     items = await store.read_items()
@@ -145,6 +149,7 @@ async def test_datetime_hydration():
     """DatetimeField is hydrated to local timezone string"""
     author_store = TortoiseStore(Author)
     author = await author_store.create_item({"name": "Test Author"})
+    assert author
 
     book_store = TortoiseStore(Book)
     await book_store.create_item({
@@ -164,6 +169,7 @@ async def test_join_fields():
     """Read with join fields brings FK-related data"""
     author_store = TortoiseStore(Author)
     author = await author_store.create_item({"name": "Jane Austen", "email": "jane@books.com"})
+    assert author
 
     book_store = TortoiseStore(Book)
     await book_store.create_item({
@@ -197,6 +203,7 @@ async def test_derived_fields_with_join():
     """Derived fields can use join field data"""
     author_store = TortoiseStore(Author)
     author = await author_store.create_item({"name": "Jane Austen"})
+    assert author
 
     book_store = TortoiseStore(Book)
     book_store.set_derived_fields(
@@ -215,7 +222,7 @@ async def test_derived_fields_with_join():
 
 async def test_observer_on_orm_create():
     """Observer fires on TortoiseStore create"""
-    store = TortoiseStore(Author)
+    store = TortoiseStore(Author, debounce_ms=0)
     events = []
     store.add_observer(lambda e: events.append(e))
 
@@ -226,8 +233,9 @@ async def test_observer_on_orm_create():
 
 async def test_observer_on_orm_update():
     """Observer fires on TortoiseStore update"""
-    store = TortoiseStore(Author)
+    store = TortoiseStore(Author, debounce_ms=0)
     created = await store.create_item({"name": "Test"})
+    assert created
 
     events = []
     store.add_observer(lambda e: events.append(e))
@@ -239,8 +247,9 @@ async def test_observer_on_orm_update():
 
 async def test_observer_on_orm_delete():
     """Observer fires on TortoiseStore delete"""
-    store = TortoiseStore(Author)
+    store = TortoiseStore(Author, debounce_ms=0)
     created = await store.create_item({"name": "Test"})
+    assert created
 
     events = []
     store.add_observer(lambda e: events.append(e))
