@@ -9,12 +9,12 @@ from typing import Any, Awaitable, Callable
 from nicegui import html, ui
 
 from .i18n import _
-from .base import ClientComponent, Column
+from .base import Column, RdmComponent
 from .fields import build_form_field
 from .protocol import RdmDataSource
 
 
-class EditDialog(ClientComponent):
+class EditDialog(RdmComponent):
     """Standalone modal dialog for add/edit operations.
 
     Configured via Column definitions for form fields.
@@ -40,8 +40,7 @@ class EditDialog(ClientComponent):
         on_save: Callable[[dict], Awaitable[None] | None] | None = None,
         on_cancel: Callable[[], None] | None = None,
     ):
-        super().__init__()
-        self.data_source = data_source
+        super().__init__(data_source)
         self.columns = columns
         self.dialog_class = dialog_class
         self.title_add = title_add or _("Add")
@@ -53,29 +52,16 @@ class EditDialog(ClientComponent):
         self._dialog: ui.dialog | None = None
         self._is_edit: bool = False
 
-    def _init_state(self, item: dict | None = None):
-        """Initialize state from item or defaults."""
-        self.state = {}
-        for col in self.columns:
-            if item:
-                value = item.get(col.name, col.default_value)
-                if col.ui_type == ui.number:
-                    self.state[col.name] = value
-                else:
-                    self.state[col.name] = value or ""
-            else:
-                self.state[col.name] = col.default_value
-
     def open_add(self):
         """Open dialog for adding a new item."""
-        self._init_state()
+        self.state = self._init_form_state(self.columns)
         self._current_item_id = None
         self._is_edit = False
         self._show()
 
     def open_edit(self, item: dict):
         """Open dialog for editing an existing item."""
-        self._init_state(item)
+        self.state = self._init_form_state(self.columns, item)
         self._current_item_id = item.get("id")
         self._is_edit = True
         self._show()
@@ -121,13 +107,7 @@ class EditDialog(ClientComponent):
 
     async def _handle_save(self):
         """Handle save button click."""
-        # Build item data
-        item_data = {}
-        for col in self.columns:
-            value = self.state.get(col.name, "")
-            if isinstance(value, str):
-                value = value.strip() or None
-            item_data[col.name] = value
+        item_data = self._build_item_data(self.columns, self.state)
 
         # Validate
         (valid, error_dict) = self.data_source.validate(item_data)

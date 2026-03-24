@@ -9,7 +9,7 @@ from typing import Any, Awaitable, Callable
 from nicegui import html, ui
 
 from .i18n import _
-from .base import TableConfig, confirm_dialog
+from .base import RdmComponent, TableConfig, confirm_dialog
 from .detail import DetailCard
 from .edit_card import EditCard
 from .list import ListTable
@@ -17,7 +17,7 @@ from .protocol import RdmDataSource
 from ..store import StoreEvent
 
 
-class ViewStack:
+class ViewStack(RdmComponent):
     """Coordinates list/detail/edit views with breadcrumb navigation.
 
     Usage:
@@ -47,7 +47,7 @@ class ViewStack:
         list_footer: Callable[[], Awaitable[None]] | None = None,
         on_add: Callable[[], Awaitable[None] | None] | None = None,
     ):
-        self.data_source = data_source
+        super().__init__(data_source)
         self.select_config = select_config
         self.detail_config = detail_config
         self.render_detail = render_detail
@@ -128,15 +128,10 @@ class ViewStack:
     async def _on_delete(self):
         if self._item is None:
             return
-        confirmed = await confirm_dialog({
-            'question': _('Delete this item?'),
-            'explanation': _('This action cannot be undone.'),
-            'no_button': _('Cancel'),
-            'yes_button': _('Delete'),
-        }, self._item)
+        confirmed = await confirm_dialog(self._item)
         if confirmed:
             await self.data_source.delete_item(self._item)
-            ui.notify(_("Item deleted"), type="info")
+            self._notify(_("Item deleted"), type="info")
             self.show_list()
 
     async def _on_store_change(self, event: StoreEvent):

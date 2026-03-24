@@ -8,11 +8,11 @@ from typing import Any, Callable
 
 from nicegui import html, ui
 
-from .base import RdmComponent, TableConfig
+from .base import ObservableRdmComponent, TableConfig
 from .protocol import RdmDataSource
 
 
-class SelectionTable(RdmComponent):
+class SelectionTable(ObservableRdmComponent):
     """Table with checkbox selection in first column.
 
     Uses native HTML table elements with rdm-* CSS classes.
@@ -72,12 +72,11 @@ class SelectionTable(RdmComponent):
     async def load_data(self, join_fields: list[str] | None = None):
         """Load data from store with filter and join fields."""
         all_joins = list(set(self.config.join_fields + self._extra_join_fields))
-        self.data = await self.data_source.read_items(
-            filter_by=self.filter_by,
+        await super().load_data(
             join_fields=join_fields or all_joins,
+            filter_by=self.filter_by,
+            transform=self.transform,
         )
-        if self.transform:
-            self.data = self.transform(self.data)
 
     def _on_checkbox_change(self, row_key: int, checked: bool):
         """Handle checkbox state change."""
@@ -87,14 +86,6 @@ class SelectionTable(RdmComponent):
             self._selected_ids.discard(row_key)
         if self.on_selection_change:
             self.on_selection_change(self._selected_ids)
-
-    def _render_cell(self, col, value, row: dict):
-        """Render a single cell value."""
-        if col.render:
-            col.render(row)
-        else:
-            display = col.formatter(value) if col.formatter else (str(value) if value else "")
-            html.span(display)
 
     @ui.refreshable
     async def build(self):

@@ -896,5 +896,8 @@
     /* Notification styling */
     .q-notification {
         font-family: var(--rdm-font-family);
+        font-size: 22px;
+        margin-bottom: 100px;
+        margin-left: 50px;
     }
 }

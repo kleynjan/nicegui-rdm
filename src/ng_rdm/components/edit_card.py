@@ -9,12 +9,12 @@ from typing import Any, Callable
 from nicegui import html, ui
 
 from .i18n import _
-from .base import ClientComponent, TableConfig
+from .base import RdmComponent, TableConfig
 from .fields import build_form_field
 from .protocol import RdmDataSource
 
 
-class EditCard(ClientComponent):
+class EditCard(RdmComponent):
     """In-place editing card using dialog_columns config.
 
     Unlike EditDialog (modal), this renders inline and is managed by ViewStack.
@@ -27,8 +27,7 @@ class EditCard(ClientComponent):
         on_saved: Callable[[dict], None] | None = None,
         on_cancel: Callable[[], None] | None = None,
     ):
-        super().__init__()
-        self.data_source = data_source
+        super().__init__(data_source)
         self.config = config
         self.on_saved = on_saved
         self.on_cancel = on_cancel
@@ -41,25 +40,11 @@ class EditCard(ClientComponent):
 
     def set_item(self, item: dict | None):
         """Load an item for editing, or None for new-item mode."""
-        self._form_state = {}
         self._item_id = item.get("id") if item else None
-        for col in self.config.dialog_columns:
-            if item:
-                value = item.get(col.name, col.default_value)
-                if col.ui_type == ui.number:
-                    self._form_state[col.name] = value
-                else:
-                    self._form_state[col.name] = value or ""
-            else:
-                self._form_state[col.name] = col.default_value
+        self._form_state = self._init_form_state(self.config.dialog_columns, item)
 
     async def _handle_save(self):
-        item_data = {}
-        for col in self.config.dialog_columns:
-            value = self._form_state.get(col.name, "")
-            if isinstance(value, str):
-                value = value.strip() or None
-            item_data[col.name] = value
+        item_data = self._build_item_data(self.config.dialog_columns, self._form_state)
 
         valid, error_dict = self.data_source.validate(item_data)
         if not valid:

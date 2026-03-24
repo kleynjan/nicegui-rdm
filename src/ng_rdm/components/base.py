@@ -15,20 +15,6 @@ from .protocol import RdmDataSource
 from ..store import StoreEvent
 
 
-class ClientComponent:
-    """Base for ng_rdm UI components needing client context capture.
-
-    Captures ui.context.client at construction for safe notifications
-    in async callbacks that run after UI may have been rebuilt.
-    """
-    def __init__(self):
-        self._client = ui.context.client
-
-    def _notify(self, message: str, **kwargs) -> None:
-        with self._client:
-            ui.notify(message, **kwargs)
-
-
 @dataclass
 class RowAction:
     """Configuration for a custom row action button.
@@ -139,36 +125,54 @@ class TableConfig:
         return None
 
 
-class RdmComponent(ClientComponent):
+class RdmComponent:
     """Base class for UI components connected to a data source.
 
     Provides:
-    - Observer pattern: subscribes to data source events for automatic refresh
+    - Client context capture for safe notifications in async callbacks
     - CRUD helpers: validate, create, update, delete with notifications
-    - State management via shared state dict
+    - Form helpers: init state from item, build item data from state
+
+    Does NOT include observer subscription or state dict - use ObservableRdmComponent for that.
     """
 
-    def __init__(self, state: dict, data_source: RdmDataSource):
-        super().__init__()
+    def __init__(self, data_source: RdmDataSource):
+        self._client = ui.context.client
         self.data_source = data_source
-        self.state = state
-        self.data: list[dict[str, Any]] = []
-        data_source.add_observer(self._handle_datasource_change)
 
-    async def load_data(self, join_fields: list[str] | None = None):
-        """Load data from data source"""
-        self.data = await self.data_source.read_items(
-            join_fields=join_fields or []
-        )
+    def _notify(self, message: str, **kwargs) -> None:
+        with self._client:
+            ui.notification(message, position="bottom-left", timeout=3, **kwargs)
 
-    async def _handle_datasource_change(self, event: StoreEvent):
-        """Handle data source changes - subclasses can override for custom behavior"""
-        await self.build.refresh()  # type: ignore
+    # ── Form helpers ──
 
-    @ui.refreshable
-    async def build(self):
-        """Build the UI - to be implemented by subclasses"""
-        raise NotImplementedError("Subclasses must implement build()")
+    @staticmethod
+    def _init_form_state(columns: list[Column], item: dict | None = None) -> dict[str, Any]:
+        """Initialize form state from columns and optional item."""
+        state: dict[str, Any] = {}
+        for col in columns:
+            if item:
+                value = item.get(col.name, col.default_value)
+                if col.ui_type == ui.number:
+                    state[col.name] = value
+                else:
+                    state[col.name] = value or ""
+            else:
+                state[col.name] = col.default_value
+        return state
+
+    @staticmethod
+    def _build_item_data(columns: list[Column], state: dict) -> dict[str, Any]:
+        """Build item data dict from form state, with string trimming."""
+        item_data: dict[str, Any] = {}
+        for col in columns:
+            value = state.get(col.name, "")
+            if isinstance(value, str):
+                value = value.strip() or None
+            item_data[col.name] = value
+        return item_data
+
+    # ── CRUD helpers ──
 
     def _validate(self, item: dict, notify: bool = True) -> tuple[bool, dict]:
         """Validate item with optional error notification."""
@@ -210,12 +214,7 @@ class RdmComponent(ClientComponent):
     async def _delete(self, item: dict, confirm: bool = True) -> bool:
         """Delete item with optional confirmation. Returns True if deleted."""
         if confirm:
-            if not await confirm_dialog({
-                'question': _('Delete item?'),
-                'explanation': _('This action cannot be undone'),
-                'yes_button': _('Delete'),
-                'no_button': _('Cancel')
-            }, item):
+            if not await confirm_dialog(item):
                 return False
 
         await self.data_source.delete_item(item)
@@ -223,23 +222,83 @@ class RdmComponent(ClientComponent):
         return True
 
 
-async def confirm_dialog(prompts: dict = {}, item: dict = {}):
+class ObservableRdmComponent(RdmComponent):
+    """RdmComponent with reactive data binding via observer pattern.
+
+    Adds:
+    - State dict for shared component state
+    - Data list from data source
+    - Observer subscription for automatic refresh
+    - load_data() with filter/transform/joins
+    - Base _render_cell() implementation
+    """
+
+    def __init__(self, state: dict, data_source: RdmDataSource):
+        super().__init__(data_source)
+        self.state = state
+        self.data: list[dict[str, Any]] = []
+        data_source.add_observer(self._handle_datasource_change)
+
+    async def load_data(
+        self,
+        join_fields: list[str] | None = None,
+        filter_by: dict[str, Any] | None = None,
+        transform: Callable[[list[dict]], list[dict]] | None = None,
+    ):
+        """Load data from data source with optional filter and transform."""
+        self.data = await self.data_source.read_items(
+            join_fields=join_fields or [],
+            filter_by=filter_by,
+        )
+        if transform:
+            self.data = transform(self.data)
+
+    def _render_cell(self, col: Column, value: Any, row: dict):
+        """Render a single cell value. Subclasses can override for special handling."""
+        if col.render:
+            col.render(row)
+        elif col.on_click:
+            raw_value = row.get(col.name, "") or ""
+            display = col.formatter(raw_value) if col.formatter else str(raw_value)
+            handler = col.on_click
+            html.span(display).classes("rdm-link").on(
+                "click", lambda _, r=row, h=handler: h(r)
+            )
+        else:
+            display = col.formatter(value) if col.formatter else (str(value) if value else "")
+            html.span(display)
+
+    async def _handle_datasource_change(self, event: StoreEvent):
+        """Handle data source changes - subclasses can override for custom behavior"""
+        await self.build.refresh()  # type: ignore
+
+    @ui.refreshable
+    async def build(self):
+        """Build the UI - to be implemented by subclasses"""
+        raise NotImplementedError("Subclasses must implement build()")
+
+
+async def confirm_dialog(item: dict | None = None, prompts: dict | None = None):
     """Show a confirmation dialog with RDM styling.
 
+    Default prompts are for delete confirmation. Override via prompts dict.
+
     Args:
+        item: Item data for format string substitution (optional)
         prompts: Dict with keys 'question', 'explanation', 'yes_button', 'no_button'
-                 Values can use {field_name} format strings that will be filled from item
-        item: Item data for format string substitution
+                 Values can use {field_name} format strings filled from item
 
     Returns:
         True if user confirmed, False if cancelled
     """
     dialog = ui.dialog().props('persistent')
+    item = item or {}
+    prompts = prompts or {}
 
-    question = prompts.get('question', _('Are you sure?')).format(**item)
-    explanation = prompts.get('explanation', '').format(**item)
-    yes_button = prompts.get('yes_button', _('Yes')).format(**item)
-    no_button = prompts.get('no_button', _('No')).format(**item)
+    question = prompts.get('question', _('Delete item?')).format(**item)
+    explanation = prompts.get('explanation', _('This action cannot be undone')).format(**item)
+    yes_button = prompts.get('yes_button', _('Delete')).format(**item)
+    no_button = prompts.get('no_button', _('Cancel')).format(**item)
 
     with dialog as d:
         with html.div().classes("rdm-dialog-backdrop rdm-component"):

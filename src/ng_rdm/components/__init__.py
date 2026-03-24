@@ -16,7 +16,7 @@ Component names:
 from pathlib import Path
 from nicegui import ui
 
-from .base import ClientComponent, RdmComponent, Column, TableConfig, RowAction, confirm_dialog
+from .base import RdmComponent, ObservableRdmComponent, Column, TableConfig, RowAction, confirm_dialog
 from .i18n import _, none_as_text, set_language, set_translations
 from .protocol import RdmDataSource
 from ..store import StoreEvent
@@ -72,8 +72,8 @@ __all__ = [
     'StoreEvent',
 
     # Base classes
-    'ClientComponent',
     'RdmComponent',
+    'ObservableRdmComponent',
     'Column',
     'TableConfig',
     'RowAction',

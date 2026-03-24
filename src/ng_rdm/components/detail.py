@@ -9,12 +9,12 @@ from typing import Awaitable, Callable
 from nicegui import html, ui
 
 from .i18n import _
-from .base import RdmComponent, TableConfig, confirm_dialog
+from .base import ObservableRdmComponent, TableConfig
 from .protocol import RdmDataSource
 from ..store import StoreEvent
 
 
-class DetailCard(RdmComponent):
+class DetailCard(ObservableRdmComponent):
     """Detail card showing a selected item with optional action buttons.
 
     Uses a render callback for flexible layout — the callback receives
@@ -74,17 +74,11 @@ class DetailCard(RdmComponent):
     async def _handle_delete(self):
         if self.selected_item is None:
             return
-        confirmed = await confirm_dialog({
-            'question': _('Delete this item?'),
-            'explanation': _('This action cannot be undone.'),
-            'no_button': _('Cancel'),
-            'yes_button': _('Delete'),
-        }, self.selected_item)
-        if confirmed:
-            await self.data_source.delete_item(self.selected_item)
-            self._notify(_("Item deleted"), type="info")
+        item = self.selected_item
+        deleted = await self._delete(item)
+        if deleted:
             if self.on_delete:
-                self.on_delete(self.selected_item)
+                self.on_delete(item)
             self.selected_item = None
 
     @ui.refreshable

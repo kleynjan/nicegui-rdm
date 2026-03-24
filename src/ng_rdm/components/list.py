@@ -8,11 +8,11 @@ from typing import Any, Callable
 
 from nicegui import html, ui
 
-from .base import RdmComponent, TableConfig
+from .base import ObservableRdmComponent, TableConfig
 from .protocol import RdmDataSource
 
 
-class ListTable(RdmComponent):
+class ListTable(ObservableRdmComponent):
     """Read-only table with clickable rows for navigation.
 
     Uses native HTML table elements with rdm-* CSS classes.
@@ -51,25 +51,21 @@ class ListTable(RdmComponent):
     async def load_data(self, join_fields: list[str] | None = None):
         """Load data from store with filter and join fields."""
         all_joins = list(set(self.config.join_fields + self._extra_join_fields))
-        self.data = await self.data_source.read_items(
-            filter_by=self.filter_by,
+        await super().load_data(
             join_fields=join_fields or all_joins,
+            filter_by=self.filter_by,
+            transform=self.transform,
         )
-        if self.transform:
-            self.data = self.transform(self.data)
 
     def _render_cell(self, col, value, row: dict):
-        """Render a single cell value."""
-        if col.render:
-            col.render(row)
-        elif col.ui_type == ui.badge:
+        """Render a single cell value. Overrides base to add ui.badge support."""
+        if col.ui_type == ui.badge:
             color_map = col.parms.get("color_map", {})
             color = color_map.get(str(value), "grey")
             if value:
                 ui.badge(str(value)).props(f"color={color}")
         else:
-            display = col.formatter(value) if col.formatter else (str(value) if value else "")
-            html.span(display)
+            super()._render_cell(col, value, row)
 
     @ui.refreshable
     async def build(self):

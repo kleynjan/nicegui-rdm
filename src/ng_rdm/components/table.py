@@ -9,12 +9,12 @@ from typing import Any, Awaitable, Callable, Literal
 from nicegui import html, ui
 
 from .i18n import _
-from .base import RdmComponent, TableConfig, confirm_dialog
+from .base import ObservableRdmComponent, TableConfig
 from .fields import build_form_field
 from .protocol import RdmDataSource
 
 
-class DataTable(RdmComponent):
+class DataTable(ObservableRdmComponent):
     """Primary editable table with configurable action rendering.
 
     Uses native HTML table elements with rdm-* CSS classes.
@@ -59,25 +59,10 @@ class DataTable(RdmComponent):
 
     async def load_data(self, join_fields: list[str] | None = None):
         """Load data from store with filter and join fields from config."""
-        self.data = await self.data_source.read_items(
-            filter_by=self.filter_by,
+        await super().load_data(
             join_fields=join_fields or self.config.join_fields,
+            filter_by=self.filter_by,
         )
-
-    def _render_cell(self, col, value, row: dict):
-        """Render a single cell value."""
-        if col.render:
-            col.render(row)
-        elif col.on_click:
-            raw_value = row.get(col.name, "") or ""
-            display = col.formatter(raw_value) if col.formatter else str(raw_value)
-            handler = col.on_click
-            html.span(display).classes("rdm-link").on(
-                "click", lambda _, r=row, h=handler: h(r)
-            )
-        else:
-            display = col.formatter(value) if col.formatter else str(value) if value else ""
-            html.span(display)
 
     @ui.refreshable
     async def build(self):
@@ -249,27 +234,14 @@ class DataTable(RdmComponent):
 
     # --- Built-in Modal Dialog (used when on_edit is not provided) ---
 
-    def _init_dialog_state(self, item: dict | None = None):
-        """Initialize dialog_state from item or defaults."""
-        self.dialog_state = {}
-        for col in self.config.dialog_columns:
-            if item:
-                value = item.get(col.name, col.default_value)
-                if col.ui_type == ui.number:
-                    self.dialog_state[col.name] = value
-                else:
-                    self.dialog_state[col.name] = value or ""
-            else:
-                self.dialog_state[col.name] = col.default_value
-
     def _open_add_dialog(self):
         """Open dialog for adding new item."""
-        self._init_dialog_state()
+        self.dialog_state = self._init_form_state(self.config.dialog_columns)
         self._show_dialog(is_edit=False)
 
     def _open_edit_dialog(self, item: dict):
         """Open dialog for editing existing item."""
-        self._init_dialog_state(item)
+        self.dialog_state = self._init_form_state(self.config.dialog_columns, item)
         self._current_item_id = item.get("id")
         self._show_dialog(is_edit=True)
 
@@ -308,13 +280,7 @@ class DataTable(RdmComponent):
 
     async def _handle_save(self, dialog, is_edit: bool):
         """Handle save button click in dialog."""
-        # Build item data
-        item_data = {}
-        for col in self.config.dialog_columns:
-            value = self.dialog_state.get(col.name, "")
-            if isinstance(value, str):
-                value = value.strip() or None
-            item_data[col.name] = value
+        item_data = self._build_item_data(self.config.dialog_columns, self.dialog_state)
 
         # Validate
         (valid, error_dict) = self._validate(item_data)

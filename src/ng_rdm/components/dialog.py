@@ -17,10 +17,8 @@ from contextlib import contextmanager
 
 from nicegui import html, ui
 
-from .base import ClientComponent
 
-
-class Dialog(ClientComponent):
+class Dialog:
     """Positioned card overlay with backdrop.
 
     Uses native HTML elements with rdm-* CSS classes.
@@ -29,7 +27,7 @@ class Dialog(ClientComponent):
     """
 
     def __init__(self, dialog_class: str = "", large: bool = False):
-        super().__init__()
+        self._client = ui.context.client
         self.dialog_class = dialog_class
         self.large = large
         self._backdrop_div = None
