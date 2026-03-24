@@ -134,22 +134,23 @@ class ViewStack(RdmComponent):
             self._notify(_("Item deleted"), type="info")
             self.show_list()
 
-    async def _on_store_change(self, event: StoreEvent):
-        """Refresh detail view if the current item was updated or deleted."""
-        if self._item is None:
-            return
-        item_id = self._item.get("id")
-        if event.verb == "delete" and event.item.get("id") == item_id:
-            self.show_list()
-        elif event.verb == "update" and event.item.get("id") == item_id:
-            items = await self.data_source.read_items(
-                filter_by={"id": item_id},
-                join_fields=self.detail_config.join_fields,
-            )
-            if items:
-                self._item = items[0]
-                if self._view == "detail" and self._detail:
-                    self._detail.set_item(self._item)
+    # NOTE: This method was never subscribed to any observer - dead code
+    # async def _on_store_change(self, event: StoreEvent):
+    #     """Refresh detail view if the current item was updated or deleted."""
+    #     if self._item is None:
+    #         return
+    #     item_id = self._item.get("id")
+    #     if event.verb == "delete" and event.item.get("id") == item_id:
+    #         self.show_list()
+    #     elif event.verb == "update" and event.item.get("id") == item_id:
+    #         items = await self.data_source.read_items(
+    #             filter_by={"id": item_id},
+    #             join_fields=self.detail_config.join_fields,
+    #         )
+    #         if items:
+    #             self._item = items[0]
+    #             if self._view == "detail" and self._detail:
+    #                 self._detail.set_item(self._item)
 
     # ── Breadcrumb ──
 

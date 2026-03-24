@@ -22,10 +22,18 @@ class StoreEvent:
     item: dict  # For single ops: the item. For batch: metadata
 
 
+@dataclass
+class ObserverEntry:
+    """Observer registration with optional topic filter."""
+    callback: Callable[[StoreEvent], Any]
+    topics: dict[str, Any] | None = None  # None = wildcard (all events)
+
+
 class EventNotifier:
     """Manages observer notifications with optional batching and debouncing.
 
-    Extracted from Store to keep the base class simple.
+    Supports topic-based filtering: observers can subscribe to specific
+    field values (e.g., topics={"role_id": 5}) to receive only relevant events.
 
     Args:
         debounce_ms: Milliseconds to wait for quiet period before flushing.
@@ -33,16 +41,25 @@ class EventNotifier:
     """
 
     def __init__(self, debounce_ms: int = 0):
-        self._observers: list[Callable[[StoreEvent], Any]] = []
+        self._observers: list[ObserverEntry] = []
+        self._topic_fields: list[str] = []
         self._debounce_ms = debounce_ms
         self._batch_depth = 0
         self._pending_events: list[StoreEvent] = []
         self._last_event_time = 0.0
         self._flush_task: asyncio.Task | None = None
 
-    def add_observer(self, observer: Callable[[StoreEvent], Any]) -> None:
-        """Add an observer to receive store events"""
-        self._observers.append(observer)
+    def set_topic_fields(self, fields: list[str]) -> None:
+        """Configure which item fields can be used for topic-based routing."""
+        self._topic_fields = fields
+
+    def add_observer(self, observer: Callable[[StoreEvent], Any], topics: dict[str, Any] | None = None) -> None:
+        """Add observer with optional topic subscription."""
+        self._observers.append(ObserverEntry(callback=observer, topics=topics))
+
+    def remove_observer(self, observer: Callable[[StoreEvent], Any]) -> None:
+        """Remove observer by callback identity."""
+        self._observers = [e for e in self._observers if e.callback != observer]
 
     @property
     def observer_count(self) -> int:
@@ -108,8 +125,16 @@ class EventNotifier:
                     self._flush_task = None
                 await self._flush_events()
 
+    def _should_notify(self, event: StoreEvent, topics: dict[str, Any] | None) -> bool:
+        """Determine if observer should receive this event."""
+        if topics is None:
+            return True  # Wildcard - receives all
+        if event.verb == "batch":
+            return True  # Conservative - batch notifies all
+        return all(event.item.get(k) == v for k, v in topics.items())
+
     async def _flush_events(self) -> None:
-        """Fire events to all observers."""
+        """Fire events to observers, filtered by topic subscriptions."""
         if not self._pending_events:
             return
 
@@ -125,8 +150,9 @@ class EventNotifier:
                 item={"count": len(events), "verbs": list({e.verb for e in events})}
             )
 
-        for observer in self._observers:
-            if inspect.iscoroutinefunction(observer):
-                await observer(event_to_fire)
-            else:
-                observer(event_to_fire)
+        for entry in self._observers:
+            if self._should_notify(event_to_fire, entry.topics):
+                if inspect.iscoroutinefunction(entry.callback):
+                    await entry.callback(event_to_fire)
+                else:
+                    entry.callback(event_to_fire)

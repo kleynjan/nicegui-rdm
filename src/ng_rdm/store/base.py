@@ -101,9 +101,17 @@ class Store:
         """Notify observers of store events"""
         await self._notifier.notify(event)
 
-    def add_observer(self, observer: Callable[[StoreEvent], Any]) -> None:
-        """Add an observer to receive store events"""
-        self._notifier.add_observer(observer)
+    def set_topic_fields(self, fields: list[str]) -> None:
+        """Configure which item fields can be used for topic-based routing."""
+        self._notifier.set_topic_fields(fields)
+
+    def add_observer(self, observer: Callable[[StoreEvent], Any], topics: dict[str, Any] | None = None) -> None:
+        """Add observer with optional topic subscription."""
+        self._notifier.add_observer(observer, topics)
+
+    def remove_observer(self, observer: Callable[[StoreEvent], Any]) -> None:
+        """Remove observer by callback identity."""
+        self._notifier.remove_observer(observer)
 
     def batch(self):
         """Context manager for explicit batching of notifications.

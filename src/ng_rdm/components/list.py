@@ -39,6 +39,7 @@ class ListTable(ObservableRdmComponent):
         transform: Callable[[list[dict]], list[dict]] | None = None,
         row_key: str = "id",
         join_fields: list[str] | None = None,
+        auto_observe: bool = True,
     ):
         super().__init__(state, data_source)
         self.config = config
@@ -47,6 +48,8 @@ class ListTable(ObservableRdmComponent):
         self.transform = transform
         self.row_key = row_key
         self._extra_join_fields = join_fields or []
+        if auto_observe:
+            self.observe(topics=filter_by)
 
     async def load_data(self, join_fields: list[str] | None = None):
         """Load data from store with filter and join fields."""

@@ -44,6 +44,7 @@ class DataTable(ObservableRdmComponent):
         on_delete: Callable[[dict], Awaitable[None] | None] | None = None,
         edit_label: str | None = None,
         delete_label: str | None = None,
+        auto_observe: bool = True,
     ):
         super().__init__(state, data_source)
         self.config = config
@@ -56,6 +57,8 @@ class DataTable(ObservableRdmComponent):
         self.dialog_state: dict[str, Any] = {}
         self._current_item_id: int | None = None
         self._dialog: ui.dialog | None = None
+        if auto_observe:
+            self.observe(topics=filter_by)
 
     async def load_data(self, join_fields: list[str] | None = None):
         """Load data from store with filter and join fields from config."""

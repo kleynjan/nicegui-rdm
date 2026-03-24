@@ -274,3 +274,42 @@ def test_registry_tenant_isolation(registry):
     assert registry.get_store("tenant_a", "items") is store_a
     assert registry.get_store("tenant_b", "items") is store_b
     assert registry.get_store("tenant_a", "items") is not store_b
+
+
+# --- Observer Remove/Topics ---
+
+
+async def test_remove_observer(validated_store):
+    """Removed observer no longer receives events"""
+    events = []
+    def observer(e): return events.append(e)
+    validated_store.add_observer(observer)
+
+    await validated_store.create_item({"email": "test@example.com", "name": "Test"})
+    assert len(events) == 1
+
+    validated_store.remove_observer(observer)
+    await validated_store.create_item({"email": "test2@example.com", "name": "Test2"})
+    assert len(events) == 1  # No new event
+
+
+async def test_observer_with_topics(validated_store):
+    """Observer with topics only receives matching events"""
+    events_role5 = []
+    events_all = []
+
+    validated_store.add_observer(lambda e: events_role5.append(e), topics={"role_id": 5})
+    validated_store.add_observer(lambda e: events_all.append(e))  # Wildcard
+
+    await validated_store.create_item({"email": "test@example.com", "name": "Test", "role_id": 5})
+    await validated_store.create_item({"email": "test2@example.com", "name": "Test2", "role_id": 7})
+
+    assert len(events_role5) == 1  # Only role_id=5
+    assert len(events_all) == 2  # Both events
+
+
+async def test_set_topic_fields(validated_store):
+    """set_topic_fields configures notifier"""
+    validated_store.set_topic_fields(["role_id", "guest_id"])
+    # Just verify it doesn't crash - internal state not exposed
+    assert True

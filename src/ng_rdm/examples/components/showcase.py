@@ -19,8 +19,9 @@ Components demonstrated:
 - Dialog: Modal overlay
 - Tabs: Tab-based content switching
 
-Key concept demonstrated:
+Key concepts demonstrated:
 - StoreRegistry: Singleton store pattern for cross-session reactivity
+- Observer pattern: Components auto-observe by default, or use explicit observe()/unobserve()
 """
 
 from pathlib import Path
@@ -177,6 +178,8 @@ async def demo_datatable(product_store):
         dialog_title_edit="Edit Product",
     )
 
+    # auto_observe=True (default): component observes store with filter_by as topics
+    # For explicit control: DataTable(..., auto_observe=False) then table.observe(topics={...})
     table = DataTable(state={}, data_source=product_store, config=config)
     table.render_add_button()
     await table.build()

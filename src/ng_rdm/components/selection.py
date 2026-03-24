@@ -39,6 +39,7 @@ class SelectionTable(ObservableRdmComponent):
         row_key: str = "id",
         join_fields: list[str] | None = None,
         on_selection_change: Callable[[set[int]], None] | None = None,
+        auto_observe: bool = True,
     ):
         super().__init__(state, data_source)
         self.config = config
@@ -48,6 +49,8 @@ class SelectionTable(ObservableRdmComponent):
         self._extra_join_fields = join_fields or []
         self.on_selection_change = on_selection_change
         self._selected_ids: set[int] = set()
+        if auto_observe:
+            self.observe(topics=filter_by)
 
     @property
     def selected_ids(self) -> set[int]:

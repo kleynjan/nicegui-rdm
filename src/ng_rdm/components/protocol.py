@@ -50,19 +50,16 @@ class RdmDataSource(Protocol):
         ...
 
     # Observer Pattern (Required - for automatic UI refresh)
-    # Note: This is now required for RDM tables to work correctly.
-    # RDM tables rely on data source notifications to refresh automatically
-    # after create/update/delete operations.
-    def add_observer(self, observer: Callable[[Any], Any]) -> None:
-        """Add an observer to receive RDM events.
-
-        This method is required for RDM components to function correctly.
-        RDM components register as observers and automatically refresh when
-        data changes occur (create/update/delete operations).
+    def add_observer(self, observer: Callable[[Any], Any], topics: dict[str, Any] | None = None) -> None:
+        """Add observer with optional topic subscription.
 
         Args:
             observer: Async or sync function that receives event notifications.
-                     Called after each successful CRUD operation.
-                     Event is StoreEvent (from ng_rdm.store).
+            topics: Dict of field=value pairs for selective notification.
+                    None = wildcard (receives all events)
         """
+        ...
+
+    def remove_observer(self, observer: Callable[[Any], Any]) -> None:
+        """Remove observer by callback identity."""
         ...

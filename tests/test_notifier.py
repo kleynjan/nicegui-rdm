@@ -224,3 +224,99 @@ async def test_debounce_after_batch(debounced_notifier):
     await asyncio.sleep(0.1)
 
     assert len(events) == 2
+
+
+# --- Remove Observer ---
+
+
+async def test_remove_observer(notifier):
+    """Removed observer no longer receives events"""
+    events = []
+    def observer(e): return events.append(e)
+    notifier.add_observer(observer)
+
+    await notifier.notify(StoreEvent(verb="create", item={"id": 1}))
+    assert len(events) == 1
+
+    notifier.remove_observer(observer)
+    await notifier.notify(StoreEvent(verb="create", item={"id": 2}))
+    assert len(events) == 1  # No new event received
+
+
+async def test_remove_observer_count(notifier):
+    """remove_observer decreases observer count"""
+    def observer1(e): return None
+    def observer2(e): return None
+    notifier.add_observer(observer1)
+    notifier.add_observer(observer2)
+    assert notifier.observer_count == 2
+
+    notifier.remove_observer(observer1)
+    assert notifier.observer_count == 1
+
+
+# --- Topic Filtering ---
+
+
+async def test_topic_filtering_exact_match(notifier):
+    """Observer with topics only receives matching events"""
+    events_role5 = []
+    events_role7 = []
+
+    notifier.add_observer(lambda e: events_role5.append(e), topics={"role_id": 5})
+    notifier.add_observer(lambda e: events_role7.append(e), topics={"role_id": 7})
+
+    await notifier.notify(StoreEvent(verb="update", item={"id": 1, "role_id": 5}))
+
+    assert len(events_role5) == 1
+    assert len(events_role7) == 0
+
+
+async def test_topic_wildcard_receives_all(notifier):
+    """Observer with topics=None receives all events"""
+    all_events = []
+    role5_events = []
+
+    notifier.add_observer(lambda e: all_events.append(e))  # Wildcard
+    notifier.add_observer(lambda e: role5_events.append(e), topics={"role_id": 5})
+
+    await notifier.notify(StoreEvent(verb="create", item={"id": 1, "role_id": 5}))
+    await notifier.notify(StoreEvent(verb="create", item={"id": 2, "role_id": 7}))
+
+    assert len(all_events) == 2  # Wildcard gets both
+    assert len(role5_events) == 1  # Filtered gets only matching
+
+
+async def test_topic_compound_match(notifier):
+    """Compound topics require all fields to match"""
+    events = []
+    notifier.add_observer(
+        lambda e: events.append(e),
+        topics={"role_id": 5, "guest_id": 100}
+    )
+
+    # Both fields match
+    await notifier.notify(StoreEvent(verb="update", item={"role_id": 5, "guest_id": 100}))
+    assert len(events) == 1
+
+    # Only one field matches
+    await notifier.notify(StoreEvent(verb="update", item={"role_id": 5, "guest_id": 200}))
+    assert len(events) == 1  # No new event
+
+
+async def test_batch_notifies_all_observers(notifier):
+    """Batch events notify all observers regardless of topics (conservative)"""
+    events_role5 = []
+    events_role7 = []
+
+    notifier.add_observer(lambda e: events_role5.append(e), topics={"role_id": 5})
+    notifier.add_observer(lambda e: events_role7.append(e), topics={"role_id": 7})
+
+    async with notifier.batch():
+        await notifier.notify(StoreEvent(verb="update", item={"id": 1, "role_id": 5}))
+        await notifier.notify(StoreEvent(verb="update", item={"id": 2, "role_id": 7}))
+
+    # Both observers receive batch event (conservative approach)
+    assert len(events_role5) == 1
+    assert len(events_role7) == 1
+    assert events_role5[0].verb == "batch"

@@ -225,19 +225,40 @@ class RdmComponent:
 class ObservableRdmComponent(RdmComponent):
     """RdmComponent with reactive data binding via observer pattern.
 
-    Adds:
-    - State dict for shared component state
-    - Data list from data source
-    - Observer subscription for automatic refresh
-    - load_data() with filter/transform/joins
-    - Base _render_cell() implementation
+    Observer subscription is explicit via observe()/unobserve() methods.
+    Call observe() at page level after construction for clear lifecycle management.
     """
 
     def __init__(self, state: dict, data_source: RdmDataSource):
         super().__init__(data_source)
         self.state = state
         self.data: list[dict[str, Any]] = []
-        data_source.add_observer(self._handle_datasource_change)
+        self._observed_topics: dict[str, Any] | None = None
+        self._is_observing = False
+
+    def observe(self, topics: dict[str, Any] | None = None) -> None:
+        """Start observing data source. Call from page level after construction."""
+        if self._is_observing:
+            self.unobserve()
+        self._observed_topics = topics
+        self.data_source.add_observer(self._handle_datasource_change, topics=topics)
+        self._is_observing = True
+
+    def unobserve(self) -> None:
+        """Stop observing data source."""
+        if self._is_observing:
+            self.data_source.remove_observer(self._handle_datasource_change)
+            self._is_observing = False
+            self._observed_topics = None
+
+    def reobserve(self, topics: dict[str, Any] | None = None) -> None:
+        """Update subscription topics."""
+        self.unobserve()
+        self.observe(topics)
+
+    @property
+    def is_observing(self) -> bool:
+        return self._is_observing
 
     async def load_data(
         self,
