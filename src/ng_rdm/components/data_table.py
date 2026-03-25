@@ -72,7 +72,7 @@ class DataTable(ObservableRdmComponent):
         """Build the table using native HTML elements."""
         await self.load_data()
 
-        with html.div().classes("rdm-table-card rdm-component"):
+        with html.div().classes("rdm-table-card rdm-component show-refresh"):
             with html.table().classes("rdm-table"):
                 # Header
                 with html.thead():

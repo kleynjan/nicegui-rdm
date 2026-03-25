@@ -12,7 +12,7 @@ from .i18n import _
 from .base import RdmComponent, TableConfig, confirm_dialog
 from .detail import DetailCard
 from .edit_card import EditCard
-from .list import ListTable
+from .list_table import ListTable
 from .protocol import RdmDataSource
 from ..store import StoreEvent
 

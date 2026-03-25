@@ -105,6 +105,25 @@
     box-sizing: inherit;
 }
 
+/* ---------------------------------------------------
+enable this block to see refresh animated
+*/
+
+.show-refresh {
+  border: 2px solid green;
+  animation: borderAnimation 2s forwards;
+}
+@keyframes borderAnimation {
+  0% {
+    border: 2px solid green;
+  }
+  100% {
+    border: 2px solid white;
+  }
+}
+/*
+------------------------------------------------------ */
+
 /* =============================================================================
    Buttons
    ============================================================================= */

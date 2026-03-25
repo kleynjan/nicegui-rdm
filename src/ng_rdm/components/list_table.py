@@ -81,7 +81,7 @@ class ListTable(ObservableRdmComponent):
                     html.span(self.config.empty_message).classes("rdm-empty-text")
             return
 
-        with html.div().classes("rdm-table-card rdm-component"):
+        with html.div().classes("rdm-table-card rdm-component show-refresh"):
             with html.table().classes("rdm-table"):
                 # Header
                 with html.thead():

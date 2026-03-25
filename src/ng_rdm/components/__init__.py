@@ -22,8 +22,8 @@ from .protocol import RdmDataSource
 from ..store import StoreEvent
 
 # Table components
-from .table import DataTable
-from .list import ListTable
+from .data_table import DataTable
+from .list_table import ListTable
 from .selection import SelectionTable
 from .edit_dialog import EditDialog
 from .dialog import Dialog

@@ -86,7 +86,7 @@ class DetailCard(ObservableRdmComponent):
         if self.selected_item is None:
             return
 
-        with html.div().classes("rdm-detail rdm-component"):
+        with html.div().classes("rdm-detail rdm-component show-refresh"):
             if self.render_callback:
                 await self.render_callback(self.selected_item)
 
