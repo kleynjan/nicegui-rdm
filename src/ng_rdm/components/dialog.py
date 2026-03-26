@@ -6,14 +6,23 @@ Positions the card at a fixed location (default: top center),
 which can feel more natural in master/detail layouts.
 
 Usage:
-    with Dialog() as dlg:
-        ui.label("Dialog content")
+    # Simple dialog with auto-generated header
+    with Dialog(title="Edit Item") as dlg:
+        ui.input("Name")
         with dlg.actions():
             ui.button("Save", on_click=handle_save)
             ui.button("Cancel", on_click=dlg.close)
     dlg.open()
+
+    # Dialog without title (manual header or headerless)
+    with Dialog() as dlg:
+        ui.label("Dialog content")
+        with dlg.actions():
+            ui.button("OK", on_click=dlg.close)
+    dlg.open()
 """
 from contextlib import contextmanager
+from typing import Callable
 
 from nicegui import html, ui
 
@@ -24,12 +33,23 @@ class Dialog:
     Uses native HTML elements with rdm-* CSS classes.
     Unlike ui.dialog which centers content, this positions the card
     at a fixed location for a more app-like feel.
+
+    Args:
+        title: Optional title for auto-generated header with close button
+        dialog_class: Additional CSS classes for the dialog container
+        on_close: Optional callback when dialog is closed
     """
 
-    def __init__(self, dialog_class: str = "", large: bool = False):
+    def __init__(
+        self,
+        title: str | None = None,
+        dialog_class: str = "",
+        on_close: Callable[[], None] | None = None,
+    ):
         self._client = ui.context.client
+        self.title = title
         self.dialog_class = dialog_class
-        self.large = large
+        self.on_close = on_close
         self._backdrop_div = None
         self._dialog_div = None
         self._body_div = None
@@ -38,17 +58,24 @@ class Dialog:
 
     def __enter__(self):
         """Enter context manager - create dialog structure."""
-        # Backdrop (click to close) - contains the dialog
+        # Backdrop - contains the dialog
         self._backdrop_div = html.div().classes('rdm-dialog-backdrop rdm-component')
         self._backdrop_div.style('display: none')
         self._backdrop_div.__enter__()
 
         # Dialog container INSIDE the backdrop
-        size_class = "rdm-dialog-lg" if self.large else ""
-        self._dialog_div = html.div().classes(f'rdm-dialog {size_class} {self.dialog_class}'.strip())
+        self._dialog_div = html.div().classes(f'rdm-dialog {self.dialog_class}'.strip())
         # Prevent clicks on dialog from closing it (stop propagation via JS)
         self._dialog_div.on('click', lambda _: None, ['stop'])
         self._dialog_div.__enter__()
+
+        # Header section (if title provided)
+        if self.title:
+            self._header_div = html.div().classes('rdm-dialog-header')
+            with self._header_div:
+                ui.label(self.title).classes('rdm-dialog-title')
+                with html.button().classes('rdm-dialog-close').on('click', self.close):
+                    html.i().classes('bi bi-x-lg')
 
         # Body section for content
         self._body_div = html.div().classes('rdm-dialog-body')
@@ -100,3 +127,10 @@ class Dialog:
             self._is_open = False
             if self._keyboard:
                 self._keyboard.active = False
+            if self.on_close:
+                self.on_close()
+
+    def _notify(self, message: str, **kwargs) -> None:
+        """Show notification safely from async context."""
+        with self._client:
+            ui.notification(message, position="bottom-left", timeout=3, **kwargs)

@@ -3,6 +3,7 @@ DataTable - Primary editable table with configurable action rendering.
 
 Uses native HTML <table> elements for clean, semantic markup.
 Supports both icon and button styles for actions, with optional built-in modal editing.
+Uses the custom Dialog component for consistent styling and behavior.
 """
 from typing import Any, Awaitable, Callable, Literal
 
@@ -10,6 +11,7 @@ from nicegui import html, ui
 
 from .i18n import _
 from .base import ObservableRdmComponent, TableConfig
+from .dialog import Dialog
 from .fields import build_form_field
 from .protocol import RdmDataSource
 
@@ -56,15 +58,23 @@ class DataTable(ObservableRdmComponent):
         self.delete_label = delete_label or _("Delete")
         self.dialog_state: dict[str, Any] = {}
         self._current_item_id: int | None = None
-        self._dialog: ui.dialog | None = None
+        self._dlg: Dialog | None = None
+        self._dialog_content: Any = None
+        self._is_edit: bool = False
         if auto_observe:
             self.observe(topics=filter_by)
 
-    async def load_data(self, join_fields: list[str] | None = None):
+    async def load_data(
+        self,
+        join_fields: list[str] | None = None,
+        filter_by: dict[str, Any] | None = None,
+        transform: Callable[[list[dict]], list[dict]] | None = None,
+    ):
         """Load data from store with filter and join fields from config."""
         await super().load_data(
             join_fields=join_fields or self.config.join_fields,
-            filter_by=self.filter_by,
+            filter_by=filter_by if filter_by is not None else self.filter_by,
+            transform=transform,
         )
 
     @ui.refreshable_method
@@ -240,48 +250,62 @@ class DataTable(ObservableRdmComponent):
     def _open_add_dialog(self):
         """Open dialog for adding new item."""
         self.dialog_state = self._init_form_state(self.config.dialog_columns)
-        self._show_dialog(is_edit=False)
+        self._current_item_id = None
+        self._is_edit = False
+        self._show_dialog()
 
     def _open_edit_dialog(self, item: dict):
         """Open dialog for editing existing item."""
         self.dialog_state = self._init_form_state(self.config.dialog_columns, item)
         self._current_item_id = item.get("id")
-        self._show_dialog(is_edit=True)
+        self._is_edit = True
+        self._show_dialog()
 
-    def _show_dialog(self, is_edit: bool):
-        """Build and show the modal dialog."""
-        title = (self.config.dialog_title_edit if is_edit else self.config.dialog_title_add) or \
-                (_("Edit") if is_edit else _("Add"))
+    def _show_dialog(self):
+        """Show the modal dialog, creating it lazily on first use."""
+        if self._dlg is None:
+            self._build_dialog()
+        else:
+            self._dialog_content.refresh()
+        assert self._dlg is not None
+        self._dlg.open()
 
-        with ui.dialog() as dlg:
-            with html.div().classes("rdm-dialog-backdrop"):
-                with html.div().classes(f"rdm-dialog {self.config.dialog_class or ''}"):
-                    # Header
-                    with html.div().classes("rdm-dialog-header"):
-                        ui.label(title).classes("rdm-dialog-title")
-                        with html.button().classes("rdm-dialog-close").on("click", dlg.close):
-                            html.i().classes("bi bi-x-lg")
+    def _build_dialog(self):
+        """Build the dialog structure once."""
+        dialog_class = self.config.dialog_class or ""
+        with Dialog(dialog_class=dialog_class) as self._dlg:
+            @ui.refreshable
+            def _content():
+                title = (
+                    self.config.dialog_title_edit if self._is_edit else self.config.dialog_title_add
+                ) or (_("Edit") if self._is_edit else _("Add"))
+                assert self._dlg is not None
 
-                    # Body - form fields
-                    with html.div().classes("rdm-dialog-body"):
-                        for col in self.config.dialog_columns:
-                            build_form_field(col, self.dialog_state)
+                # Header
+                with html.div().classes("rdm-dialog-header"):
+                    ui.label(title).classes("rdm-dialog-title")
+                    with html.button().classes("rdm-dialog-close").on("click", self._dlg.close):
+                        html.i().classes("bi bi-x-lg")
 
-                    # Footer - action buttons
-                    with html.div().classes("rdm-dialog-footer"):
-                        with html.button().classes("rdm-btn rdm-btn-primary").on(
-                            "click", lambda: self._handle_save(dlg, is_edit)
-                        ):
-                            html.span(_("Save") if is_edit else _("Add"))
-                        with html.button().classes("rdm-btn rdm-btn-secondary").on(
-                            "click", dlg.close
-                        ):
-                            html.span(_("Cancel"))
+                # Form fields
+                for col in self.config.dialog_columns:
+                    build_form_field(col, self.dialog_state)
 
-        self._dialog = dlg
-        dlg.open()
+            self._dialog_content = _content
+            _content()
 
-    async def _handle_save(self, dialog, is_edit: bool):
+            # Footer - action buttons (outside refreshable for stability)
+            with self._dlg.actions():
+                with html.button().classes("rdm-btn rdm-btn-primary").on(
+                    "click", self._handle_save
+                ):
+                    html.span(_("Save"))
+                with html.button().classes("rdm-btn rdm-btn-secondary").on(
+                    "click", self._dlg.close
+                ):
+                    html.span(_("Cancel"))
+
+    async def _handle_save(self):
         """Handle save button click in dialog."""
         item_data = self._build_item_data(self.config.dialog_columns, self.dialog_state)
 
@@ -290,10 +314,10 @@ class DataTable(ObservableRdmComponent):
         if not valid:
             return
 
-        if is_edit and self._current_item_id is not None:
+        if self._is_edit and self._current_item_id is not None:
             success = await self._update(self._current_item_id, item_data)
         else:
             success = await self._validate_and_create(item_data)
 
-        if success:
-            dialog.close()
+        if success and self._dlg:
+            self._dlg.close()

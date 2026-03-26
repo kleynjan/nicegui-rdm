@@ -26,7 +26,7 @@ class Author(QModel):
         ]),
     }
 
-    class Meta:
+    class Meta(QModel.Meta):
         table = "author"
 
 
@@ -44,7 +44,7 @@ class Book(QModel):
         ]),
     }
 
-    class Meta:
+    class Meta(QModel.Meta):
         table = "book"
 
 
@@ -54,7 +54,7 @@ class TenantItem(QModel):
     name = fields.CharField(max_length=100)
     description = fields.TextField(null=True)
 
-    class Meta:
+    class Meta(QModel.Meta):
         table = "tenant_item"
 
 

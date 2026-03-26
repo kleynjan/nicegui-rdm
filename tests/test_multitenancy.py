@@ -54,6 +54,7 @@ async def test_cross_tenant_update_raises():
     store = MultitenantTortoiseStore(TenantItem, tenant="alpha")
     item = await store.create_item({"name": "Item A"})
 
+    assert item
     with pytest.raises(TenancyError, match="cross-tenant"):
         await store.update_item(item["id"], {"tenant": "beta", "name": "Hacked"})
 
@@ -63,6 +64,7 @@ async def test_update_within_tenant():
     store = MultitenantTortoiseStore(TenantItem, tenant="alpha")
     item = await store.create_item({"name": "Original"})
 
+    assert item
     updated = await store.update_item(item["id"], {"name": "Updated"})
     assert updated is not None
     assert updated["name"] == "Updated"
@@ -77,6 +79,7 @@ async def test_delete_scoped_to_tenant():
     alpha_item = await store_alpha.create_item({"name": "Alpha"})
     await store_beta.create_item({"name": "Beta"})
 
+    assert alpha_item
     # Delete alpha item
     await store_alpha.delete_item(alpha_item)
 

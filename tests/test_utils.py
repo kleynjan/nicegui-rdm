@@ -197,6 +197,7 @@ def test_config_dot_access():
 
 def test_config_nested():
     c = Config({"db": {"host": "localhost", "port": 5432}})
+    assert c.db
     assert c.db.host == "localhost"
     assert c.db.port == 5432
 
@@ -208,5 +209,6 @@ def test_config_missing_returns_none():
 
 def test_config_list_of_dicts():
     c = Config({"entries": [{"a": 1}, {"a": 2}]})
+    assert c.entries
     assert c.entries[0].a == 1
     assert c.entries[1].a == 2

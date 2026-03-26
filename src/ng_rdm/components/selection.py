@@ -72,13 +72,18 @@ class SelectionTable(ObservableRdmComponent):
         if self.on_selection_change:
             self.on_selection_change(self._selected_ids)
 
-    async def load_data(self, join_fields: list[str] | None = None):
+    async def load_data(
+        self,
+        join_fields: list[str] | None = None,
+        filter_by: dict[str, Any] | None = None,
+        transform: Callable[[list[dict]], list[dict]] | None = None,
+    ):
         """Load data from store with filter and join fields."""
         all_joins = list(set(self.config.join_fields + self._extra_join_fields))
         await super().load_data(
             join_fields=join_fields or all_joins,
-            filter_by=self.filter_by,
-            transform=self.transform,
+            filter_by=filter_by if filter_by is not None else self.filter_by,
+            transform=transform if transform is not None else self.transform,
         )
 
     def _on_checkbox_change(self, row_key: int, checked: bool):

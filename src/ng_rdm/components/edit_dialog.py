@@ -3,6 +3,7 @@ EditDialog - Standalone modal dialog for add/edit operations.
 
 A reusable modal dialog configured via Column definitions (dialog_columns).
 Can be used independently or wired to any table component via callbacks.
+Uses the custom Dialog component for consistent styling and behavior.
 """
 from typing import Any, Awaitable, Callable
 
@@ -10,6 +11,7 @@ from nicegui import html, ui
 
 from .i18n import _
 from .base import Column, RdmComponent
+from .dialog import Dialog
 from .fields import build_form_field
 from .protocol import RdmDataSource
 
@@ -19,6 +21,7 @@ class EditDialog(RdmComponent):
 
     Configured via Column definitions for form fields.
     Saves via RdmDataSource or custom callbacks.
+    Uses Dialog component with @ui.refreshable for efficient DOM reuse.
 
     Args:
         data_source: RdmDataSource for validation and save operations
@@ -42,14 +45,15 @@ class EditDialog(RdmComponent):
     ):
         super().__init__(data_source)
         self.columns = columns
-        self.dialog_class = dialog_class
+        self.dialog_class = dialog_class or ""
         self.title_add = title_add or _("Add")
         self.title_edit = title_edit or _("Edit")
         self.on_save = on_save
         self.on_cancel = on_cancel
         self.state: dict[str, Any] = {}
         self._current_item_id: int | None = None
-        self._dialog: ui.dialog | None = None
+        self._dlg: Dialog | None = None
+        self._content: Any = None
         self._is_edit: bool = False
 
     def open_add(self):
@@ -67,41 +71,48 @@ class EditDialog(RdmComponent):
         self._show()
 
     def _show(self):
-        """Build and show the modal dialog."""
-        title = self.title_edit if self._is_edit else self.title_add
+        """Show the modal dialog, creating it lazily on first use."""
+        if self._dlg is None:
+            self._build()
+        else:
+            self._content.refresh()
+        assert self._dlg is not None
+        self._dlg.open()
 
-        with ui.dialog().props('no-backdrop-dismiss') as dlg:
-            with html.div().classes("rdm-dialog-backdrop"):
-                with html.div().classes(f"rdm-dialog {self.dialog_class or ''}"):
-                    # Header
-                    with html.div().classes("rdm-dialog-header"):
-                        ui.label(title).classes("rdm-dialog-title")
-                        with html.button().classes("rdm-dialog-close").on("click", self._handle_cancel):
-                            html.i().classes("bi bi-x-lg")
+    def _build(self):
+        """Build the dialog structure once."""
+        with Dialog(dialog_class=self.dialog_class, on_close=self._handle_cancel) as self._dlg:
+            @ui.refreshable
+            def _content():
+                title = self.title_edit if self._is_edit else self.title_add
+                assert self._dlg is not None
 
-                    # Body - form fields
-                    with html.div().classes("rdm-dialog-body"):
-                        for col in self.columns:
-                            build_form_field(col, self.state)
+                # Header
+                with html.div().classes("rdm-dialog-header"):
+                    ui.label(title).classes("rdm-dialog-title")
+                    with html.button().classes("rdm-dialog-close").on("click", self._dlg.close):
+                        html.i().classes("bi bi-x-lg")
 
-                    # Footer - action buttons
-                    with html.div().classes("rdm-dialog-footer"):
-                        with html.button().classes("rdm-btn rdm-btn-primary").on(
-                            "click", self._handle_save
-                        ):
-                            html.span(_("Save") if self._is_edit else _("Add"))
-                        with html.button().classes("rdm-btn rdm-btn-secondary").on(
-                            "click", self._handle_cancel
-                        ):
-                            html.span(_("Cancel"))
+                # Form fields
+                for col in self.columns:
+                    build_form_field(col, self.state)
 
-        self._dialog = dlg
-        dlg.open()
+            self._content = _content
+            _content()
+
+            # Footer - action buttons (outside refreshable for stability)
+            with self._dlg.actions():
+                with html.button().classes("rdm-btn rdm-btn-primary").on(
+                    "click", self._handle_save
+                ):
+                    html.span(_("Save"))
+                with html.button().classes("rdm-btn rdm-btn-secondary").on(
+                    "click", self._dlg.close
+                ):
+                    html.span(_("Cancel"))
 
     def _handle_cancel(self):
-        """Handle cancel button click."""
-        if self._dialog:
-            self._dialog.close()
+        """Handle cancel/close."""
         if self.on_cancel:
             self.on_cancel()
 
@@ -130,8 +141,8 @@ class EditDialog(RdmComponent):
                 self._notify(_("Item created"), type="positive")
 
         if saved_item:
-            if self._dialog:
-                self._dialog.close()
+            if self._dlg:
+                self._dlg.close()
             # Call on_save callback
             if self.on_save:
                 result = self.on_save(saved_item)
