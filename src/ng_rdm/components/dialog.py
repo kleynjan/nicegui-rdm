@@ -24,7 +24,7 @@ Usage:
 from contextlib import contextmanager
 from typing import Callable
 
-from nicegui import html, ui
+from nicegui import context, html, ui
 
 
 class Dialog:
@@ -57,10 +57,18 @@ class Dialog:
         self._is_open = False
 
     def __enter__(self):
-        """Enter context manager - create dialog structure."""
-        # Backdrop - contains the dialog
+        """Enter context manager - create dialog structure.
+
+        Attaches the backdrop to the client's root layout so the dialog
+        DOM survives @ui.refreshable rebuilds regardless of call site.
+        """
+        # Attach backdrop to client root layout (escapes any refreshable zone)
+        layout = context.client.layout
+        layout.__enter__()
         self._backdrop_div = html.div().classes('rdm-dialog-backdrop rdm-component')
         self._backdrop_div.style('display: none')
+        layout.__exit__(None, None, None)
+
         self._backdrop_div.__enter__()
 
         # Dialog container INSIDE the backdrop

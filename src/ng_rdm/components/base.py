@@ -290,8 +290,14 @@ class ObservableRdmComponent(RdmComponent):
             html.span(display)
 
     async def _handle_datasource_change(self, event: StoreEvent):
-        """Handle data source changes - subclasses can override for custom behavior"""
-        await self.build.refresh()  # type: ignore
+        """Handle data source changes. Auto-unobserves if DOM context is gone."""
+        build = getattr(self, 'build', None)
+        if build and hasattr(build, 'prune'):
+            build.prune()
+            if not [t for t in build.targets if t.instance == self]:
+                self.unobserve()
+                return
+        await self.build.refresh()  # type: ignore[union-attr]
 
     # note, commented out to avoid type confusion
     # async def build(self):
