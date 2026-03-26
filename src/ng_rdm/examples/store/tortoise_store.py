@@ -34,7 +34,7 @@ class Category(QModel):
         ])
     }
 
-    class Meta:
+    class Meta(QModel.Meta):
         table = "category"
 
 
@@ -57,7 +57,7 @@ class Product(QModel):
         ])
     }
 
-    class Meta:
+    class Meta(QModel.Meta):
         table = "product"
 
 

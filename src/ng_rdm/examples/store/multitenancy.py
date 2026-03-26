@@ -36,7 +36,7 @@ class Task(QModel):
         ])
     }
 
-    class Meta:
+    class Meta(QModel.Meta):
         table = "task"
 
 
@@ -119,7 +119,8 @@ async def main():
     try:
         # The store will override with its own tenant, so this is safe
         bad_task = await store_a.create_item({'title': 'Evil task', 'tenant': 'tenant_b'})
-        print(f"  Created (tenant was overridden): tenant={bad_task.get('tenant')}")
+        if bad_task:
+            print(f"  Created (tenant was overridden): tenant={bad_task.get('tenant')}")
     except TenancyError as e:
         print(f"  TenancyError: {e}")
 

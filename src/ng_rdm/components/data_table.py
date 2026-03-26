@@ -67,7 +67,7 @@ class DataTable(ObservableRdmComponent):
             filter_by=self.filter_by,
         )
 
-    @ui.refreshable
+    @ui.refreshable_method
     async def build(self):
         """Build the table using native HTML elements."""
         await self.load_data()

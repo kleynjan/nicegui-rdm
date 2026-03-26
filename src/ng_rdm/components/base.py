@@ -293,10 +293,9 @@ class ObservableRdmComponent(RdmComponent):
         """Handle data source changes - subclasses can override for custom behavior"""
         await self.build.refresh()  # type: ignore
 
-    @ui.refreshable
-    async def build(self):
-        """Build the UI - to be implemented by subclasses"""
-        raise NotImplementedError("Subclasses must implement build()")
+    # note, commented out to avoid type confusion
+    # async def build(self):
+    #     raise NotImplementedError("Subclasses must implement build()")
 
 
 async def confirm_dialog(item: dict | None = None, prompts: dict | None = None):

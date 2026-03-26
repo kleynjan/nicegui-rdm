@@ -70,7 +70,7 @@ class EditDialog(RdmComponent):
         """Build and show the modal dialog."""
         title = self.title_edit if self._is_edit else self.title_add
 
-        with ui.dialog() as dlg:
+        with ui.dialog().props('no-backdrop-dismiss') as dlg:
             with html.div().classes("rdm-dialog-backdrop"):
                 with html.div().classes(f"rdm-dialog {self.dialog_class or ''}"):
                     # Header

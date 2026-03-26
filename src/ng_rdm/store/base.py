@@ -10,11 +10,16 @@ A Store...
 - it is *not* meant for caching
 """
 
-from typing import Any, Callable
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Callable
 
 from ..models import FieldSpec
 from ..utils import logger
 from .notifier import EventNotifier, StoreEvent
+
+if TYPE_CHECKING:
+    from ..debug.event_log import EventLog
 
 
 class Store:
@@ -70,6 +75,16 @@ class Store:
     def observer_count(self) -> int:
         """Get the number of observers"""
         return self._notifier.observer_count
+
+    def set_event_log(self, event_log: EventLog, name: str, tenant: str) -> None:
+        """Set the event log for debug tracking.
+
+        Args:
+            event_log: The EventLog instance to log events to
+            name: Store name (for display in debug panel)
+            tenant: Tenant identifier (for display in debug panel)
+        """
+        self._notifier.set_event_log(event_log, name, tenant)
 
     def validate(self, item: dict) -> tuple[bool, dict]:
         """Validate and normalize an item or partial.
@@ -195,12 +210,27 @@ class StoreRegistry:
 
     def __init__(self):
         self._stores: dict[str, dict[str, Store]] = {}
+        self._event_log: EventLog | None = None
+
+    def set_event_log(self, event_log: EventLog) -> None:
+        """Enable debug event logging for all stores.
+
+        Wires up event logging for all currently registered stores
+        and any stores registered in the future.
+        """
+        self._event_log = event_log
+        # Wire up existing stores
+        for tenant, name, store in self.get_all_stores():
+            store.set_event_log(event_log, name, tenant)
 
     def register_store(self, tenant: str, name: str, store: Store) -> None:
         """Register a store instance for a tenant."""
         if tenant not in self._stores:
             self._stores[tenant] = {}
         self._stores[tenant][name] = store
+        # Auto-wire event logging if enabled
+        if self._event_log:
+            store.set_event_log(self._event_log, name, tenant)
         logger.debug(f"Registered {name} store for tenant {tenant}")
 
     def get_store(self, tenant: str, name: str) -> Store:
@@ -213,6 +243,14 @@ class StoreRegistry:
             return self._stores[tenant][name]
         except KeyError:
             raise KeyError(f"No store '{name}' found for tenant '{tenant}'")
+
+    def get_all_stores(self) -> list[tuple[str, str, Store]]:
+        """Get all registered stores as (tenant, name, store) tuples."""
+        result = []
+        for tenant, stores in self._stores.items():
+            for name, store in stores.items():
+                result.append((tenant, name, store))
+        return result
 
 
 # Global registry instance

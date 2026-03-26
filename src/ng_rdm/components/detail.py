@@ -55,7 +55,7 @@ class DetailCard(ObservableRdmComponent):
 
     def set_item(self, item: dict | None):
         self.selected_item = item
-        self.build.refresh()  # type: ignore
+        self.build.refresh()
 
     async def _handle_datasource_change(self, event: StoreEvent):
         if self.selected_item is None:
@@ -69,7 +69,7 @@ class DetailCard(ObservableRdmComponent):
                 join_fields=self.config.join_fields,
             )
             self.selected_item = items[0] if items else None
-        await self.build.refresh()  # type: ignore
+        await self.build.refresh()
 
     async def _handle_delete(self):
         if self.selected_item is None:
@@ -81,7 +81,7 @@ class DetailCard(ObservableRdmComponent):
                 self.on_delete(item)
             self.selected_item = None
 
-    @ui.refreshable
+    @ui.refreshable_method
     async def build(self):
         if self.selected_item is None:
             return

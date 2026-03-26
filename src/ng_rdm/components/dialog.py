@@ -40,7 +40,6 @@ class Dialog:
         """Enter context manager - create dialog structure."""
         # Backdrop (click to close) - contains the dialog
         self._backdrop_div = html.div().classes('rdm-dialog-backdrop rdm-component')
-        self._backdrop_div.on('click', self._on_backdrop_click)
         self._backdrop_div.style('display: none')
         self._backdrop_div.__enter__()
 
@@ -69,10 +68,6 @@ class Dialog:
         if self._backdrop_div:
             self._backdrop_div.__exit__(exc_type, exc_val, exc_tb)
         return False
-
-    def _on_backdrop_click(self, e):
-        """Handle backdrop click - close only if click is on backdrop itself."""
-        self.close()
 
     def _on_key(self, e):
         """Handle keyboard events - ESC to close."""

@@ -102,13 +102,13 @@ class StepWizard:
             await self._handle_complete()
         else:
             self._current_step += 1
-            self._content.refresh()  # type: ignore
+            self._content.refresh()
 
     def _handle_back(self):
         """Handle back button click."""
         if not self.is_first_step:
             self._current_step -= 1
-            self._content.refresh()  # type: ignore
+            self._content.refresh()
 
     async def _handle_complete(self):
         """Handle wizard completion."""

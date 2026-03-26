@@ -79,14 +79,14 @@ class ViewStack(RdmComponent):
         self._item = None
         if self._detail:
             self._detail.set_item(None)
-        self.build.refresh()  # type: ignore
+        self.build.refresh()
 
     def show_detail(self, item: dict):
         self._view = "detail"
         self._item = item
         if self._detail:
             self._detail.set_item(item)
-        self.build.refresh()  # type: ignore
+        self.build.refresh()    # type: ignore
 
     def show_edit_existing(self, item: dict | None = None):
         item = item or self._item
@@ -96,14 +96,14 @@ class ViewStack(RdmComponent):
         self._item = item
         if self._edit:
             self._edit.set_item(item)
-        self.build.refresh()  # type: ignore
+        self.build.refresh()
 
     def show_edit_new(self):
         self._view = "edit"
         self._item = None
         if self._edit:
             self._edit.set_item(None)
-        self.build.refresh()  # type: ignore
+        self.build.refresh()    # type: ignore
 
     # ── Callbacks ──
 
@@ -187,7 +187,7 @@ class ViewStack(RdmComponent):
 
     # ── Build ──
 
-    @ui.refreshable
+    @ui.refreshable_method
     async def build(self):
         self._build_breadcrumb()
 
@@ -205,7 +205,7 @@ class ViewStack(RdmComponent):
             config=self.select_config,
             on_click=self._on_row_selected,
         )
-        await self._table.build()  # type: ignore
+        await self._table.build()
 
         # Toolbar with add button and optional list_footer content
         with html.div().classes("rdm-view-stack-toolbar"):
@@ -229,7 +229,7 @@ class ViewStack(RdmComponent):
                     show_delete=False,
                 )
                 self._detail.set_item(self._item)
-                await self._detail.build()  # type: ignore
+                await self._detail.build()
 
                 with html.div().classes("rdm-detail-actions"):
                     if self.show_edit:
@@ -254,4 +254,4 @@ class ViewStack(RdmComponent):
             on_cancel=self._on_edit_cancel,
         )
         self._edit.set_item(self._item)
-        await self._edit.build()  # type: ignore
+        await self._edit.build()

@@ -29,9 +29,9 @@ class Tabs:
 
     def _select(self, key: str):
         self.active = key
-        self.build.refresh()  # type: ignore
+        self.build.refresh()
 
-    @ui.refreshable
+    @ui.refreshable_method
     async def build(self):
         with html.div().classes("rdm-tabs rdm-component"):
             for key, label, _ in self.tabs:

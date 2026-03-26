@@ -7,12 +7,17 @@ EventNotifier manages observer notifications for Store, providing:
 - Explicit batching via context manager
 """
 
+from __future__ import annotations
+
 import asyncio
 import inspect
 import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
+
+if TYPE_CHECKING:
+    from ..debug.event_log import EventLog
 
 
 @dataclass
@@ -27,6 +32,21 @@ class ObserverEntry:
     """Observer registration with optional topic filter."""
     callback: Callable[[StoreEvent], Any]
     topics: dict[str, Any] | None = None  # None = wildcard (all events)
+    name: str = ""  # Derived from callback inspection
+
+
+def _infer_observer_name(callback: Callable) -> str:
+    """Infer a human-readable name from a callback function or method."""
+    # Method on object: "DataTable#a3f2" (class + short id)
+    if hasattr(callback, '__self__'):
+        obj = callback.__self__
+        class_name = obj.__class__.__name__
+        short_id = hex(id(obj))[-4:]
+        return f"{class_name}#{short_id}"
+    # Plain function: use __name__
+    if hasattr(callback, '__name__'):
+        return callback.__name__
+    return f"observer#{hex(id(callback))[-4:]}"
 
 
 class EventNotifier:
@@ -48,14 +68,24 @@ class EventNotifier:
         self._pending_events: list[StoreEvent] = []
         self._last_event_time = 0.0
         self._flush_task: asyncio.Task | None = None
+        self._event_log: EventLog | None = None
+        self._store_name: str = ""
+        self._store_tenant: str = ""
 
     def set_topic_fields(self, fields: list[str]) -> None:
         """Configure which item fields can be used for topic-based routing."""
         self._topic_fields = fields
 
+    def set_event_log(self, event_log: EventLog, store_name: str, tenant: str) -> None:
+        """Set the event log for debug tracking."""
+        self._event_log = event_log
+        self._store_name = store_name
+        self._store_tenant = tenant
+
     def add_observer(self, observer: Callable[[StoreEvent], Any], topics: dict[str, Any] | None = None) -> None:
         """Add observer with optional topic subscription."""
-        self._observers.append(ObserverEntry(callback=observer, topics=topics))
+        name = _infer_observer_name(observer)
+        self._observers.append(ObserverEntry(callback=observer, topics=topics, name=name))
 
     def remove_observer(self, observer: Callable[[StoreEvent], Any]) -> None:
         """Remove observer by callback identity."""
@@ -151,7 +181,20 @@ class EventNotifier:
             )
 
         for entry in self._observers:
-            if self._should_notify(event_to_fire, entry.topics):
+            notified = self._should_notify(event_to_fire, entry.topics)
+            # Log to debug event log if enabled
+            if self._event_log and self._event_log.is_enabled:
+                from ..debug.event_log import EventLogEntry
+                self._event_log.log(EventLogEntry(
+                    timestamp=time.time(),
+                    store_name=self._store_name,
+                    tenant=self._store_tenant,
+                    observer_name=entry.name,
+                    topics=entry.topics,
+                    event=event_to_fire,
+                    notified=notified,
+                ))
+            if notified:
                 if inspect.iscoroutinefunction(entry.callback):
                     await entry.callback(event_to_fire)
                 else:

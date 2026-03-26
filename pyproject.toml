@@ -24,6 +24,9 @@ dev = [
 [tool.hatch.build.targets.wheel]
 packages = ["src/ng_rdm"]
 
+[tool.pyright]
+stubPath = "typings"
+
 [tool.pytest.ini_options]
 addopts = "-W ignore::DeprecationWarning -W ignore::PendingDeprecationWarning -W ignore::pytest.PytestDeprecationWarning -v"
 asyncio_mode = "auto"

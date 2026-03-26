@@ -52,7 +52,7 @@ class Category(QModel):
         ])
     }
 
-    class Meta:
+    class Meta(QModel.Meta):
         table = "showcase_category"
 
 
@@ -76,7 +76,7 @@ class Product(QModel):
         ])
     }
 
-    class Meta:
+    class Meta(QModel.Meta):
         table = "showcase_product"
 
 
@@ -343,6 +343,8 @@ async def demo_tabs(product_store, category_store):
 @ui.page("/")
 async def main():
     rdm_init()
+    from ng_rdm.debug import enable_debug_page
+    enable_debug_page()  # Optional: enable debug page for event stream visualization
 
     ui.add_head_html("""
     <style>

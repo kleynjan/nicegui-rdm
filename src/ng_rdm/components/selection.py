@@ -90,7 +90,7 @@ class SelectionTable(ObservableRdmComponent):
         if self.on_selection_change:
             self.on_selection_change(self._selected_ids)
 
-    @ui.refreshable
+    @ui.refreshable_method
     async def build(self):
         """Build the table using native HTML elements."""
         await self.load_data()

@@ -70,7 +70,7 @@ class EditCard(RdmComponent):
         if self.on_cancel:
             self.on_cancel()
 
-    @ui.refreshable
+    @ui.refreshable_method
     async def build(self):
         with html.div().classes("rdm-card rdm-edit-card rdm-component"):
             with html.div().classes("rdm-card-body"):
