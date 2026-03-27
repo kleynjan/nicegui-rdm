@@ -8,11 +8,11 @@ from typing import Any, Callable
 
 from nicegui import html, ui
 
-from .base import ObservableRdmComponent, TableConfig
+from .base import ObservableRdmTable, TableConfig
 from .protocol import RdmDataSource
 
 
-class SelectionTable(ObservableRdmComponent):
+class SelectionTable(ObservableRdmTable):
     """Table with checkbox selection in first column.
 
     Uses native HTML table elements with rdm-* CSS classes.
@@ -41,16 +41,14 @@ class SelectionTable(ObservableRdmComponent):
         on_selection_change: Callable[[set[int]], None] | None = None,
         auto_observe: bool = True,
     ):
-        super().__init__(state, data_source)
-        self.config = config
-        self.filter_by = filter_by
-        self.transform = transform
+        super().__init__(
+            state, data_source, config,
+            filter_by=filter_by, transform=transform,
+            join_fields=join_fields, auto_observe=auto_observe,
+        )
         self.row_key = row_key
-        self._extra_join_fields = join_fields or []
         self.on_selection_change = on_selection_change
         self._selected_ids: set[int] = set()
-        if auto_observe:
-            self.observe(topics=filter_by)
 
     @property
     def selected_ids(self) -> set[int]:
@@ -71,20 +69,6 @@ class SelectionTable(ObservableRdmComponent):
                 self._selected_ids.add(key)
         if self.on_selection_change:
             self.on_selection_change(self._selected_ids)
-
-    async def load_data(
-        self,
-        join_fields: list[str] | None = None,
-        filter_by: dict[str, Any] | None = None,
-        transform: Callable[[list[dict]], list[dict]] | None = None,
-    ):
-        """Load data from store with filter and join fields."""
-        all_joins = list(set(self.config.join_fields + self._extra_join_fields))
-        await super().load_data(
-            join_fields=join_fields or all_joins,
-            filter_by=filter_by if filter_by is not None else self.filter_by,
-            transform=transform if transform is not None else self.transform,
-        )
 
     def _on_checkbox_change(self, row_key: int, checked: bool):
         """Handle checkbox state change."""

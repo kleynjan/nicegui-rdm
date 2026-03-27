@@ -304,6 +304,67 @@ class ObservableRdmComponent(RdmComponent):
     #     raise NotImplementedError("Subclasses must implement build()")
 
 
+class ObservableRdmTable(ObservableRdmComponent):
+    """Base class for store-connected table components.
+
+    Adds shared table concerns on top of ObservableRdmComponent:
+    - TableConfig, filter_by, transform, extra join fields
+    - load_data() with join field merging
+    - Toolbar rendering (add button; filtering/pagination in future)
+    """
+
+    def __init__(
+        self,
+        state: dict,
+        data_source: RdmDataSource,
+        config: TableConfig,
+        filter_by: dict[str, Any] | None = None,
+        transform: Callable[[list[dict]], list[dict]] | None = None,
+        join_fields: list[str] | None = None,
+        on_add: Callable[[], Awaitable[None] | None] | None = None,
+        render_toolbar: Callable[[], None] | None = None,
+        auto_observe: bool = True,
+    ):
+        super().__init__(state, data_source)
+        self.config = config
+        self.filter_by = filter_by
+        self.transform = transform
+        self._extra_join_fields = join_fields or []
+        self.on_add = on_add
+        self.render_toolbar = render_toolbar
+        if auto_observe:
+            self.observe(topics=filter_by)
+
+    async def load_data(
+        self,
+        join_fields: list[str] | None = None,
+        filter_by: dict[str, Any] | None = None,
+        transform: Callable[[list[dict]], list[dict]] | None = None,
+    ):
+        all_joins = list(set(self.config.join_fields + self._extra_join_fields))
+        await super().load_data(
+            join_fields=join_fields or all_joins,
+            filter_by=filter_by if filter_by is not None else self.filter_by,
+            transform=transform if transform is not None else self.transform,
+        )
+
+    def _build_toolbar(self):
+        """Render table toolbar with add button and optional extra content."""
+        if not self.config.show_add_button and not self.render_toolbar:
+            return
+        with html.div().classes("rdm-table-toolbar"):
+            if self.config.show_add_button:
+                add_handler = self.on_add or self._default_on_add
+                with html.button().classes("rdm-btn rdm-btn-primary").on("click", add_handler):
+                    html.span(self.config.add_button or _("Add new"))
+            if self.render_toolbar:
+                self.render_toolbar()
+
+    def _default_on_add(self):
+        """Default add handler — no-op. Subclasses with modal support override this."""
+        pass
+
+
 async def confirm_dialog(item: dict | None = None, prompts: dict | None = None):
     """Show a confirmation dialog with RDM styling.
 

@@ -10,13 +10,13 @@ from typing import Any, Awaitable, Callable, Literal
 from nicegui import html, ui
 
 from .i18n import _
-from .base import ObservableRdmComponent, TableConfig
+from .base import ObservableRdmTable, TableConfig
 from .dialog import Dialog
 from .fields import build_form_field
 from .protocol import RdmDataSource
 
 
-class DataTable(ObservableRdmComponent):
+class DataTable(ObservableRdmTable):
     """Primary editable table with configurable action rendering.
 
     Uses native HTML table elements with rdm-* CSS classes.
@@ -42,15 +42,19 @@ class DataTable(ObservableRdmComponent):
         config: TableConfig,
         filter_by: dict[str, Any] | None = None,
         action_style: Literal["icon", "button"] = "icon",
+        on_add: Callable[[], Awaitable[None] | None] | None = None,
         on_edit: Callable[[dict], Awaitable[None] | None] | None = None,
         on_delete: Callable[[dict], Awaitable[None] | None] | None = None,
         edit_label: str | None = None,
         delete_label: str | None = None,
+        render_toolbar: Callable[[], None] | None = None,
         auto_observe: bool = True,
     ):
-        super().__init__(state, data_source)
-        self.config = config
-        self.filter_by = filter_by
+        super().__init__(
+            state, data_source, config,
+            filter_by=filter_by, on_add=on_add,
+            render_toolbar=render_toolbar, auto_observe=auto_observe,
+        )
         self.action_style = action_style
         self.on_edit = on_edit
         self.on_delete = on_delete
@@ -61,26 +65,16 @@ class DataTable(ObservableRdmComponent):
         self._dlg: Dialog | None = None
         self._dialog_content: Any = None
         self._is_edit: bool = False
-        if auto_observe:
-            self.observe(topics=filter_by)
 
-    async def load_data(
-        self,
-        join_fields: list[str] | None = None,
-        filter_by: dict[str, Any] | None = None,
-        transform: Callable[[list[dict]], list[dict]] | None = None,
-    ):
-        """Load data from store with filter and join fields from config."""
-        await super().load_data(
-            join_fields=join_fields or self.config.join_fields,
-            filter_by=filter_by if filter_by is not None else self.filter_by,
-            transform=transform,
-        )
+    def _default_on_add(self):
+        """Open the built-in add dialog."""
+        self._open_add_dialog()
 
     @ui.refreshable_method
     async def build(self):
         """Build the table using native HTML elements."""
         await self.load_data()
+        self._build_toolbar()
 
         with html.div().classes("rdm-table-card rdm-component show-refresh"):
             with html.table().classes("rdm-table"):
@@ -211,14 +205,6 @@ class DataTable(ObservableRdmComponent):
                 "click", lambda _, r=row: self._handle_delete(r)
             ):
                 html.span(self.delete_label)
-
-    def render_add_button(self):
-        """Render the add button - call from page code to position alongside other buttons."""
-        if self.config.add_button and self.config.show_add_button:
-            with html.button().classes("rdm-btn rdm-btn-primary").on(
-                "click", self._open_add_dialog
-            ):
-                html.span(self.config.add_button)
 
     async def _handle_custom_action(self, action, row: dict):
         """Handle custom action button click."""

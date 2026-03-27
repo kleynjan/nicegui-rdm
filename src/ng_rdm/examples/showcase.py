@@ -6,7 +6,7 @@ A practical introduction to ng_rdm components, demonstrating
 each component type with a real SQLite database.
 
 Run from project root:
-    python -m ng_rdm.examples.components.showcase
+    python -m ng_rdm.examples.showcase
 
 Then open http://localhost:8080 in your browser.
 Creates: showcase.sqlite3
@@ -18,10 +18,6 @@ Components demonstrated:
 - ViewStack: Master-detail navigation pattern
 - Dialog: Modal overlay
 - Tabs: Tab-based content switching
-
-Key concepts demonstrated:
-- StoreRegistry: Singleton store pattern for cross-session reactivity
-- Observer pattern: Components auto-observe by default, or use explicit observe()/unobserve()
 """
 
 from pathlib import Path
@@ -158,16 +154,6 @@ async def demo_datatable(product_store):
     - Click **Delete** to remove items
     """)
 
-    # Reactivity test instructions
-    with ui.element("div").classes("q-pa-sm q-mb-sm").style("background: #e3f2fd; border-radius: 4px;"):
-        ui.label("🔄 Test Cross-Session Reactivity:").classes("text-weight-bold")
-        ui.label("1. Click 'Open Second Window' below").classes("text-caption")
-        ui.label("2. Add or edit a product in one window").classes("text-caption")
-        ui.label("3. Watch the table update automatically in the other window!").classes("text-caption")
-
-    ui.link("↗ Open Second Window", target="/").props("target=_blank").classes(
-        "rdm-btn rdm-btn-secondary q-mb-sm")
-
     config = TableConfig(
         columns=product_columns,
         add_button="+ Add Product",
@@ -181,7 +167,6 @@ async def demo_datatable(product_store):
     # auto_observe=True (default): component observes store with filter_by as topics
     # For explicit control: DataTable(..., auto_observe=False) then table.observe(topics={...})
     table = DataTable(state={}, data_source=product_store, config=config)
-    table.render_add_button()
     await table.build()
 
 
@@ -245,6 +230,7 @@ async def demo_viewstack(category_store, product_store):
 
     select_config = TableConfig(
         columns=category_columns,
+        show_add_button=True,
         add_button="+ Add Category",
     )
 
@@ -253,6 +239,8 @@ async def demo_viewstack(category_store, product_store):
             Column(name="name", label="Name"),
             Column(name="description", label="Description", ui_type=ui.textarea),
         ],
+        show_edit_button=True,
+        show_delete_button=True,
     )
 
     async def render_detail(item: dict):
@@ -273,14 +261,11 @@ async def demo_viewstack(category_store, product_store):
 
     stack = ViewStack(
         data_source=category_store,
-        select_config=select_config,
+        master_config=select_config,
         detail_config=detail_config,
-        render_detail=render_detail,
+        render_detail_item=render_detail,
         breadcrumb_root="Categories",
         item_label=lambda item: item.get("name", ""),
-        show_add=True,
-        show_edit=True,
-        show_delete=True,
     )
     await stack.build()
 

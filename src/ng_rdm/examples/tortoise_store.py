@@ -8,7 +8,7 @@ This example demonstrates:
 - Hydration (datetime ↔ string conversion)
 
 Run from project root:
-    python -m ng_rdm.examples.store.tortoise_store
+    python -m ng_rdm.examples.tortoise_store
 
 Creates: store_demo.sqlite3
 """

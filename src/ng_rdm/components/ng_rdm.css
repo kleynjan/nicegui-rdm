@@ -754,6 +754,7 @@ enable this block to see refresh animated
     width: 100%;
 }
 
+.rdm-table-toolbar,
 .rdm-view-stack-toolbar {
     display: flex;
     gap: var(--rdm-spacing-sm);

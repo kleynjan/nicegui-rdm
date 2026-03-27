@@ -8,18 +8,18 @@ This example demonstrates:
 - Using observer pattern for automatic refresh
 
 Run from project root:
-    python -m ng_rdm.examples.components.custom_table
+    python -m ng_rdm.examples.custom_table
 
 Then open http://localhost:8080 in your browser.
 """
 
 from nicegui import app, ui, html
-from ng_rdm.components import StoreComponent, rdm_init
+from ng_rdm.components import ObservableRdmComponent, rdm_init
 from ng_rdm.models import FieldSpec, Validator
 from ng_rdm.store import DictStore
 
 
-class HighlightTable(StoreComponent):
+class HighlightTable(ObservableRdmComponent):
     """A custom table that highlights rows based on a condition.
 
     Shows how to build your own store-connected table component by:
@@ -46,7 +46,7 @@ class HighlightTable(StoreComponent):
     def _should_highlight(self, row: dict) -> bool:
         return row.get(self.highlight_field) in self.highlight_values
 
-    @ui.refreshable
+    @ui.refreshable_method
     async def build(self):
         await self.load_data()
 
@@ -73,7 +73,7 @@ class HighlightTable(StoreComponent):
 
         tr = html.tr().classes(row_class)
         if self.on_row_click:
-            tr.on("click", lambda _, r=row: self.on_row_click(r))
+            tr.on("click", lambda _, r=row: self.on_row_click(r))   # type: ignore
 
         with tr:
             for field, _label in self.columns:

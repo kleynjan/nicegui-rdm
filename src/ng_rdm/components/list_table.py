@@ -4,15 +4,15 @@ ListTable - Read-only table with clickable rows for navigation.
 Uses native HTML <table> elements for clean, semantic markup.
 Integrates with store for automatic refresh on data changes.
 """
-from typing import Any, Callable
+from typing import Any, Awaitable, Callable
 
 from nicegui import html, ui
 
-from .base import ObservableRdmComponent, TableConfig
+from .base import ObservableRdmTable, TableConfig
 from .protocol import RdmDataSource
 
 
-class ListTable(ObservableRdmComponent):
+class ListTable(ObservableRdmTable):
     """Read-only table with clickable rows for navigation.
 
     Uses native HTML table elements with rdm-* CSS classes.
@@ -36,34 +36,21 @@ class ListTable(ObservableRdmComponent):
         config: TableConfig,
         filter_by: dict[str, Any] | None = None,
         on_click: Callable[[int | None], None] | None = None,
+        on_add: Callable[[], Awaitable[None] | None] | None = None,
         transform: Callable[[list[dict]], list[dict]] | None = None,
         row_key: str = "id",
         join_fields: list[str] | None = None,
+        render_toolbar: Callable[[], None] | None = None,
         auto_observe: bool = True,
     ):
-        super().__init__(state, data_source)
-        self.config = config
-        self.filter_by = filter_by
-        self.on_click = on_click
-        self.transform = transform
-        self.row_key = row_key
-        self._extra_join_fields = join_fields or []
-        if auto_observe:
-            self.observe(topics=filter_by)
-
-    async def load_data(
-        self,
-        join_fields: list[str] | None = None,
-        filter_by: dict[str, Any] | None = None,
-        transform: Callable[[list[dict]], list[dict]] | None = None,
-    ):
-        """Load data from store with filter and join fields."""
-        all_joins = list(set(self.config.join_fields + self._extra_join_fields))
-        await super().load_data(
-            join_fields=join_fields or all_joins,
-            filter_by=filter_by if filter_by is not None else self.filter_by,
-            transform=transform if transform is not None else self.transform,
+        super().__init__(
+            state, data_source, config,
+            filter_by=filter_by, transform=transform,
+            join_fields=join_fields, on_add=on_add,
+            render_toolbar=render_toolbar, auto_observe=auto_observe,
         )
+        self.on_click = on_click
+        self.row_key = row_key
 
     def _render_cell(self, col, value, row: dict):
         """Render a single cell value. Overrides base to add ui.badge support."""
@@ -79,6 +66,7 @@ class ListTable(ObservableRdmComponent):
     async def build(self):
         """Build the table using native HTML elements."""
         await self.load_data()
+        self._build_toolbar()
 
         if not self.data:
             if self.config.empty_message:

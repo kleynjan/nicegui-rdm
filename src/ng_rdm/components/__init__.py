@@ -1,5 +1,5 @@
 """
-RDM (Reactive Database Management) components for NiceGUI.
+RDM (Reactive Data Management) components for NiceGUI.
 
 Component names:
 - DataTable - primary editable table with configurable actions (icon/button style)
@@ -16,7 +16,7 @@ Component names:
 from pathlib import Path
 from nicegui import ui
 
-from .base import RdmComponent, ObservableRdmComponent, Column, TableConfig, RowAction, confirm_dialog
+from .base import RdmComponent, ObservableRdmComponent, ObservableRdmTable, Column, TableConfig, RowAction, confirm_dialog
 from .i18n import _, none_as_text, set_language, set_translations
 from .protocol import RdmDataSource
 from ..store import StoreEvent
@@ -78,6 +78,7 @@ __all__ = [
     # Base classes
     'RdmComponent',
     'ObservableRdmComponent',
+    'ObservableRdmTable',
     'Column',
     'TableConfig',
     'RowAction',

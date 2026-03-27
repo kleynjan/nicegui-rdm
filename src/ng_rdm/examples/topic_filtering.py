@@ -1,7 +1,7 @@
 """
 Topic Filtering Example - demonstrates selective event subscriptions.
 
-Run: python -m ng_rdm.examples.store.topic_filtering
+Run: python -m ng_rdm.examples.topic_filtering
 Then open http://localhost:8080 to see two DataTables with topic-based filtering.
 Open http://localhost:8080/rdm-debug to see the event stream.
 
