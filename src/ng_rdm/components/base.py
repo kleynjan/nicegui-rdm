@@ -70,59 +70,36 @@ class Column:
 
 @dataclass
 class TableConfig:
-    """Configuration for CRUD tables and related components.
-
-    For modal mode, use table_columns and dialog_columns separately.
-    For direct/explicit modes, use columns (backwards compatible).
-    """
-    columns: list[Column] = field(default_factory=list)      # for direct/explicit modes
-    table_columns: list[Column] = field(default_factory=list)  # modal: columns in table view
-    dialog_columns: list[Column] = field(default_factory=list)  # modal: columns in dialog
-    mode: str = "explicit"              # "explicit", "direct", or "modal"
-    add_button: Optional[str] = None    # Custom add button text
-    focus_column: Optional[str] = None  # Default column for focus
-    delete_confirmation: bool = True    # Confirm deletes
-    dialog_class: Optional[str] = None  # CSS class for modal dialog card
-    dialog_title_add: Optional[str] = None    # Dialog title for add (modal mode)
-    dialog_title_edit: Optional[str] = None   # Dialog title for edit (modal mode)
-    empty_message: Optional[str] = None  # Message to display when table is empty
-    # Row action buttons (modal mode)
-    show_add_button: bool = True        # Show add button
-    show_edit_button: bool = True       # Show edit button per row
-    show_delete_button: bool = True     # Show delete button per row
-    custom_actions: list[RowAction] = field(default_factory=list)  # Custom action buttons per row
+    """Configuration for table display components (DataTable, ListTable, SelectionTable)."""
+    columns: list[Column] = field(default_factory=list)
+    empty_message: Optional[str] = None
+    add_button: Optional[str] = None
+    show_add_button: bool = True
+    show_edit_button: bool = True
+    show_delete_button: bool = True
+    custom_actions: list[RowAction] = field(default_factory=list)
 
     def __post_init__(self):
-        # Backwards compat: if columns set but table_columns/dialog_columns empty, use columns for both
-        if self.columns and not self.table_columns:
-            self.table_columns = self.columns
-        if self.columns and not self.dialog_columns:
-            self.dialog_columns = self.columns
-        # For non-modal modes, ensure columns is set from table_columns if needed
-        if not self.columns and self.table_columns:
-            self.columns = self.table_columns
-
-        # Compute join_fields from all column sources
-        all_cols = self.columns + self.table_columns + self.dialog_columns
-        self.join_fields = list({col.name for col in all_cols if "__" in col.name})
-
-        # Set default focus column
-        if not self.focus_column:
-            if self.dialog_columns:
-                self.focus_column = self.dialog_columns[0].name
-            elif self.columns:
-                self.focus_column = self.columns[0].name
-
-        # Compute width_style for all columns (always set, empty string if no width_percent)
-        for col in all_cols:
+        self.join_fields = list({col.name for col in self.columns if "__" in col.name})
+        for col in self.columns:
             col.width_style = f"flex: 0 0 {col.width_percent}%" if col.width_percent is not None else ""
 
-    def find_column(self, col_name: str) -> Column | None:
-        """Find column by name in any column list"""
-        for col in self.dialog_columns + self.table_columns + self.columns:
-            if col.name == col_name:
-                return col
-        return None
+
+@dataclass
+class FormConfig:
+    """Configuration for form/dialog components (EditCard, DataTable dialog)."""
+    columns: list[Column] = field(default_factory=list)
+    title_add: Optional[str] = None
+    title_edit: Optional[str] = None
+    dialog_class: Optional[str] = None
+    focus_column: Optional[str] = None
+    delete_confirmation: bool = True
+
+    def __post_init__(self):
+        if not self.focus_column and self.columns:
+            self.focus_column = self.columns[0].name
+        for col in self.columns:
+            col.width_style = f"flex: 0 0 {col.width_percent}%" if col.width_percent is not None else ""
 
 
 class RdmComponent:
@@ -289,6 +266,23 @@ class ObservableRdmComponent(RdmComponent):
             display = col.formatter(value) if col.formatter else (str(value) if value else "")
             html.span(display)
 
+    # ── Subclass contract ──
+    # Subclasses MUST implement:
+    #
+    #     @ui.refreshable_method
+    #     async def build(self) -> None:
+    #         ...
+    #
+    # This method is called by _handle_datasource_change (via getattr) to refresh
+    # the UI when the data source changes. The @ui.refreshable_method decorator
+    # provides .refresh(), .prune(), and .targets used for lifecycle management.
+    #
+    # Why not defined here: NiceGUI's refreshable_method uses an invariant TypeVar
+    # (_S) that makes any override in a subclass a Pylance type error — whether
+    # the base uses the decorator or not. Defining build here (decorated or plain)
+    # produces reportIncompatibleVariableOverride / reportIncompatibleMethodOverride
+    # that cannot be suppressed without global config or per-subclass ignores.
+
     async def _handle_datasource_change(self, event: StoreEvent):
         """Handle data source changes. Auto-unobserves if DOM context is gone."""
         build = getattr(self, 'build', None)
@@ -297,11 +291,12 @@ class ObservableRdmComponent(RdmComponent):
             if not [t for t in build.targets if t.instance == self]:
                 self.unobserve()
                 return
-        await self.build.refresh()  # type: ignore[union-attr]
-
-    # note, commented out to avoid type confusion
-    # async def build(self):
-    #     raise NotImplementedError("Subclasses must implement build()")
+        # # build: Any = self.build  # subclasses decorate with @ui.refreshable_method
+        # self.build.prune()
+        # if not [t for t in self.build.targets if t.instance == self]:
+        #     self.unobserve()
+        #     return
+        await self.build.refresh()      # type: ignore
 
 
 class ObservableRdmTable(ObservableRdmComponent):

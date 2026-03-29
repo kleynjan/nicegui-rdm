@@ -14,7 +14,7 @@ Key concepts demonstrated:
 from nicegui import html, ui
 
 from ng_rdm import DictStore, store_registry
-from ng_rdm.components import rdm_init, DataTable, Column, TableConfig
+from ng_rdm.components import rdm_init, DataTable, Column, TableConfig, FormConfig
 
 # Create store and configure topic filtering on 'country' field
 customer_store = DictStore()
@@ -38,13 +38,14 @@ customer_columns = [
 ]
 
 customer_config = TableConfig(
-    table_columns=customer_columns,
-    dialog_columns=[
-        Column(name="name", label="Name", editable=True, required=True),
-    ],
+    columns=customer_columns,
     show_add_button=False,
     show_edit_button=True,
     show_delete_button=False,
+)
+
+customer_form_config = FormConfig(
+    columns=[Column(name="name", label="Name", editable=True, required=True)],
 )
 
 
@@ -81,6 +82,7 @@ async def index():
                 state={},
                 data_source=customer_store,
                 config=customer_config,
+                form_config=customer_form_config,
                 filter_by={"country": left_filter["value"]},
                 auto_observe=False,
             )
@@ -116,6 +118,7 @@ async def index():
                 state={},
                 data_source=customer_store,
                 config=customer_config,
+                form_config=customer_form_config,
                 filter_by={"country": right_filter["value"]},
                 auto_observe=False,
             )

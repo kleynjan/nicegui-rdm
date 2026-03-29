@@ -10,7 +10,7 @@ from typing import Any, Awaitable, Callable, Literal
 from nicegui import html, ui
 
 from .i18n import _
-from .base import ObservableRdmTable, TableConfig
+from .base import ObservableRdmTable, TableConfig, FormConfig
 from .dialog import Dialog
 from .fields import build_form_field
 from .protocol import RdmDataSource
@@ -40,6 +40,7 @@ class DataTable(ObservableRdmTable):
         state: dict,
         data_source: RdmDataSource,
         config: TableConfig,
+        form_config: FormConfig | None = None,
         filter_by: dict[str, Any] | None = None,
         action_style: Literal["icon", "button"] = "icon",
         on_add: Callable[[], Awaitable[None] | None] | None = None,
@@ -55,6 +56,7 @@ class DataTable(ObservableRdmTable):
             filter_by=filter_by, on_add=on_add,
             render_toolbar=render_toolbar, auto_observe=auto_observe,
         )
+        self.form_config = form_config
         self.action_style = action_style
         self.on_edit = on_edit
         self.on_delete = on_delete
@@ -81,7 +83,7 @@ class DataTable(ObservableRdmTable):
                 # Header
                 with html.thead():
                     with html.tr():
-                        for col in self.config.table_columns:
+                        for col in self.config.columns:
                             th = html.th(col.label or col.name)
                             if col.width_percent:
                                 th.style(f"width: {col.width_percent}%")
@@ -93,7 +95,7 @@ class DataTable(ObservableRdmTable):
                 with html.tbody():
                     if not self.data:
                         with html.tr():
-                            colspan = len(self.config.table_columns)
+                            colspan = len(self.config.columns)
                             if self.config.show_edit_button or self.config.show_delete_button:
                                 colspan += 1
                             with html.td().props(f"colspan={colspan}"):
@@ -108,7 +110,7 @@ class DataTable(ObservableRdmTable):
         """Build a single data row."""
         with html.tr():
             # Data columns
-            for col in self.config.table_columns:
+            for col in self.config.columns:
                 with html.td():
                     self._render_cell(col, row.get(col.name, ""), row)
 
@@ -235,14 +237,16 @@ class DataTable(ObservableRdmTable):
 
     def _open_add_dialog(self):
         """Open dialog for adding new item."""
-        self.dialog_state = self._init_form_state(self.config.dialog_columns)
+        assert self.form_config, "form_config required for built-in dialog"
+        self.dialog_state = self._init_form_state(self.form_config.columns)
         self._current_item_id = None
         self._is_edit = False
         self._show_dialog()
 
     def _open_edit_dialog(self, item: dict):
         """Open dialog for editing existing item."""
-        self.dialog_state = self._init_form_state(self.config.dialog_columns, item)
+        assert self.form_config, "form_config required for built-in dialog"
+        self.dialog_state = self._init_form_state(self.form_config.columns, item)
         self._current_item_id = item.get("id")
         self._is_edit = True
         self._show_dialog()
@@ -258,12 +262,13 @@ class DataTable(ObservableRdmTable):
 
     def _build_dialog(self):
         """Build the dialog structure once."""
-        dialog_class = self.config.dialog_class or ""
-        with Dialog(dialog_class=dialog_class) as self._dlg:
+        assert self.form_config, "form_config required for built-in dialog"
+        fc = self.form_config
+        with Dialog(dialog_class=fc.dialog_class or "") as self._dlg:
             @ui.refreshable
             def _content():
                 title = (
-                    self.config.dialog_title_edit if self._is_edit else self.config.dialog_title_add
+                    fc.title_edit if self._is_edit else fc.title_add
                 ) or (_("Edit") if self._is_edit else _("Add"))
                 assert self._dlg is not None
 
@@ -274,7 +279,7 @@ class DataTable(ObservableRdmTable):
                         html.i().classes("bi bi-x-lg")
 
                 # Form fields
-                for col in self.config.dialog_columns:
+                for col in fc.columns:
                     build_form_field(col, self.dialog_state)
 
             self._dialog_content = _content
@@ -293,7 +298,8 @@ class DataTable(ObservableRdmTable):
 
     async def _handle_save(self):
         """Handle save button click in dialog."""
-        item_data = self._build_item_data(self.config.dialog_columns, self.dialog_state)
+        assert self.form_config, "form_config required for built-in dialog"
+        item_data = self._build_item_data(self.form_config.columns, self.dialog_state)
 
         # Validate
         (valid, error_dict) = self._validate(item_data)

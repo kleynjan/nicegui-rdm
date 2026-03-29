@@ -4,7 +4,7 @@ ListTable - Read-only table with clickable rows for navigation.
 Uses native HTML <table> elements for clean, semantic markup.
 Integrates with store for automatic refresh on data changes.
 """
-from typing import Any, Awaitable, Callable
+from typing import Any, Awaitable, Callable, Union
 
 from nicegui import html, ui
 
@@ -35,7 +35,7 @@ class ListTable(ObservableRdmTable):
         data_source: RdmDataSource,
         config: TableConfig,
         filter_by: dict[str, Any] | None = None,
-        on_click: Callable[[int | None], None] | None = None,
+        on_click: Callable[[int | None], Union[Awaitable[None], None]] | None = None,
         on_add: Callable[[], Awaitable[None] | None] | None = None,
         transform: Callable[[list[dict]], list[dict]] | None = None,
         row_key: str = "id",
@@ -79,7 +79,7 @@ class ListTable(ObservableRdmTable):
                 # Header
                 with html.thead():
                     with html.tr():
-                        for col in self.config.table_columns:
+                        for col in self.config.columns:
                             th = html.th(col.label or col.name)
                             if col.width_percent:
                                 th.style(f"width: {col.width_percent}%")
@@ -93,6 +93,6 @@ class ListTable(ObservableRdmTable):
                             tr.on("click", lambda _, k=key: self.on_click(k))  # type: ignore
 
                         with tr:
-                            for col in self.config.table_columns:
+                            for col in self.config.columns:
                                 with html.td():
                                     self._render_cell(col, item.get(col.name, ""), item)

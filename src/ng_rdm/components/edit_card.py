@@ -1,29 +1,26 @@
 """
 EditCard - in-place form for editing or creating a store item.
 
-Renders dialog_columns as form fields inside a card.
-Used by ViewStack as the "edit" view in the list → detail → edit flow.
+Renders form columns as form fields inside a card.
+Used by ViewStack as the "edit" view in the list -> detail -> edit flow.
 """
 from typing import Any, Callable
 
-from nicegui import html, ui
+from nicegui import html
 
 from .i18n import _
-from .base import RdmComponent, TableConfig
+from .base import RdmComponent, FormConfig
 from .fields import build_form_field
 from .protocol import RdmDataSource
 
 
 class EditCard(RdmComponent):
-    """In-place editing card using dialog_columns config.
-
-    Unlike EditDialog (modal), this renders inline and is managed by ViewStack.
-    """
+    """In-place editing card using FormConfig columns."""
 
     def __init__(
         self,
         data_source: RdmDataSource,
-        config: TableConfig,
+        config: FormConfig,
         on_saved: Callable[[dict], None] | None = None,
         on_cancel: Callable[[], None] | None = None,
     ):
@@ -41,10 +38,10 @@ class EditCard(RdmComponent):
     def set_item(self, item: dict | None):
         """Load an item for editing, or None for new-item mode."""
         self._item_id = item.get("id") if item else None
-        self._form_state = self._init_form_state(self.config.dialog_columns, item)
+        self._form_state = self._init_form_state(self.config.columns, item)
 
     async def _handle_save(self):
-        item_data = self._build_item_data(self.config.dialog_columns, self._form_state)
+        item_data = self._build_item_data(self.config.columns, self._form_state)
 
         valid, error_dict = self.data_source.validate(item_data)
         if not valid:
@@ -70,11 +67,10 @@ class EditCard(RdmComponent):
         if self.on_cancel:
             self.on_cancel()
 
-    @ui.refreshable_method
     async def build(self):
         with html.div().classes("rdm-card rdm-edit-card rdm-component"):
             with html.div().classes("rdm-card-body"):
-                for col in self.config.dialog_columns:
+                for col in self.config.columns:
                     build_form_field(col, self._form_state)
 
             with html.div().classes("rdm-edit-actions"):

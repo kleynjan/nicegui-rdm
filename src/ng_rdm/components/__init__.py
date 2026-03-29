@@ -5,10 +5,9 @@ Component names:
 - DataTable - primary editable table with configurable actions (icon/button style)
 - ListTable - read-only table with clickable rows
 - SelectionTable - table with checkbox multi-select
-- EditDialog - standalone modal dialog for add/edit operations
 - Dialog - positioned card overlay
 - Tabs - div-based tab switcher
-- DetailCard - display-only detail view
+- detail_card - display-only detail view function
 - EditCard - in-place editing form
 - ViewStack - list/detail/edit navigation
 - StepWizard - multi-step form wizard
@@ -16,7 +15,7 @@ Component names:
 from pathlib import Path
 from nicegui import ui
 
-from .base import RdmComponent, ObservableRdmComponent, ObservableRdmTable, Column, TableConfig, RowAction, confirm_dialog
+from .base import RdmComponent, ObservableRdmComponent, ObservableRdmTable, Column, TableConfig, FormConfig, RowAction, confirm_dialog
 from .i18n import _, none_as_text, set_language, set_translations
 from .protocol import RdmDataSource
 from ..store import StoreEvent
@@ -25,10 +24,9 @@ from ..store import StoreEvent
 from .data_table import DataTable
 from .list_table import ListTable
 from .selection import SelectionTable
-from .edit_dialog import EditDialog
 from .dialog import Dialog
 from .tabs import Tabs
-from .detail import DetailCard
+from .detail import detail_card
 from .edit_card import EditCard
 from .view_stack import ViewStack
 from .wizard import WizardStep, StepWizard
@@ -81,6 +79,7 @@ __all__ = [
     'ObservableRdmTable',
     'Column',
     'TableConfig',
+    'FormConfig',
     'RowAction',
     'confirm_dialog',
     'none_as_text',
@@ -89,10 +88,9 @@ __all__ = [
     'DataTable',
     'ListTable',
     'SelectionTable',
-    'EditDialog',
     'Dialog',
     'Tabs',
-    'DetailCard',
+    'detail_card',
     'EditCard',
     'ViewStack',
     'WizardStep',

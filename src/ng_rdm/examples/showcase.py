@@ -24,9 +24,9 @@ from pathlib import Path
 from tortoise import fields
 from nicegui import app, ui
 from ng_rdm.components import (
-    rdm_init, Column, TableConfig,
-    DataTable, ListTable, SelectionTable,
-    ViewStack, Dialog, Tabs, Button,
+    rdm_init, Column, TableConfig, FormConfig,
+    DataTable, ListTable, SelectionTable, EditCard,
+    ViewStack, Dialog, Tabs, Button, detail_card,
 )
 from ng_rdm.store import TortoiseStore, init_db, close_db, store_registry
 from ng_rdm.models import QModel, FieldSpec, Validator
@@ -160,13 +160,17 @@ async def demo_datatable(product_store):
         show_add_button=True,
         show_edit_button=True,
         show_delete_button=True,
-        dialog_title_add="Add New Product",
-        dialog_title_edit="Edit Product",
+    )
+
+    form_config = FormConfig(
+        columns=product_columns,
+        title_add="Add New Product",
+        title_edit="Edit Product",
     )
 
     # auto_observe=True (default): component observes store with filter_by as topics
     # For explicit control: DataTable(..., auto_observe=False) then table.observe(topics={...})
-    table = DataTable(state={}, data_source=product_store, config=config)
+    table = DataTable(state={}, data_source=product_store, config=config, form_config=form_config)
     await table.build()
 
 
@@ -228,44 +232,69 @@ async def demo_viewstack(category_store, product_store):
     - Back navigation
     """)
 
-    select_config = TableConfig(
+    list_config = TableConfig(
         columns=category_columns,
         show_add_button=True,
         add_button="+ Add Category",
     )
 
-    detail_config = TableConfig(
+    edit_form = FormConfig(
         columns=[
             Column(name="name", label="Name"),
             Column(name="description", label="Description", ui_type=ui.textarea),
         ],
-        show_edit_button=True,
-        show_delete_button=True,
     )
 
-    async def render_detail(item: dict):
-        ui.label(item.get("name", "")).classes("text-h6")
-        ui.label(item.get("description", "") or "No description").classes("text-grey")
+    async def render_list(vs: ViewStack):
+        async def on_click(row_id):
+            items = await category_store.read_items(filter_by={"id": row_id})
+            if items:
+                vs.show_detail(items[0])
 
-        ui.separator()
-        ui.label("Products in this category:").classes("text-subtitle2")
+        table = ListTable(
+            state={}, data_source=category_store, config=list_config,
+            on_click=on_click, on_add=vs.show_edit_new,
+        )
+        await table.build()
 
-        cat_id = item.get("id")
-        if cat_id:
-            products = await product_store.read_items(filter_by={"category_id": cat_id})
-            if products:
-                for p in products:
-                    ui.label(f"• {p['name']} - ${float(p['price']):.2f}").classes("q-ml-md")
-            else:
-                ui.label("No products").classes("text-grey q-ml-md")
+    async def render_detail_view(vs: ViewStack, item: dict):
+        async def render_item(item: dict):
+            ui.label(item.get("name", "")).classes("text-h6")
+            ui.label(item.get("description", "") or "No description").classes("text-grey")
+
+            ui.separator()
+            ui.label("Products in this category:").classes("text-subtitle2")
+
+            cat_id = item.get("id")
+            if cat_id:
+                products = await product_store.read_items(filter_by={"category_id": cat_id})
+                if products:
+                    for p in products:
+                        ui.label(f"• {p['name']} - ${float(p['price']):.2f}").classes("q-ml-md")
+                else:
+                    ui.label("No products").classes("text-grey q-ml-md")
+
+        await detail_card(
+            item, render=render_item,
+            on_edit=lambda i: vs.show_edit_existing(i),
+            on_delete=lambda _: vs.show_list(),
+        )
+
+    async def render_edit_view(vs: ViewStack, item: dict | None):
+        edit = EditCard(
+            data_source=category_store, config=edit_form,
+            on_saved=lambda saved: vs.show_detail(saved),
+            on_cancel=lambda: vs.show_detail(item) if item else vs.show_list(),
+        )
+        edit.set_item(item)
+        await edit.build()
 
     stack = ViewStack(
-        data_source=category_store,
-        master_config=select_config,
-        detail_config=detail_config,
-        render_detail_item=render_detail,
         breadcrumb_root="Categories",
         item_label=lambda item: item.get("name", ""),
+        render_list=render_list,
+        render_detail=render_detail_view,
+        render_edit=render_edit_view,
     )
     await stack.build()
 

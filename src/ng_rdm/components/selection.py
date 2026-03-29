@@ -97,7 +97,7 @@ class SelectionTable(ObservableRdmTable):
                     with html.tr():
                         # Checkbox column header (narrow)
                         html.th("").style("width: 48px;")
-                        for col in self.config.table_columns:
+                        for col in self.config.columns:
                             th = html.th(col.label or col.name)
                             if col.width_percent:
                                 th.style(f"width: {col.width_percent}%")
@@ -119,6 +119,6 @@ class SelectionTable(ObservableRdmTable):
                                 )
 
                             # Data cells
-                            for col in self.config.table_columns:
+                            for col in self.config.columns:
                                 with html.td():
                                     self._render_cell(col, item.get(col.name, ""), item)
