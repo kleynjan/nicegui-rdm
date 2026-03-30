@@ -7,7 +7,7 @@ which can feel more natural in master/detail layouts.
 
 Usage:
     # Simple dialog with auto-generated header
-    with Dialog(title="Edit Item") as dlg:
+    with Dialog(state=ui_state['dialog'], title="Edit Item") as dlg:
         ui.input("Name")
         with dlg.actions():
             ui.button("Save", on_click=handle_save)
@@ -15,7 +15,7 @@ Usage:
     dlg.open()
 
     # Dialog without title (manual header or headerless)
-    with Dialog() as dlg:
+    with Dialog(state=ui_state['dialog']) as dlg:
         ui.label("Dialog content")
         with dlg.actions():
             ui.button("OK", on_click=dlg.close)
@@ -42,11 +42,14 @@ class Dialog:
 
     def __init__(
         self,
+        state: dict,
         title: str | None = None,
         dialog_class: str = "",
         on_close: Callable[[], None] | None = None,
     ):
         self._client = ui.context.client
+        self.state = state
+        self.state.setdefault("is_open", False)
         self.title = title
         self.dialog_class = dialog_class
         self.on_close = on_close
@@ -54,7 +57,6 @@ class Dialog:
         self._dialog_div = None
         self._body_div = None
         self._keyboard = None
-        self._is_open = False
 
     def __enter__(self):
         """Enter context manager - create dialog structure.
@@ -66,7 +68,7 @@ class Dialog:
         layout = context.client.layout
         layout.__enter__()
         self._backdrop_div = html.div().classes('rdm-dialog-backdrop rdm-component')
-        self._backdrop_div.style('display: none')
+        self._backdrop_div.bind_visibility_from(self.state, 'is_open')
         layout.__exit__(None, None, None)
 
         self._backdrop_div.__enter__()
@@ -106,7 +108,7 @@ class Dialog:
 
     def _on_key(self, e):
         """Handle keyboard events - ESC to close."""
-        if e.action.keydown and e.key.name == 'Escape' and self._is_open:
+        if e.action.keydown and e.key.name == 'Escape' and self.state['is_open']:
             self.close()
 
     @contextmanager
@@ -122,21 +124,17 @@ class Dialog:
 
     def open(self):
         """Show the dialog."""
-        if self._backdrop_div:
-            self._backdrop_div.style('display: flex')
-            self._is_open = True
-            if self._keyboard:
-                self._keyboard.active = True
+        self.state['is_open'] = True
+        if self._keyboard:
+            self._keyboard.active = True
 
     def close(self):
         """Hide the dialog."""
-        if self._backdrop_div:
-            self._backdrop_div.style('display: none')
-            self._is_open = False
-            if self._keyboard:
-                self._keyboard.active = False
-            if self.on_close:
-                self.on_close()
+        self.state['is_open'] = False
+        if self._keyboard:
+            self._keyboard.active = False
+        if self.on_close:
+            self.on_close()
 
     def _notify(self, message: str, **kwargs) -> None:
         """Show notification safely from async context."""

@@ -11,8 +11,11 @@ from nicegui import html, ui
 class Tabs:
     """Tab bar + panel renderer using native HTML elements.
 
+    All panels are rendered upfront; visibility is toggled via NiceGUI bindings,
+    avoiding full DOM rebuilds on tab switch.
+
     Usage:
-        tabs = Tabs([
+        tabs = Tabs(state=ui_state['tabs'], tabs=[
             ("guests", "Guests", render_guests),
             ("admins", "Admins", render_admins),
         ])
@@ -21,26 +24,30 @@ class Tabs:
 
     def __init__(
         self,
+        state: dict,
         tabs: list[tuple[str, str, Callable[[], Awaitable[None]]]],
-        default: str | None = None,
+        # default: str | None = None,
     ):
+        self.state = state
         self.tabs = tabs
-        self.active = default or tabs[0][0]
+        self.state.setdefault("active", tabs[0][0])
 
     def _select(self, key: str):
-        self.active = key
-        self.build.refresh()
+        self.state["active"] = key
+        self._build_tabbar.refresh()  # type: ignore[attr-defined]
 
     @ui.refreshable_method
-    async def build(self):
+    def _build_tabbar(self):
         with html.div().classes("rdm-tabs rdm-component"):
             for key, label, _ in self.tabs:
-                cls = "rdm-tab rdm-active" if key == self.active else "rdm-tab"
+                cls = "rdm-tab rdm-active" if self.state["active"] == key else "rdm-tab"
                 with html.button().classes(cls).on("click", lambda _, k=key: self._select(k)):
                     html.span(label)
 
+    async def build(self):
+        self._build_tabbar()
         for key, _, render in self.tabs:
-            if key == self.active:
-                with html.div().classes("rdm-tab-panel"):
-                    await render()
-                break
+            panel = html.div().classes("rdm-tab-panel")
+            panel.bind_visibility_from(self.state, "active", backward=lambda v, k=key: v == k)
+            with panel:
+                await render()

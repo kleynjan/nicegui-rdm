@@ -19,6 +19,7 @@ class EditDialog(RdmComponent):
     """Modal dialog for editing or creating a store item.
 
     Args:
+        state: Shared state dict. Keys: 'item_id', 'form', 'dialog'.
         data_source: RdmDataSource (typically a Store)
         config: FormConfig with column definitions
         on_saved: Callback when item is saved, receives the saved item
@@ -26,32 +27,35 @@ class EditDialog(RdmComponent):
 
     def __init__(
         self,
+        state: dict,
         data_source: RdmDataSource,
         config: FormConfig,
         on_saved: Callable[[dict], None] | None = None,
     ):
         super().__init__(data_source)
+        self.state = state
+        self.state.setdefault("item_id", None)
+        self.state.setdefault("form", {})
+        self.state.setdefault("dialog", {})
         self.config = config
         self.on_saved = on_saved
-        self._form_state: dict[str, Any] = {}
-        self._item_id: int | None = None
         self._dlg: Dialog | None = None
         self._dialog_content: Any = None
 
     @property
     def is_new(self) -> bool:
-        return self._item_id is None
+        return self.state["item_id"] is None
 
     def open_for_new(self):
         """Open dialog for creating a new item."""
-        self._item_id = None
-        self._form_state = self._init_form_state(self.config.columns)
+        self.state["item_id"] = None
+        self.state["form"] = self._init_form_state(self.config.columns)
         self._show()
 
     def open_for_edit(self, item: dict):
         """Open dialog for editing an existing item."""
-        self._item_id = item.get("id")
-        self._form_state = self._init_form_state(self.config.columns, item)
+        self.state["item_id"] = item.get("id")
+        self.state["form"] = self._init_form_state(self.config.columns, item)
         self._show()
 
     def _show(self):
@@ -66,7 +70,7 @@ class EditDialog(RdmComponent):
     def _build_dialog(self):
         """Build the dialog structure once."""
         fc = self.config
-        with Dialog(dialog_class=fc.dialog_class or "") as self._dlg:
+        with Dialog(state=self.state["dialog"], dialog_class=fc.dialog_class or "") as self._dlg:
             @ui.refreshable
             def _content():
                 title = (
@@ -83,7 +87,7 @@ class EditDialog(RdmComponent):
 
                 # Form fields
                 for col in fc.columns:
-                    build_form_field(col, self._form_state)
+                    build_form_field(col, self.state["form"])
 
             self._dialog_content = _content
             _content()
@@ -102,15 +106,15 @@ class EditDialog(RdmComponent):
 
     async def _handle_save(self):
         """Handle save button click in dialog."""
-        item_data = self._build_item_data(self.config.columns, self._form_state)
+        item_data = self._build_item_data(self.config.columns, self.state["form"])
 
         # Validate
         (valid, _) = self._validate(item_data)
         if not valid:
             return
 
-        if not self.is_new and self._item_id is not None:
-            result = await self._update(self._item_id, item_data)
+        if not self.is_new and self.state["item_id"] is not None:
+            result = await self._update(self.state["item_id"], item_data)
         else:
             result = await self._validate_and_create(item_data)
 

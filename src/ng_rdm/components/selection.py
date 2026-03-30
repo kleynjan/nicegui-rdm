@@ -49,17 +49,23 @@ class SelectionTable(ObservableRdmTable):
         self.row_key = row_key
         self.on_selection_change = on_selection_change
         self._selected_ids: set[int] = set()
+        self.state.setdefault("selected_ids", [])
 
     @property
     def selected_ids(self) -> set[int]:
         """Get currently selected row IDs."""
         return self._selected_ids.copy()
 
+    def _sync_state(self):
+        self.state["selected_ids"] = list(self._selected_ids)
+        if self.on_selection_change:
+            self.on_selection_change(self._selected_ids)
+        self.build.refresh()
+
     def clear_selection(self):
         """Clear all selections."""
         self._selected_ids.clear()
-        if self.on_selection_change:
-            self.on_selection_change(self._selected_ids)
+        self._sync_state()
 
     def select_all(self):
         """Select all rows."""
@@ -67,8 +73,7 @@ class SelectionTable(ObservableRdmTable):
             key = item.get(self.row_key)
             if key is not None:
                 self._selected_ids.add(key)
-        if self.on_selection_change:
-            self.on_selection_change(self._selected_ids)
+        self._sync_state()
 
     def _on_checkbox_change(self, row_key: int, checked: bool):
         """Handle checkbox state change."""
@@ -76,8 +81,7 @@ class SelectionTable(ObservableRdmTable):
             self._selected_ids.add(row_key)
         else:
             self._selected_ids.discard(row_key)
-        if self.on_selection_change:
-            self.on_selection_change(self._selected_ids)
+        self._sync_state()
 
     @ui.refreshable_method
     async def build(self):

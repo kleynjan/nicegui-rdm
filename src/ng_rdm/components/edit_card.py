@@ -19,29 +19,31 @@ class EditCard(RdmComponent):
 
     def __init__(
         self,
+        state: dict,
         data_source: RdmDataSource,
         config: FormConfig,
         on_saved: Callable[[dict], None] | None = None,
         on_cancel: Callable[[], None] | None = None,
     ):
         super().__init__(data_source)
+        self.state = state
+        self.state.setdefault("item_id", None)
+        self.state.setdefault("form", {})
         self.config = config
         self.on_saved = on_saved
         self.on_cancel = on_cancel
-        self._form_state: dict[str, Any] = {}
-        self._item_id: int | None = None
 
     @property
     def is_new(self) -> bool:
-        return self._item_id is None
+        return self.state["item_id"] is None
 
     def set_item(self, item: dict | None):
         """Load an item for editing, or None for new-item mode."""
-        self._item_id = item.get("id") if item else None
-        self._form_state = self._init_form_state(self.config.columns, item)
+        self.state["item_id"] = item.get("id") if item else None
+        self.state["form"] = self._init_form_state(self.config.columns, item)
 
     async def _handle_save(self):
-        item_data = self._build_item_data(self.config.columns, self._form_state)
+        item_data = self._build_item_data(self.config.columns, self.state["form"])
 
         valid, error_dict = self.data_source.validate(item_data)
         if not valid:
@@ -51,8 +53,8 @@ class EditCard(RdmComponent):
             )
             return
 
-        if self._item_id is not None:
-            result = await self.data_source.update_item(self._item_id, item_data)
+        if self.state["item_id"] is not None:
+            result = await self.data_source.update_item(self.state["item_id"], item_data)
             if result:
                 self._notify(_("Item updated"), type="positive")
         else:
@@ -71,7 +73,7 @@ class EditCard(RdmComponent):
         with html.div().classes("rdm-card rdm-edit-card rdm-component"):
             with html.div().classes("rdm-card-body"):
                 for col in self.config.columns:
-                    build_form_field(col, self._form_state)
+                    build_form_field(col, self.state["form"])
 
             with html.div().classes("rdm-edit-actions"):
                 with html.button().classes("rdm-btn rdm-btn-primary").on(

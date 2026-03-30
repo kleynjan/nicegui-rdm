@@ -17,7 +17,12 @@ class ViewStack:
     The consumer provides three render callbacks that build the actual UI
     for each view. ViewStack handles view state and breadcrumb rendering.
 
+    The list panel is rendered once and its visibility is toggled via NiceGUI
+    bindings, so the list component (and its store observer) stays alive while
+    navigating to detail/edit — back-navigation is instant with no re-query.
+
     Args:
+        state: External state dict (from ui_state). Keys: 'view', 'item'.
         breadcrumb_root: Label for the root breadcrumb link (e.g. "Roles").
         item_label: Extracts a display label from an item for breadcrumbs.
         render_list: Async callback to render the list view. Receives the ViewStack.
@@ -27,61 +32,69 @@ class ViewStack:
 
     def __init__(
         self,
+        state: dict,
         breadcrumb_root: str,
         item_label: Callable[[dict], str],
         render_list: Callable[["ViewStack"], Awaitable[None]],
         render_detail: Callable[["ViewStack", dict], Awaitable[None]],
         render_edit: Callable[["ViewStack", dict | None], Awaitable[None]],
     ):
+        self.state = state
+        self.state.setdefault("view", "list")
+        self.state.setdefault("item", None)
+
         self.breadcrumb_root = breadcrumb_root
         self.item_label = item_label
         self._render_list = render_list
         self._render_detail = render_detail
         self._render_edit = render_edit
 
-        self._view: str = "list"
-        self._item: dict | None = None
-
     # ── Properties ──
 
     @property
     def view(self) -> str:
-        return self._view
+        return self.state["view"]
 
     @property
     def item(self) -> dict | None:
-        return self._item
+        return self.state["item"]
 
     # ── Navigation ──
 
     def show_list(self):
-        self._view = "list"
-        self._item = None
-        self.build.refresh()  # type: ignore[attr-defined]
+        self.state["view"] = "list"
+        self.state["item"] = None
+        self._breadcrumb.refresh()  # type: ignore[attr-defined]
 
     def show_detail(self, item: dict):
-        self._view = "detail"
-        self._item = item
-        self.build.refresh()  # type: ignore[attr-defined]
+        self.state["view"] = "detail"
+        self.state["item"] = item
+        self._breadcrumb.refresh()  # type: ignore[attr-defined]
+        self._detail_edit.refresh()  # type: ignore[attr-defined]
 
     def show_edit_existing(self, item: dict | None = None):
-        item = item or self._item
+        item = item or self.state["item"]
         if item is None:
             return
-        self._view = "edit"
-        self._item = item
-        self.build.refresh()  # type: ignore[attr-defined]
+        self.state["view"] = "edit"
+        self.state["item"] = item
+        self._breadcrumb.refresh()  # type: ignore[attr-defined]
+        self._detail_edit.refresh()  # type: ignore[attr-defined]
 
     def show_edit_new(self):
-        self._view = "edit"
-        self._item = None
-        self.build.refresh()  # type: ignore[attr-defined]
+        self.state["view"] = "edit"
+        self.state["item"] = None
+        self._breadcrumb.refresh()  # type: ignore[attr-defined]
+        self._detail_edit.refresh()  # type: ignore[attr-defined]
 
     # ── Breadcrumb ──
 
-    def _build_breadcrumb(self):
+    @ui.refreshable_method
+    def _breadcrumb(self):
         with html.div().classes("rdm-breadcrumb rdm-component"):
-            if self._view == "list":
+            view = self.state["view"]
+            item = self.state["item"]
+            if view == "list":
                 html.span("")
             else:
                 with html.button().classes("rdm-btn rdm-btn-icon rdm-breadcrumb-back").on(
@@ -91,35 +104,50 @@ class ViewStack:
                 html.span(self.breadcrumb_root).classes("rdm-breadcrumb-item rdm-link").on(
                     "click", lambda: self.show_list()
                 )
-                if self._item:
+                if item:
                     html.span("›").classes("rdm-breadcrumb-separator")
-                    label_text = self.item_label(self._item)
-                    if self._view == "edit":
+                    label_text = self.item_label(item)
+                    if view == "edit":
                         html.span(label_text).classes("rdm-breadcrumb-item rdm-link").on(
-                            "click", lambda: self.show_detail(self._item)  # type: ignore[arg-type]
+                            "click", lambda: self.show_detail(self.state["item"])  # type: ignore[arg-type]
                         )
                     else:
                         html.span(label_text).classes("rdm-breadcrumb-item rdm-current")
-                elif self._view == "edit":
+                elif view == "edit":
                     html.span("›").classes("rdm-breadcrumb-separator")
                     html.span(_("New")).classes("rdm-breadcrumb-item rdm-current")
 
     def _breadcrumb_back(self):
-        if self._view == "edit" and self._item:
-            self.show_detail(self._item)
+        if self.state["view"] == "edit" and self.state["item"]:
+            self.show_detail(self.state["item"])
         else:
             self.show_list()
 
-    # ── Build ──
+    # ── Detail / Edit content ──
 
     @ui.refreshable_method
-    async def build(self):
-        self._build_breadcrumb()
+    async def _detail_edit(self):
+        view = self.state["view"]
+        item = self.state["item"]
+        if view == "detail":
+            assert item is not None
+            await self._render_detail(self, item)
+        elif view == "edit":
+            await self._render_edit(self, item)
 
-        if self._view == "list":
+    # ── Build ──
+
+    async def build(self):
+        self._breadcrumb()
+
+        # List panel: rendered once, binding-driven visibility.
+        # The list component's store observer stays alive while hidden,
+        # so navigating back is instant with no re-query.
+        with html.div() as list_panel:
             await self._render_list(self)
-        elif self._view == "detail":
-            assert self._item is not None
-            await self._render_detail(self, self._item)
-        elif self._view == "edit":
-            await self._render_edit(self, self._item)
+        list_panel.bind_visibility_from(self.state, "view", value="list")
+
+        # Detail/edit panel: refreshes on each navigation (item changes).
+        with html.div() as detail_panel:
+            await self._detail_edit()
+        detail_panel.bind_visibility_from(self.state, "view", backward=lambda v: v != "list")

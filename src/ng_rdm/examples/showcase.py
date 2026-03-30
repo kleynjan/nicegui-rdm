@@ -22,10 +22,10 @@ Components demonstrated:
 
 from pathlib import Path
 from tortoise import fields
-from nicegui import app, ui
+from nicegui import app, ui, Client
 from ng_rdm.components import (
     rdm_init, Column, TableConfig, FormConfig,
-    DataTable, ListTable, SelectionTable, EditCard,
+    ActionButtonTable, ListTable, SelectionTable, EditCard,
     ViewStack, Dialog, Tabs, Button, detail_card,
 )
 from ng_rdm.store import TortoiseStore, init_db, close_db, store_registry
@@ -162,15 +162,15 @@ async def demo_datatable(product_store):
         show_delete_button=True,
     )
 
-    form_config = FormConfig(
-        columns=product_columns,
-        title_add="Add New Product",
-        title_edit="Edit Product",
-    )
+    # form_config = FormConfig(
+    #     columns=product_columns,
+    #     title_add="Add New Product",
+    #     title_edit="Edit Product",
+    # )
 
     # auto_observe=True (default): component observes store with filter_by as topics
     # For explicit control: DataTable(..., auto_observe=False) then table.observe(topics={...})
-    table = DataTable(state={}, data_source=product_store, config=config, form_config=form_config)
+    table = ActionButtonTable(state={}, data_source=product_store, config=config)
     await table.build()
 
 
@@ -194,7 +194,7 @@ async def demo_listtable(category_store):
     await table.build()
 
 
-async def demo_selectiontable(product_store):
+async def demo_selectiontable(ui_state, product_store):
     """SelectionTable - Multi-select with checkboxes."""
     ui.label("SelectionTable").classes("text-h5")
     ui.markdown("""
@@ -204,25 +204,23 @@ async def demo_selectiontable(product_store):
     - Get selected IDs for batch processing
     """)
 
-    selection_label = ui.label("No items selected").classes("text-grey")
-
-    def on_selection_change(selected_ids):
-        count = len(selected_ids)
-        selection_label.text = f"Selected {count} item(s)" if count else "No items selected"
-
     config = TableConfig(columns=product_columns[:3], empty_message="No products")
-    table = SelectionTable(
-        state={}, data_source=product_store, config=config,
-        on_selection_change=on_selection_change
-    )
+    table = SelectionTable(state=ui_state, data_source=product_store, config=config)
     await table.build()
 
     with ui.row():
         Button("Select All", on_click=lambda: table.select_all())  # type: ignore[arg-type]
-        Button("Clear", on_click=lambda: table.clear_selection(), variant="secondary")  # type: ignore[arg-type]
+        btn_clear = Button("Clear", on_click=lambda: table.clear_selection(), variant="secondary")  # type: ignore[arg-type]
+        btn_clear.element.bind_visibility_from(ui_state, "selected_ids", backward=lambda ids: len(ids) > 0)
+
+    selection_label = ui.label("").classes("text-caption text-grey")
+    selection_label.bind_text_from(
+        ui_state, "selected_ids",
+        backward=lambda ids: f"Selected {len(ids)} item(s)" if ids else "No items selected"
+    )
 
 
-async def demo_viewstack(category_store, product_store):
+async def demo_viewstack(ui_state, category_store, product_store):
     """ViewStack - Master-detail navigation."""
     ui.label("ViewStack").classes("text-h5")
     ui.markdown("""
@@ -274,14 +272,19 @@ async def demo_viewstack(category_store, product_store):
                 else:
                     ui.label("No products").classes("text-grey q-ml-md")
 
+        async def handle_delete(item):
+            await category_store.delete_item(item)
+            vs.show_list()
+
         await detail_card(
             item, render=render_item,
             on_edit=lambda i: vs.show_edit_existing(i),
-            on_delete=lambda _: vs.show_list(),
+            on_delete=handle_delete,
         )
 
     async def render_edit_view(vs: ViewStack, item: dict | None):
         edit = EditCard(
+            state=ui_state["editcard"],
             data_source=category_store, config=edit_form,
             on_saved=lambda saved: vs.show_detail(saved),
             on_cancel=lambda: vs.show_detail(item) if item else vs.show_list(),
@@ -290,6 +293,7 @@ async def demo_viewstack(category_store, product_store):
         await edit.build()
 
     stack = ViewStack(
+        state=ui_state["viewstack"],
         breadcrumb_root="Categories",
         item_label=lambda item: item.get("name", ""),
         render_list=render_list,
@@ -299,27 +303,29 @@ async def demo_viewstack(category_store, product_store):
     await stack.build()
 
 
-def demo_dialog():
+def demo_dialog(ui_state):
     """Dialog - Modal overlay."""
     ui.label("Dialog").classes("text-h5")
     ui.markdown("""
     **Use case:** Confirmations, forms, focused interactions.
-    - Backdrop click to close
     - ESC key to close
     - Custom actions footer
     """)
 
-    with Dialog() as dlg:
+    with Dialog(state=ui_state) as dlg:
         ui.label("Confirm Action").classes("text-h6")
         ui.label("Are you sure you want to proceed?")
         with dlg.actions():
             Button("Cancel", on_click=dlg.close, variant="secondary")
             Button("Confirm", on_click=dlg.close)
 
-    Button("Open Dialog", on_click=dlg.open)
+    with ui.row().classes("items-center gap-4"):
+        Button("Open Dialog", on_click=dlg.open)
+        status = ui.label("").classes("text-caption text-grey")
+        status.bind_text_from(ui_state, "is_open", backward=lambda v: "open" if v else "closed")
 
 
-async def demo_tabs(product_store, category_store):
+async def demo_tabs(ui_state, product_store, category_store):
     """Tabs - Tab-based content switching."""
     ui.label("Tabs").classes("text-h5")
     ui.markdown("""
@@ -342,12 +348,16 @@ async def demo_tabs(product_store, category_store):
         ui.label("ng_rdm Component Library")
         ui.label("Build data-driven NiceGUI applications with ease.").classes("text-grey")
 
-    tabs = Tabs([
+    tabs = Tabs(state=ui_state, tabs=[
         ("products", "Products", render_products),
         ("categories", "Categories", render_categories),
         ("about", "About", render_about),
     ])
     await tabs.build()
+
+    # Demonstrate external state visibility
+    active_label = ui.label("").classes("text-caption text-grey")
+    active_label.bind_text_from(ui_state, "active", backward=lambda v: f"active tab: {v}")
 
 
 # =============================================================================
@@ -355,10 +365,21 @@ async def demo_tabs(product_store, category_store):
 # =============================================================================
 
 @ui.page("/")
-async def main():
+async def main(client: Client):
     rdm_init()
     from ng_rdm.debug import enable_debug_page
     enable_debug_page()  # Optional: enable debug page for event stream visualization
+
+    await client.connected()
+
+    app.storage.user["ui_state"] = {
+        "tabs": {"active": "categories"},
+        "viewstack": {},
+        "selection": {},
+        "dialog": {},
+        "editcard": {},
+    }
+    ui_state = app.storage.user["ui_state"]
 
     ui.add_head_html("""
     <style>
@@ -397,19 +418,19 @@ async def main():
 
         # SelectionTable
         with ui.element("div").classes("showcase-section"):
-            await demo_selectiontable(product_store)
+            await demo_selectiontable(ui_state['selection'], product_store)
 
         # Dialog
         with ui.element("div").classes("showcase-section"):
-            demo_dialog()
+            demo_dialog(ui_state['dialog'])
 
         # Tabs
         with ui.element("div").classes("showcase-section"):
-            await demo_tabs(product_store, category_store)
+            await demo_tabs(ui_state['tabs'], product_store, category_store)
 
         # ViewStack
         with ui.element("div").classes("showcase-section"):
-            await demo_viewstack(category_store, product_store)
+            await demo_viewstack(ui_state, category_store, product_store)
 
         ui.separator()
         ui.markdown("""
@@ -426,4 +447,4 @@ async def main():
         """)
 
 
-ui.run(title="ng_rdm Showcase", port=8080)
+ui.run(title="ng_rdm Showcase", port=8080, storage_secret="showcase_1928392")

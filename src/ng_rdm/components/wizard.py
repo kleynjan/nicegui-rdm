@@ -65,6 +65,7 @@ class StepWizard:
             self.complete_label = _("Create")
 
     _state: dict = field(default_factory=dict, init=False)
+    _dialog_state: dict = field(default_factory=dict, init=False)
     _current_step: int = field(default=0, init=False)
     _dlg: Dialog | None = field(default=None, init=False)
     _content: Any = field(default=None, init=False)
@@ -125,7 +126,7 @@ class StepWizard:
         """Show the wizard dialog."""
         self._current_step = 0
 
-        with Dialog() as self._dlg:
+        with Dialog(state=self._dialog_state) as self._dlg:
             @ui.refreshable
             async def _content():
                 step = self.current_step
