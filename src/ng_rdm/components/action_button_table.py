@@ -1,27 +1,25 @@
 """
-DataTable - Primary editable table with configurable action rendering.
+ActionButtonTable - Table with action buttons per row.
 
 Uses native HTML <table> elements for clean, semantic markup.
-Supports both icon and button styles for actions, with optional built-in modal editing.
-Uses the custom Dialog component for consistent styling and behavior.
+Supports both icon and button styles for Edit/Delete/custom actions.
+All action semantics delegated to client callbacks.
 """
 from typing import Any, Awaitable, Callable, Literal
 
 from nicegui import html, ui
 
 from .i18n import _
-from .base import ObservableRdmTable, TableConfig, FormConfig
-from .dialog import Dialog
-from .fields import build_form_field
+from .base import ObservableRdmTable, TableConfig
 from .protocol import RdmDataSource
 
 
-class DataTable(ObservableRdmTable):
-    """Primary editable table with configurable action rendering.
+class ActionButtonTable(ObservableRdmTable):
+    """Table with action buttons per row.
 
     Uses native HTML table elements with rdm-* CSS classes.
-    Supports icon or button styles for Edit/Delete actions.
-    Can use built-in modal dialog or delegate to external callbacks.
+    Supports icon or button styles for actions.
+    All action semantics (edit, delete, custom) are handled via callbacks.
 
     Args:
         state: Shared state dict
@@ -29,8 +27,9 @@ class DataTable(ObservableRdmTable):
         config: TableConfig with column definitions
         filter_by: Optional filter dict for data loading
         action_style: "icon" for icon buttons, "button" for text buttons
-        on_edit: External callback when Edit clicked (if None, uses built-in modal)
-        on_delete: External callback when Delete clicked (if None, uses internal delete)
+        on_add: Callback when Add button clicked
+        on_edit: Callback when Edit button clicked, receives row dict
+        on_delete: Callback when Delete button clicked, receives row dict
         edit_label: Label for edit button (button style only)
         delete_label: Label for delete button (button style only)
     """
@@ -40,7 +39,6 @@ class DataTable(ObservableRdmTable):
         state: dict,
         data_source: RdmDataSource,
         config: TableConfig,
-        form_config: FormConfig | None = None,
         filter_by: dict[str, Any] | None = None,
         action_style: Literal["icon", "button"] = "icon",
         on_add: Callable[[], Awaitable[None] | None] | None = None,
@@ -56,21 +54,11 @@ class DataTable(ObservableRdmTable):
             filter_by=filter_by, on_add=on_add,
             render_toolbar=render_toolbar, auto_observe=auto_observe,
         )
-        self.form_config = form_config
         self.action_style = action_style
         self.on_edit = on_edit
         self.on_delete = on_delete
         self.edit_label = edit_label or _("Edit")
         self.delete_label = delete_label or _("Delete")
-        self.dialog_state: dict[str, Any] = {}
-        self._current_item_id: int | None = None
-        self._dlg: Dialog | None = None
-        self._dialog_content: Any = None
-        self._is_edit: bool = False
-
-    def _default_on_add(self):
-        """Open the built-in add dialog."""
-        self._open_add_dialog()
 
     @ui.refreshable_method
     async def build(self):
@@ -88,7 +76,7 @@ class DataTable(ObservableRdmTable):
                             if col.width_percent:
                                 th.style(f"width: {col.width_percent}%")
                         # Actions column header
-                        if self.config.show_edit_button or self.config.show_delete_button:
+                        if self.config.show_edit_button or self.config.show_delete_button or self.config.custom_actions:
                             html.th("").classes("rdm-col-actions")
 
                 # Body
@@ -96,7 +84,7 @@ class DataTable(ObservableRdmTable):
                     if not self.data:
                         with html.tr():
                             colspan = len(self.config.columns)
-                            if self.config.show_edit_button or self.config.show_delete_button:
+                            if self.config.show_edit_button or self.config.show_delete_button or self.config.custom_actions:
                                 colspan += 1
                             with html.td().props(f"colspan={colspan}"):
                                 html.span(
@@ -216,100 +204,15 @@ class DataTable(ObservableRdmTable):
                 await result
 
     async def _handle_edit(self, row: dict):
-        """Handle edit button click - use callback or built-in modal."""
+        """Handle edit button click."""
         if self.on_edit:
             result = self.on_edit(row)
             if result is not None and hasattr(result, '__await__'):
                 await result
-        else:
-            self._open_edit_dialog(row)
 
-    async def _handle_delete(self, item: dict):
-        """Handle delete button click - use callback or internal delete."""
+    async def _handle_delete(self, row: dict):
+        """Handle delete button click."""
         if self.on_delete:
-            result = self.on_delete(item)
+            result = self.on_delete(row)
             if result is not None and hasattr(result, '__await__'):
                 await result
-        else:
-            await self._delete(item)
-
-    # --- Built-in Modal Dialog (used when on_edit is not provided) ---
-
-    def _open_add_dialog(self):
-        """Open dialog for adding new item."""
-        assert self.form_config, "form_config required for built-in dialog"
-        self.dialog_state = self._init_form_state(self.form_config.columns)
-        self._current_item_id = None
-        self._is_edit = False
-        self._show_dialog()
-
-    def _open_edit_dialog(self, item: dict):
-        """Open dialog for editing existing item."""
-        assert self.form_config, "form_config required for built-in dialog"
-        self.dialog_state = self._init_form_state(self.form_config.columns, item)
-        self._current_item_id = item.get("id")
-        self._is_edit = True
-        self._show_dialog()
-
-    def _show_dialog(self):
-        """Show the modal dialog, creating it lazily on first use."""
-        if self._dlg is None:
-            self._build_dialog()
-        else:
-            self._dialog_content.refresh()
-        assert self._dlg is not None
-        self._dlg.open()
-
-    def _build_dialog(self):
-        """Build the dialog structure once."""
-        assert self.form_config, "form_config required for built-in dialog"
-        fc = self.form_config
-        with Dialog(dialog_class=fc.dialog_class or "") as self._dlg:
-            @ui.refreshable
-            def _content():
-                title = (
-                    fc.title_edit if self._is_edit else fc.title_add
-                ) or (_("Edit") if self._is_edit else _("Add"))
-                assert self._dlg is not None
-
-                # Header
-                with html.div().classes("rdm-dialog-header"):
-                    ui.label(title).classes("rdm-dialog-title")
-                    with html.button().classes("rdm-dialog-close").on("click", self._dlg.close):
-                        html.i().classes("bi bi-x-lg")
-
-                # Form fields
-                for col in fc.columns:
-                    build_form_field(col, self.dialog_state)
-
-            self._dialog_content = _content
-            _content()
-
-            # Footer - action buttons (outside refreshable for stability)
-            with self._dlg.actions():
-                with html.button().classes("rdm-btn rdm-btn-primary").on(
-                    "click", self._handle_save
-                ):
-                    html.span(_("Save"))
-                with html.button().classes("rdm-btn rdm-btn-secondary").on(
-                    "click", self._dlg.close
-                ):
-                    html.span(_("Cancel"))
-
-    async def _handle_save(self):
-        """Handle save button click in dialog."""
-        assert self.form_config, "form_config required for built-in dialog"
-        item_data = self._build_item_data(self.form_config.columns, self.dialog_state)
-
-        # Validate
-        (valid, error_dict) = self._validate(item_data)
-        if not valid:
-            return
-
-        if self._is_edit and self._current_item_id is not None:
-            success = await self._update(self._current_item_id, item_data)
-        else:
-            success = await self._validate_and_create(item_data)
-
-        if success and self._dlg:
-            self._dlg.close()

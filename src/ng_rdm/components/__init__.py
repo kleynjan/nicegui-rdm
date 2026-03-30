@@ -2,13 +2,14 @@
 RDM (Reactive Data Management) components for NiceGUI.
 
 Component names:
-- DataTable - primary editable table with configurable actions (icon/button style)
+- ActionButtonTable - table with action buttons per row (edit/delete/custom)
 - ListTable - read-only table with clickable rows
 - SelectionTable - table with checkbox multi-select
+- EditDialog - modal dialog for creating/editing items
+- EditCard - in-place editing form
 - Dialog - positioned card overlay
 - Tabs - div-based tab switcher
 - detail_card - display-only detail view function
-- EditCard - in-place editing form
 - ViewStack - list/detail/edit navigation
 - StepWizard - multi-step form wizard
 """
@@ -21,13 +22,14 @@ from .protocol import RdmDataSource
 from ..store import StoreEvent
 
 # Table components
-from .data_table import DataTable
+from .action_button_table import ActionButtonTable
 from .list_table import ListTable
 from .selection import SelectionTable
 from .dialog import Dialog
 from .tabs import Tabs
 from .detail import detail_card
 from .edit_card import EditCard
+from .edit_dialog import EditDialog
 from .view_stack import ViewStack
 from .wizard import WizardStep, StepWizard
 from .button import Button, IconButton
@@ -85,13 +87,14 @@ __all__ = [
     'none_as_text',
 
     # Core components
-    'DataTable',
+    'ActionButtonTable',
     'ListTable',
     'SelectionTable',
     'Dialog',
     'Tabs',
     'detail_card',
     'EditCard',
+    'EditDialog',
     'ViewStack',
     'WizardStep',
     'StepWizard',
