@@ -64,7 +64,7 @@ class ActionButtonTable(ObservableRdmTable):
     async def build(self):
         """Build the table using native HTML elements."""
         await self.load_data()
-        self._build_toolbar()
+        self._build_toolbar("top")
 
         with html.div().classes("rdm-table-card rdm-component show-refresh"):
             with html.table().classes("rdm-table"):
@@ -93,6 +93,8 @@ class ActionButtonTable(ObservableRdmTable):
                     else:
                         for row in self.data:
                             self._build_row(row)
+
+        self._build_toolbar("bottom")
 
     def _build_row(self, row: dict):
         """Build a single data row."""

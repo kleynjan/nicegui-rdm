@@ -294,8 +294,6 @@ async def demo_viewstack(ui_state, category_store, product_store):
 
     stack = ViewStack(
         state=ui_state["viewstack"],
-        breadcrumb_root="Categories",
-        item_label=lambda item: item.get("name", ""),
         render_list=render_list,
         render_detail=render_detail_view,
         render_edit=render_edit_view,

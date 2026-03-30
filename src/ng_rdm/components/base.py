@@ -6,7 +6,7 @@ RDM helpers with validation, and notification utilities.
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any, Awaitable, Callable, Literal, Optional
 
 from nicegui import html, ui
 
@@ -78,6 +78,7 @@ class TableConfig:
     show_edit_button: bool = True
     show_delete_button: bool = True
     custom_actions: list[RowAction] = field(default_factory=list)
+    toolbar_position: Literal["top", "bottom"] = "top"
 
     def __post_init__(self):
         self.join_fields = list({col.name for col in self.columns if "__" in col.name})
@@ -343,8 +344,14 @@ class ObservableRdmTable(ObservableRdmComponent):
             transform=transform if transform is not None else self.transform,
         )
 
-    def _build_toolbar(self):
-        """Render table toolbar with add button and optional extra content."""
+    def _build_toolbar(self, at: Literal["top", "bottom"] = "top"):
+        """Render table toolbar at the given slot position.
+
+        Subclasses call this twice — once before and once after the table —
+        passing the slot name. Only the call matching config.toolbar_position renders.
+        """
+        if at != self.config.toolbar_position:
+            return
         if not self.config.show_add_button and not self.render_toolbar:
             return
         with html.div().classes("rdm-table-toolbar"):

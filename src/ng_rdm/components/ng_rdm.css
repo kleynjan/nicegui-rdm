@@ -265,7 +265,7 @@ enable this block to see refresh animated
 }
 
 .rdm-btn-icon i {
-    font-size: 18px;
+    font-size: 24px;
 }
 
 /* =============================================================================
@@ -606,43 +606,38 @@ enable this block to see refresh animated
 }
 
 /* =============================================================================
-   Breadcrumbs
+   Back Navigation (ViewStack)
    ============================================================================= */
 
-.rdm-breadcrumb {
+.rdm-view-stack-detail {
+    position: relative;
+}
+
+.rdm-back-nav {
+    /* Blue circle with white arrow, flows above detail content by default */
     display: flex;
     align-items: center;
-    gap: var(--rdm-spacing-sm);
-    padding: var(--rdm-spacing-md) 0;
-    font-size: var(--rdm-font-size);
-}
-
-.rdm-breadcrumb-item {
-    color: var(--rdm-text-secondary);
-}
-
-.rdm-breadcrumb-item.rdm-link {
-    color: var(--rdm-primary);
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--rdm-primary);
+    color: white;
+    /* font-size: 2rem; */
     cursor: pointer;
-    text-decoration: none;
+    border: none;
+    margin-bottom: var(--rdm-spacing-sm);
+
+    i {
+        -webkit-text-stroke: 1px white;
+    }
+
+    &:hover:not(:disabled) {
+        background-color: var(--rdm-primary-hover);
+    }
 }
 
-.rdm-breadcrumb-item.rdm-link:hover {
-    text-decoration: underline;
-}
 
-.rdm-breadcrumb-item.rdm-current {
-    color: var(--rdm-text);
-    font-weight: var(--rdm-font-weight-medium);
-}
-
-.rdm-breadcrumb-separator {
-    color: var(--rdm-text-placeholder);
-}
-
-.rdm-breadcrumb-back {
-    margin-right: var(--rdm-spacing-xs);
-}
 
 /* =============================================================================
    Detail Card

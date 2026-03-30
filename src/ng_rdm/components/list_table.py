@@ -66,12 +66,13 @@ class ListTable(ObservableRdmTable):
     async def build(self):
         """Build the table using native HTML elements."""
         await self.load_data()
-        self._build_toolbar()
+        self._build_toolbar("top")
 
         if not self.data:
             if self.config.empty_message:
                 with html.div().classes("rdm-empty"):
                     html.span(self.config.empty_message).classes("rdm-empty-text")
+            self._build_toolbar("bottom")
             return
 
         with html.div().classes("rdm-table-card rdm-component show-refresh"):
@@ -96,3 +97,5 @@ class ListTable(ObservableRdmTable):
                             for col in self.config.columns:
                                 with html.td():
                                     self._render_cell(col, item.get(col.name, ""), item)
+
+        self._build_toolbar("bottom")
