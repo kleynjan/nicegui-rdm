@@ -70,7 +70,7 @@ class Column:
 
 @dataclass
 class TableConfig:
-    """Configuration for table display components (DataTable, ListTable, SelectionTable)."""
+    """Configuration for table display components (ActionButtonTable, ListTable, SelectionTable)."""
     columns: list[Column] = field(default_factory=list)
     empty_message: Optional[str] = None
     add_button: Optional[str] = None
@@ -78,7 +78,7 @@ class TableConfig:
     show_edit_button: bool = True
     show_delete_button: bool = True
     custom_actions: list[RowAction] = field(default_factory=list)
-    toolbar_position: Literal["top", "bottom"] = "top"
+    toolbar_position: Literal["top", "bottom"] = "bottom"
 
     def __post_init__(self):
         self.join_fields = list({col.name for col in self.columns if "__" in col.name})
@@ -88,7 +88,7 @@ class TableConfig:
 
 @dataclass
 class FormConfig:
-    """Configuration for form/dialog components (EditCard, DataTable dialog)."""
+    """Configuration for form/dialog components."""
     columns: list[Column] = field(default_factory=list)
     title_add: Optional[str] = None
     title_edit: Optional[str] = None

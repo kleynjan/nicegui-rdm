@@ -1,27 +1,34 @@
 """
-Topic Filtering Example - demonstrates selective event subscriptions.
+Topic Filtering — selective store event routing.
 
-Run: python -m ng_rdm.examples.topic_filtering
-Then open http://localhost:8080 to see two DataTables with topic-based filtering.
-Open http://localhost:8080/rdm-debug to see the event stream.
+Key concepts:
+1. Topic filtering: set_topic_fields() + observe(topics=...) so that editing a
+   UK customer notifies only UK-filtered tables, not USA ones.
+2. Dynamic resubscription: radio buttons change filter_by and reobserve() at runtime.
+3. UI state preservation: selections in a SelectionTable survive store-triggered
+   refreshes because state is owned externally in app.storage.user.
+4. Event log: a plain store observer records every notification in real time.
 
-Key concepts demonstrated:
-- set_topic_fields() to enable topic routing on a field
-- reobserve(topics) to dynamically change what events a table receives
-- Editing UK data on one table doesn't refresh the USA table (and vice versa)
+Run:  python -m ng_rdm.examples.topic_filtering
+Open: http://localhost:8080  |  debug: http://localhost:8080/rdm-debug
 """
-
-from nicegui import html, ui
+from nicegui import app, ui, Client
 
 from ng_rdm import DictStore, store_registry
-from ng_rdm.components import rdm_init, DataTable, Column, TableConfig, FormConfig
+from ng_rdm.store import StoreEvent
+from ng_rdm.components import (
+    rdm_init, Column, TableConfig, FormConfig,
+    ActionButtonTable, SelectionTable, EditDialog, Button,
+)
 
-# Create store and configure topic filtering on 'country' field
+# =============================================================================
+# Store setup
+# =============================================================================
+
 customer_store = DictStore()
 customer_store.set_topic_fields(["country"])
 store_registry.register_store("demo", "customers", customer_store)
 
-# Seed data: 3 USA customers, 2 UK customers
 SEED_DATA = [
     {"id": 1, "name": "Alice Johnson", "country": "USA"},
     {"id": 2, "name": "Bob Smith", "country": "USA"},
@@ -30,129 +37,168 @@ SEED_DATA = [
     {"id": 5, "name": "Edward Thames", "country": "UK"},
 ]
 
-# Column configuration
-customer_columns = [
-    Column(name="id", label="ID", width_percent=15, editable=False),
-    Column(name="name", label="Name", width_percent=50, editable=True),
-    Column(name="country", label="Country", width_percent=35, editable=False),
-]
-
-customer_config = TableConfig(
-    columns=customer_columns,
-    show_add_button=False,
-    show_edit_button=True,
-    show_delete_button=False,
-)
-
-customer_form_config = FormConfig(
-    columns=[Column(name="name", label="Name", editable=True, required=True)],
-)
-
 
 async def seed_store():
-    """Populate the store with initial data if empty."""
-    existing = await customer_store.read_items()
-    if not existing:
+    if not await customer_store.read_items():
         for item in SEED_DATA:
             await customer_store.create_item(item)
 
 
+# =============================================================================
+# Column / config definitions
+# =============================================================================
+
+customer_table_config = TableConfig(
+    columns=[
+        Column(name="name", label="Name", width_percent=55),
+        Column(name="country", label="Country", width_percent=30),
+    ],
+    show_add_button=False,
+    show_delete_button=False,
+    empty_message="No customers",
+)
+
+customer_form_config = FormConfig(
+    columns=[Column(name="name", label="Name", required=True)],
+    title_edit="Edit Customer",
+)
+
+
+# =============================================================================
+# Page
+# =============================================================================
+
 @ui.page("/")
-async def index():
-    rdm_init()
+async def index(client: Client):
+    rdm_init(extra_css="examples.css")
     await seed_store()
+    await client.connected()
 
-    ui.label("Topic Filtering Demo").classes("text-2xl font-bold mb-2")
-    ui.label(
-        "Edit a customer's name. If left table filters UK and right filters USA, "
-        "editing a UK customer won't refresh the USA table."
-    ).classes("text-gray-600 mb-4")
+    app.storage.user.setdefault("ui_state", {
+        "left_table": {}, "right_table": {}, "dialog": {}, "selection": {},
+    })
+    ui_state = app.storage.user["ui_state"]
 
-    # State for filter selections
-    left_filter = {"value": "USA"}
-    right_filter = {"value": "UK"}
+    with ui.column().style("width: 100%; max-width: 64rem; margin: 0 auto; padding: 1rem; gap: 1rem"):
 
-    # Create two tables side by side
-    with ui.row().classes("w-full gap-8"):
-        # Left table
-        with ui.column().classes("flex-1"):
-            ui.label("Left Table").classes("font-semibold text-lg mb-2")
+        # ── section 1: topic-filtered side-by-side tables ────────────────────
 
-            left_table = DataTable(
-                state={},
-                data_source=customer_store,
-                config=customer_config,
-                form_config=customer_form_config,
-                filter_by={"country": left_filter["value"]},
-                auto_observe=False,
-            )
-            left_table.observe(topics={"country": left_filter["value"]})
-            await left_table.build()
+        ui.label("Topic Filtering").classes("demo-section-heading")
+        ui.markdown(
+            "Each table subscribes to a single country topic. "
+            "Editing a UK customer fires a `country=UK` event — "
+            "only the UK table refreshes, the USA table stays silent."
+        )
 
-            # Radio buttons for left table
-            with html.div().classes("mt-4"):
-                ui.label("Filter:").classes("text-sm text-gray-500 mb-1")
+        # Shared EditDialog: one instance handles both tables
+        edit_dialog = EditDialog(
+            state=ui_state["dialog"],
+            data_source=customer_store,
+            config=customer_form_config,
+        )
 
-                async def on_left_change(e):
-                    value = e.value
-                    left_filter["value"] = value
-                    if value == "All":
-                        left_table.filter_by = None
-                        left_table.reobserve(topics=None)
-                    else:
-                        left_table.filter_by = {"country": value}
-                        left_table.reobserve(topics={"country": value})
-                    await left_table.build.refresh()
+        with ui.row().style("width: 100%; gap: 2rem"):
+            for side, default_country in [("Left", "USA"), ("Right", "UK")]:
+                state_key = f"{side.lower()}_table"
+                with ui.column().style("flex: 1"):
+                    ui.label(f"{side} Table").style("font-size: 1rem; font-weight: 600")
 
-                ui.radio(
-                    ["USA", "UK", "All"],
-                    value=left_filter["value"],
-                    on_change=on_left_change,
-                ).props("inline")
+                    table = ActionButtonTable(
+                        state=ui_state[state_key],
+                        data_source=customer_store,
+                        config=customer_table_config,
+                        filter_by={"country": default_country},
+                        auto_observe=False,
+                        on_edit=edit_dialog.open_for_edit,
+                    )
+                    table.observe(topics={"country": default_country})
+                    await table.build()
 
-        # Right table
-        with ui.column().classes("flex-1"):
-            ui.label("Right Table").classes("font-semibold text-lg mb-2")
+                    # Radio filter — changes both filter_by and topic subscription
+                    ui.label("Filter:").classes("demo-caption")
 
-            right_table = DataTable(
-                state={},
-                data_source=customer_store,
-                config=customer_config,
-                form_config=customer_form_config,
-                filter_by={"country": right_filter["value"]},
-                auto_observe=False,
-            )
-            right_table.observe(topics={"country": right_filter["value"]})
-            await right_table.build()
+                    async def on_filter_change(e, t=table):
+                        value = e.value
+                        if value == "All":
+                            t.filter_by = None
+                            t.reobserve(topics=None)
+                        else:
+                            t.filter_by = {"country": value}
+                            t.reobserve(topics={"country": value})
+                        await t.build.refresh()
 
-            # Radio buttons for right table
-            with html.div().classes("mt-4"):
-                ui.label("Filter:").classes("text-sm text-gray-500 mb-1")
+                    ui.radio(["USA", "UK", "All"], value=default_country,
+                             on_change=on_filter_change).props("inline")
 
-                async def on_right_change(e):
-                    value = e.value
-                    right_filter["value"] = value
-                    if value == "All":
-                        right_table.filter_by = None
-                        right_table.reobserve(topics=None)
-                    else:
-                        right_table.filter_by = {"country": value}
-                        right_table.reobserve(topics={"country": value})
-                    await right_table.build.refresh()
+        # ── section 2: UI state preservation ─────────────────────────────────
 
-                ui.radio(
-                    ["USA", "UK", "All"],
-                    value=right_filter["value"],
-                    on_change=on_right_change,
-                ).props("inline")
+        ui.separator()
+        ui.label("UI State Preservation").classes("demo-section-heading")
+        ui.markdown(
+            "Select customers below, then edit a name in the tables above. "
+            "The table refreshes (store notification fires) but your selection "
+            "persists — because `state[\"selected_ids\"]` lives in "
+            "`app.storage.user`, outside the component."
+        )
 
-    # Debug page link
-    with html.div().classes("mt-8 pt-4 border-t"):
-        ui.link(text="Open Debug Panel", target="/rdm-debug",
-                new_tab=True).classes("text-sm text-blue-600 hover:underline")
-        ui.label(
-            "Watch the event stream to see which observers get notified"
-        ).classes("text-sm text-gray-500 ml-4")
+        selection_config = TableConfig(
+            columns=[
+                Column(name="name", label="Name", width_percent=50),
+                Column(name="country", label="Country", width_percent=35),
+            ],
+            show_add_button=False,
+            show_edit_button=False,
+            show_delete_button=False,
+        )
+
+        sel_table = SelectionTable(
+            state=ui_state["selection"],
+            data_source=customer_store,
+            config=selection_config,
+        )
+        await sel_table.build()
+
+        selection_label = ui.label("").classes("demo-caption")
+        selection_label.bind_text_from(
+            ui_state["selection"], "selected_ids",
+            backward=lambda ids: (
+                f"Selected: {len(ids)} customer(s) — IDs {sorted(ids)}"
+                if ids else "No selection"
+            ),
+        )
+
+        with ui.row():
+            Button("Select All", on_click=sel_table.select_all)  # type: ignore[arg-type]
+            Button("Clear", on_click=sel_table.clear_selection, variant="secondary")  # type: ignore[arg-type]
+
+        # ── section 3: event log ──────────────────────────────────────────────
+
+        ui.separator()
+        ui.label("Event Log").classes("demo-section-heading")
+        ui.markdown(
+            "A plain observer (no topic filter) records every store event. "
+            "Compare with the filtered tables above — they only receive events "
+            "matching their subscribed country."
+        )
+
+        log = ui.log(max_lines=30).style("width: 100%; height: 160px; font-size: 0.85rem;")
+
+        async def on_event(event: StoreEvent):
+            country = event.item.get("country", "?")
+            name = event.item.get("name", "?")
+            log.push(f"[{event.verb.upper()}] {name!r}  country={country!r}")
+
+        customer_store.add_observer(on_event)
+
+        async def cleanup():
+            customer_store.remove_observer(on_event)
+
+        client.on_disconnect(cleanup)
+
+        # ── footer ────────────────────────────────────────────────────────────
+
+        ui.separator()
+        ui.link("Open Debug Panel →", target="/rdm-debug", new_tab=True).classes("demo-caption")
 
 
-ui.run(title="Topic Filtering Demo", port=8080)
+ui.run(title="Topic Filtering — ng_rdm", port=8080, storage_secret="topic_filter_1928")

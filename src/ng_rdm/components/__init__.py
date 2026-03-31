@@ -47,7 +47,7 @@ def rdm_init(
     Args:
         custom_translations: Optional dict to update/extend built-in translations.
                              Structure: {'lang_code': {'key': 'translation', ...}, ...}
-        extra_css: Optional CSS string to add after ng_rdm.css.
+        extra_css: Optional CSS string | file to add (in addition to ng_rdm.css).
     """
     if custom_translations:
         set_translations(custom_translations)

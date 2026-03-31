@@ -39,12 +39,13 @@ class SelectionTable(ObservableRdmTable):
         row_key: str = "id",
         join_fields: list[str] | None = None,
         on_selection_change: Callable[[set[int]], None] | None = None,
+        render_toolbar: Callable[[], None] | None = None,
         auto_observe: bool = True,
     ):
         super().__init__(
             state, data_source, config,
             filter_by=filter_by, transform=transform,
-            join_fields=join_fields, auto_observe=auto_observe,
+            join_fields=join_fields, render_toolbar=render_toolbar, auto_observe=auto_observe,
         )
         self.row_key = row_key
         self.on_selection_change = on_selection_change
@@ -88,6 +89,8 @@ class SelectionTable(ObservableRdmTable):
         """Build the table using native HTML elements."""
         await self.load_data()
 
+        self._build_toolbar("top")
+
         if not self.data:
             if self.config.empty_message:
                 with html.div().classes("rdm-empty"):
@@ -126,3 +129,5 @@ class SelectionTable(ObservableRdmTable):
                             for col in self.config.columns:
                                 with html.td():
                                     self._render_cell(col, item.get(col.name, ""), item)
+
+        self._build_toolbar("bottom")

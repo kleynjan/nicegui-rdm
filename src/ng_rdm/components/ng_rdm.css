@@ -520,7 +520,7 @@ enable this block to see refresh animated
 }
 
 .rdm-dialog-header {
-    padding: var(--rdm-spacing-lg) var(--rdm-spacing-xl);
+    /* padding: var(--rdm-spacing-lg) var(--rdm-spacing-xl); */
     border-bottom: 1px solid var(--rdm-border-light);
     display: flex;
     align-items: center;
