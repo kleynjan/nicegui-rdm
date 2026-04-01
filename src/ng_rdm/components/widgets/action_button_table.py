@@ -9,9 +9,9 @@ from typing import Any, Awaitable, Callable, Literal
 
 from nicegui import html, ui
 
-from .i18n import _
-from .base import ObservableRdmTable, TableConfig
-from .protocol import RdmDataSource
+from ..i18n import _
+from ..base import ObservableRdmTable, TableConfig
+from ..protocol import RdmDataSource
 
 
 class ActionButtonTable(ObservableRdmTable):

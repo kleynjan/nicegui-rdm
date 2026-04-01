@@ -16,6 +16,7 @@ from nicegui import app, ui, Client
 
 from ng_rdm import DictStore, store_registry
 from ng_rdm.store import StoreEvent
+from ng_rdm.components import Row, Col, Separator
 
 
 # =============================================================================
@@ -58,7 +59,7 @@ TABLE_COLUMNS = [
 async def main(client: Client):
     await client.connected()
 
-    with ui.column().style("width: 100%; max-width: 64rem; margin: 0 auto; padding: 1rem; gap: 1rem"):
+    with Col(gap="1rem", style="width: 100%; max-width: 64rem; margin: 0 auto; padding: 1rem"):
         ui.label("Store + Vanilla NiceGUI").classes("demo-section-heading")
         ui.markdown(
             "No RDM components — `@ui.refreshable` sections are triggered by store observers. "
@@ -89,17 +90,17 @@ async def main(client: Client):
             store.add_observer(on_category_change, topics={"category": category})
             observers.append(on_category_change)
 
-        with ui.row().style("width: 100%; gap: 2rem"):
+        with Row(gap="2rem", style="width: 100%"):
             for cat in CATEGORIES:
-                with ui.column().style("flex: 1"):
+                with Col(style="flex: 1"):
                     await build_category_panel(cat)
 
         # ── edit form ─────────────────────────────────────────────────────────
 
-        ui.separator()
+        Separator()
         ui.label("Edit a product").classes("demo-subtitle")
 
-        with ui.row().classes("demo-form-row"):
+        with Row(align="flex-end", style="flex-wrap: wrap"):
             items_now = await store.read_items()
             options = {i["id"]: f"{i['name']} ({i['category']})" for i in items_now}
             item_select = ui.select(options, label="Product", value=next(iter(options), None))
@@ -116,10 +117,10 @@ async def main(client: Client):
 
         # ── add form ──────────────────────────────────────────────────────────
 
-        ui.separator()
+        Separator()
         ui.label("Add a product").classes("demo-subtitle")
 
-        with ui.row().classes("demo-form-row"):
+        with Row(align="flex-end", style="flex-wrap: wrap"):
             new_name = ui.input("Name")
             new_price = ui.number("Price", min=0, value=0)
             new_cat = ui.select(CATEGORIES, label="Category", value=CATEGORIES[0])
@@ -140,7 +141,7 @@ async def main(client: Client):
 
         # ── event log ─────────────────────────────────────────────────────────
 
-        ui.separator()
+        Separator()
         ui.label("Store event log").classes("demo-subtitle")
         ui.label("Every observer receives events scoped to its topic.").classes("demo-caption")
 

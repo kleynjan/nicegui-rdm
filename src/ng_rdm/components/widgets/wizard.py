@@ -23,7 +23,7 @@ from typing import Callable, Awaitable, Any
 from nicegui import ui
 
 from .dialog import Dialog
-from .i18n import _
+from ..i18n import _
 
 
 @dataclass

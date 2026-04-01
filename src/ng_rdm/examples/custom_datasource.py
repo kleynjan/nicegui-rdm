@@ -15,6 +15,7 @@ from nicegui import app, ui, Client
 from ng_rdm.components import (
     rdm_init, Column, TableConfig, FormConfig,
     ActionButtonTable, EditDialog,
+    Col,
 )
 from ng_rdm.store import StoreEvent
 
@@ -120,7 +121,7 @@ async def main(client: Client):
     app.storage.user.setdefault("ui_state", {"table": {}, "dialog": {}})
     ui_state = app.storage.user["ui_state"]
 
-    with ui.column().style("width: 100%; max-width: 42rem; margin: 0 auto; padding: 1rem"):
+    with Col(style="width: 100%; max-width: 42rem; margin: 0 auto; padding: 1rem"):
         ui.label("RDM Components — Custom Data Source").classes("demo-section-heading")
         ui.markdown(
             "The `ListDataSource` class below satisfies the `RdmDataSource` protocol "

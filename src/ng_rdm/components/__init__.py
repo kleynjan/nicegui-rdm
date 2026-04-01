@@ -9,7 +9,7 @@ Component names:
 - EditCard - in-place editing form
 - Dialog - positioned card overlay
 - Tabs - div-based tab switcher
-- detail_card - display-only detail view function
+- DetailCard - display-only detail view with inline actions
 - ViewStack - list/detail/edit navigation
 - StepWizard - multi-step form wizard
 """
@@ -21,18 +21,13 @@ from .i18n import _, none_as_text, set_language, set_translations
 from .protocol import RdmDataSource
 from ..store import StoreEvent
 
-# Table components
-from .action_button_table import ActionButtonTable
-from .list_table import ListTable
-from .selection import SelectionTable
-from .dialog import Dialog
-from .tabs import Tabs
-from .detail import detail_card
-from .edit_card import EditCard
-from .edit_dialog import EditDialog
-from .view_stack import ViewStack
-from .wizard import WizardStep, StepWizard
-from .button import Button, IconButton
+# Concrete widget components
+from .widgets import (
+    ActionButtonTable, ListTable, SelectionTable,
+    Dialog, Tabs, DetailCard, EditCard, EditDialog,
+    ViewStack, WizardStep, StepWizard,
+    Button, IconButton, Row, Col, Separator,
+)
 
 
 def rdm_init(
@@ -92,7 +87,7 @@ __all__ = [
     'SelectionTable',
     'Dialog',
     'Tabs',
-    'detail_card',
+    'DetailCard',
     'EditCard',
     'EditDialog',
     'ViewStack',
@@ -100,6 +95,9 @@ __all__ = [
     'StepWizard',
     'Button',
     'IconButton',
+    'Row',
+    'Col',
+    'Separator',
 
     # Page initialization
     'rdm_init',

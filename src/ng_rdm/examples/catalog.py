@@ -12,14 +12,15 @@ Creates: catalog.sqlite3
 from pathlib import Path
 
 from tortoise import fields
-from nicegui import app, ui, Client
+from nicegui import app, ui, Client, html
 
 from ng_rdm.components import (
     rdm_init, Column, TableConfig, FormConfig, RowAction,
     ActionButtonTable, ListTable, SelectionTable,
     EditCard, EditDialog, ViewStack, Dialog, Tabs,
-    WizardStep, StepWizard, Button, detail_card,
+    WizardStep, StepWizard, Button, DetailCard,
     ObservableRdmComponent,
+    Row, Col, Separator,
 )
 from ng_rdm.store import TortoiseStore, DictStore, init_db, close_db, store_registry
 from ng_rdm.models import QModel, FieldSpec, Validator
@@ -139,10 +140,6 @@ category_form_cols = [
 # =============================================================================
 # Section renderers
 # =============================================================================
-
-def _card(title: str):
-    return ui.element("div").classes("catalog-section")
-
 
 async def section_action_button_table(ui_state, product_store, category_store):
     ui.label("ActionButtonTable").classes("demo-section-heading")
@@ -277,7 +274,7 @@ def section_dialog(ui_state):
             Button("Cancel", on_click=dlg.close, variant="secondary")
             Button("Confirm", on_click=dlg.close)
 
-    with ui.row().style("align-items: center; gap: 1rem"):
+    with Row():
         Button("Open Dialog", on_click=dlg.open)
         # External state control: open via state dict
         Button("Open via state", on_click=lambda: dlg.open(), variant="secondary")
@@ -321,7 +318,7 @@ async def section_tabs(ui_state, product_store, category_store):
     ])
     await tabs.build()
 
-    with ui.row().style("align-items: center; gap: 1rem; margin-top: 0.5rem"):
+    with Row(style="margin-top: 0.5rem"):
         # External state control: switch tabs by modifying state directly
         for key, label in [("products", "→ Products"), ("categories", "→ Categories"), ("about", "→ About")]:
             ui.button(label, on_click=lambda k=key: ui_state["tabs"].update({"active": k})).props("flat dense")
@@ -364,15 +361,14 @@ async def section_viewstack(ui_state, category_store, product_store):
         await table.build()
 
     async def render_detail(vs: ViewStack, item: dict):
-        async def render_content(item: dict):
-            ui.label(item.get("name", "")).classes("demo-section-heading")
-            ui.label(item.get("description") or "").classes("rdm-text-muted")
+        async def render_header(i: dict):
+            ui.label(i.get("name", "")).classes("demo-section-heading")
+            ui.label(i.get("description") or "").classes("rdm-text-muted")
 
-            ui.separator()
+        async def render_body(i: dict):
+            Separator()
             ui.label("Products in this category:").style("font-size: 0.875rem; font-weight: 500; margin-top: 0.5rem")
-            products = await product_store.read_items(
-                filter_by={"category_id": item.get("id")}
-            )
+            products = await product_store.read_items(filter_by={"category_id": i.get("id")})
             if products:
                 for p in products:
                     ui.label(f"• {p['name']}  ${float(p['price']):.2f}").classes(
@@ -380,16 +376,16 @@ async def section_viewstack(ui_state, category_store, product_store):
             else:
                 ui.label("None").classes("rdm-text-muted demo-caption").style("margin-left: 1rem")
 
-        async def on_delete(item: dict):
-            await category_store.delete_item(item)
-            vs.show_list()
-
-        await detail_card(
-            item,
-            render=render_content,
+        detail = DetailCard(
+            state=ui_state["detail_card"],
+            data_source=category_store,
+            render=render_header,
+            render_body=render_body,
             on_edit=lambda i: vs.show_edit_existing(i),
-            on_delete=on_delete,
+            on_deleted=vs.show_list,
         )
+        detail.set_item(item)
+        await detail.build()
 
     async def render_edit(vs: ViewStack, item: dict | None):
         edit = EditCard(
@@ -418,7 +414,7 @@ async def section_wizard(product_store, category_store):
         "Each step renders into a shared state dict; validation gates Next."
     )
 
-    wizard_btn_area = ui.row()
+    wizard_btn_area = Row().element
 
     async def show_wizard():
         categories = await category_store.read_items()
@@ -492,7 +488,6 @@ class HighlightTable(ObservableRdmComponent):
     @ui.refreshable_method
     async def build(self):
         await self.load_data()
-        from nicegui import html
         with html.table().classes("rdm-table"):
             with html.thead():
                 with html.tr():
@@ -524,7 +519,7 @@ async def section_custom_component(ui_state):
 
     ui.label("High-priority rows are highlighted. Try adding a task:").classes("demo-caption").style("margin-top: 0.5rem")
 
-    with ui.row().classes("demo-form-row"):
+    with Row(align="flex-end", style="flex-wrap: wrap"):
         title_input = ui.input("Task title")
         priority_select = ui.select(["high", "normal"], label="Priority", value="normal")
 
@@ -546,56 +541,59 @@ async def section_custom_component(ui_state):
 @ui.page("/")
 async def main(client: Client):
 
+    def _section_card(title: str):
+        return html.div().classes("catalog-section")
+
     rdm_init(extra_css="examples.css")
     await client.connected()
 
-    # All component state in app.storage.user for persistence across refreshes
-    ui_state = app.storage.user['ui_state'] = {
+    # component state in app.storage.user => persistence across refreshes
+    ui_state = app.storage.user.setdefault("ui_state", {
         "action_table": {}, "action_dialog": {},
         "list_table": {},
         "selection": {},
         "editcard": {},
         "dialog": {},
         "tabs": {},
-        "viewstack": {}, "vs_list": {}, "vs_editcard": {},
+        "viewstack": {}, "vs_list": {}, "vs_editcard": {}, "detail_card": {},
         "highlight": {},
-    }
+    })
 
     product_store = store_registry.get_store("default", "product")
     category_store = store_registry.get_store("default", "category")
 
-    with ui.column().classes("demo-content-column"):
+    with Col(classes="demo-content-column"):
         ui.label("ng_rdm components showcase").style("font-size: 2rem")
         ui.label("No Quasar tables and dialogs, just lovely old html.").style("margin-bottom: 1rem")
 
-        with _card("action"):
+        with _section_card("action"):
             await section_action_button_table(ui_state, product_store, category_store)
 
-        with _card("list"):
+        with _section_card("list"):
             await section_list_table(ui_state, category_store)
 
-        with _card("selection"):
+        with _section_card("selection"):
             await section_selection_table(ui_state, product_store)
 
-        with _card("editcard"):
+        with _section_card("editcard"):
             await section_edit_card(ui_state, category_store)
 
-        with _card("dialog"):
+        with _section_card("dialog"):
             section_dialog(ui_state)
 
-        with _card("tabs"):
+        with _section_card("tabs"):
             await section_tabs(ui_state, product_store, category_store)
 
-        with _card("viewstack"):
+        with _section_card("viewstack"):
             await section_viewstack(ui_state, category_store, product_store)
 
-        with _card("wizard"):
+        with _section_card("wizard"):
             await section_wizard(product_store, category_store)
 
-        with _card("custom"):
+        with _section_card("custom"):
             await section_custom_component(ui_state)
 
-        ui.separator()
+        Separator()
         ui.markdown("""
         ### Quick Reference
 

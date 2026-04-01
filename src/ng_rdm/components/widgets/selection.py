@@ -8,8 +8,8 @@ from typing import Any, Callable
 
 from nicegui import html, ui
 
-from .base import ObservableRdmTable, TableConfig
-from .protocol import RdmDataSource
+from ..base import ObservableRdmTable, TableConfig
+from ..protocol import RdmDataSource
 
 
 class SelectionTable(ObservableRdmTable):

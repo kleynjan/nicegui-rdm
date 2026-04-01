@@ -721,8 +721,8 @@ enable this block to see refresh animated
 .rdm-detail-actions {
     display: flex;
     gap: var(--rdm-spacing-sm);
-    margin-top: var(--rdm-spacing-xl);
-    padding-top: 0.75rem;
+    align-items: flex-start;
+    flex-shrink: 0;
 }
 
 /* =============================================================================

@@ -8,11 +8,11 @@ from typing import Any, Callable
 
 from nicegui import ui
 
-from .i18n import _
-from .base import RdmComponent, FormConfig
+from ..i18n import _
+from ..base import RdmComponent, FormConfig
 from .dialog import Dialog
-from .fields import build_form_field
-from .protocol import RdmDataSource
+from ..fields import build_form_field
+from ..protocol import RdmDataSource
 
 
 class EditDialog(RdmComponent):

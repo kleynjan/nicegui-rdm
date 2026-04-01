@@ -19,6 +19,7 @@ from ng_rdm.store import StoreEvent
 from ng_rdm.components import (
     rdm_init, Column, TableConfig, FormConfig,
     ActionButtonTable, SelectionTable, EditDialog, Button,
+    Row, Col, Separator,
 )
 
 # =============================================================================
@@ -79,7 +80,7 @@ async def index(client: Client):
     })
     ui_state = app.storage.user["ui_state"]
 
-    with ui.column().style("width: 100%; max-width: 64rem; margin: 0 auto; padding: 1rem; gap: 1rem"):
+    with Col(gap="1rem", style="width: 100%; max-width: 64rem; margin: 0 auto; padding: 1rem"):
 
         # ── section 1: topic-filtered side-by-side tables ────────────────────
 
@@ -97,10 +98,10 @@ async def index(client: Client):
             config=customer_form_config,
         )
 
-        with ui.row().style("width: 100%; gap: 2rem"):
+        with Row(gap="2rem", style="width: 100%"):
             for side, default_country in [("Left", "USA"), ("Right", "UK")]:
                 state_key = f"{side.lower()}_table"
-                with ui.column().style("flex: 1"):
+                with Col(style="flex: 1"):
                     ui.label(f"{side} Table").style("font-size: 1rem; font-weight: 600")
 
                     table = ActionButtonTable(
@@ -132,7 +133,7 @@ async def index(client: Client):
 
         # ── section 2: UI state preservation ─────────────────────────────────
 
-        ui.separator()
+        Separator()
         ui.label("UI State Preservation").classes("demo-section-heading")
         ui.markdown(
             "Select customers below, then edit a name in the tables above. "
@@ -167,13 +168,13 @@ async def index(client: Client):
             ),
         )
 
-        with ui.row():
+        with Row():
             Button("Select All", on_click=sel_table.select_all)  # type: ignore[arg-type]
             Button("Clear", on_click=sel_table.clear_selection, variant="secondary")  # type: ignore[arg-type]
 
         # ── section 3: event log ──────────────────────────────────────────────
 
-        ui.separator()
+        Separator()
         ui.label("Event Log").classes("demo-section-heading")
         ui.markdown(
             "A plain observer (no topic filter) records every store event. "
@@ -197,7 +198,7 @@ async def index(client: Client):
 
         # ── footer ────────────────────────────────────────────────────────────
 
-        ui.separator()
+        Separator()
         ui.link("Open Debug Panel →", target="/rdm-debug", new_tab=True).classes("demo-caption")
 
 

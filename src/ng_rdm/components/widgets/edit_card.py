@@ -8,10 +8,10 @@ from typing import Any, Callable
 
 from nicegui import html
 
-from .i18n import _
-from .base import RdmComponent, FormConfig
-from .fields import build_form_field
-from .protocol import RdmDataSource
+from ..i18n import _
+from ..base import RdmComponent, FormConfig
+from ..fields import build_form_field
+from ..protocol import RdmDataSource
 
 
 class EditCard(RdmComponent):

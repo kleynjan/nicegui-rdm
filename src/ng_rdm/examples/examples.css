@@ -15,12 +15,6 @@
 
 /* ── Layout ──────────────────────────────────────────────────────────────── */
 
-.demo-form-row {
-    align-items: flex-end;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
 .demo-content-column {
     width: 100%;
     max-width: 56rem;

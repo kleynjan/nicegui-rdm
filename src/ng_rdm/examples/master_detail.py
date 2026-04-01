@@ -7,7 +7,7 @@ list view → detail view (with 1:N component sub-table) → edit view.
 Structure:
   ViewStack
     List:   ListTable of products
-    Detail: detail_card with product info + ActionButtonTable of components
+    Detail: DetailCard with product info + ActionButtonTable of components
     Edit:   EditCard for product
 
 Run:  python -m ng_rdm.examples.master_detail
@@ -22,7 +22,8 @@ from nicegui import app, ui, Client
 from ng_rdm.components import (
     rdm_init, Column, TableConfig, FormConfig,
     ActionButtonTable, ListTable, EditCard, EditDialog,
-    ViewStack, detail_card,
+    ViewStack, DetailCard,
+    Row, Col, Separator,
 )
 from ng_rdm.store import TortoiseStore, init_db, close_db, store_registry
 from ng_rdm.models import QModel, FieldSpec, Validator
@@ -154,20 +155,16 @@ async def main(client: Client):
 
     ui_state = app.storage.user['ui_state'] = {
         "viewstack": {}, "list_table": {}, "component_table": {},
-        "editcard": {}, "component_dialog": {},
+        "editcard": {}, "component_dialog": {}, "detail_card": {},
     }
 
     product_store = store_registry.get_store("default", "product")
     component_store = store_registry.get_store("default", "component")
 
-    with ui.row().style("align-items: center; gap: 0.75rem; padding: 1rem"):
-        ui.label("Product Catalog").classes("demo-section-heading")
-        ui.label("Product → Components master/detail").classes("demo-caption")
+    with Col(classes="demo-content-column"):
 
-    ui.separator()
-
-    # with ui.column().style("width: 100%; max-width: 56rem; margin: 0 auto; padding: 1rem"):
-    with ui.column().classes("demo-content-column"):
+        with Row(style="margin-bottom: 1rem"):
+            ui.label("Master/detail example").classes("demo-section-heading")
 
         # Component EditDialog — one instance, shared across detail views
         component_dialog = EditDialog(
@@ -211,15 +208,15 @@ async def main(client: Client):
             async def on_delete_component(row: dict):
                 await component_store.delete_item(row)
 
-            async def render_content(item: dict):
-                ui.label(item.get("name", "")).style("font-size: 1.25rem; font-weight: 500")
-                price = item.get("price")
+            async def render_header(i: dict):
+                ui.label(i.get("name", "")).style("font-size: 1.25rem; font-weight: 500")
+                price = i.get("price")
                 if price:
-                    ui.label(f"${float(price):.2f}").classes("rdm-text-muted").style("margin-bottom: 0.5rem")
+                    ui.label(f"${float(price):.2f}").classes("rdm-text-muted")
 
-                ui.separator()
+            async def render_body(_: dict):
+                Separator()
                 ui.label("Components").style("font-size: 0.875rem; font-weight: 500; margin-top: 0.5rem")
-
                 component_table = ActionButtonTable(
                     state=ui_state["component_table"],
                     data_source=component_store,
@@ -236,16 +233,16 @@ async def main(client: Client):
                 )
                 await component_table.build()
 
-            async def on_delete_product(item: dict):
-                await product_store.delete_item(item)
-                vs.show_list()
-
-            await detail_card(
-                item,
-                render=render_content,
+            detail = DetailCard(
+                state=ui_state["detail_card"],
+                data_source=product_store,
+                render=render_header,
+                render_body=render_body,
                 on_edit=lambda i: vs.show_edit_existing(i),
-                on_delete=on_delete_product,
+                on_deleted=vs.show_list,
             )
+            detail.set_item(item)
+            await detail.build()
 
         async def render_edit(vs: ViewStack, item: dict | None):
             edit = EditCard(
