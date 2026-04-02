@@ -99,7 +99,7 @@ async def startup():
     store_registry.register_store("default", "product", TortoiseStore(Product))
     if not await task_store.read_items():
         for item in [
-            {"title": "Fix bug #42", "priority": "high"},
+            {"title": "Fix bug #42", "priority": "normal"},
             {"title": "Write tests", "priority": "normal"},
             {"title": "Deploy release", "priority": "high"},
             {"title": "Update docs", "priority": "normal"},
@@ -143,10 +143,7 @@ category_form_cols = [
 
 async def section_action_button_table(ui_state, product_store, category_store):
     ui.label("ActionButtonTable").classes("demo-section-heading")
-    ui.markdown(
-        "**Use case:** Primary CRUD interface. Edit/delete per row, add at top or bottom. "
-        "Pass `on_add`, `on_edit`, `on_delete` to wire an EditDialog."
-    )
+    ui.markdown("**Use case:** Primary CRUD interface. Edit/delete per row, add at top or bottom.")
 
     categories = await category_store.read_items()
     cat_options = {c["id"]: c["name"] for c in categories}
@@ -183,10 +180,7 @@ async def section_action_button_table(ui_state, product_store, category_store):
 
 async def section_list_table(ui_state, category_store):
     ui.label("ListTable").classes("demo-section-heading")
-    ui.markdown(
-        "**Use case:** Navigation lists, master-detail. "
-        "Entire row is clickable; `on_click` receives the row key."
-    )
+    ui.markdown("**Use case:** Navigation lists, master-detail (e.g, in viewstack).")
 
     selected_label = ui.label("Click a row").classes("demo-caption")
 
@@ -207,10 +201,7 @@ async def section_list_table(ui_state, category_store):
 
 async def section_selection_table(ui_state, product_store):
     ui.label("SelectionTable").classes("demo-section-heading")
-    ui.markdown(
-        "**Use case:** Bulk operations. Checkbox column, "
-        "`selected_ids` lives in external state — survives refreshes."
-    )
+    ui.markdown("**Use case:** Multi-select, eg for bulk operations.")
 
     def render_toolbar():
         Button("Select All", on_click=table.select_all)  # type: ignore[arg-type]
@@ -239,10 +230,7 @@ async def section_selection_table(ui_state, product_store):
 
 async def section_edit_card(ui_state, category_store):
     ui.label("EditCard").classes("demo-section-heading")
-    ui.markdown(
-        "**Use case:** In-place editing inside a ViewStack edit view, or standalone form. "
-        "Takes a `FormConfig`; `set_item(None)` for new, `set_item(item)` for edit."
-    )
+    ui.markdown("**Use case:** In-place editing inside a ViewStack edit view or standalone form.")
 
     items = await category_store.read_items()
     item = items[0] if items else None
@@ -262,10 +250,7 @@ async def section_edit_card(ui_state, category_store):
 
 def section_dialog(ui_state):
     ui.label("Dialog").classes("demo-section-heading")
-    ui.markdown(
-        "**Use case:** Confirmations, focused interactions. "
-        "State-driven: `state['is_open']` controls visibility from outside."
-    )
+    ui.markdown("**Use case:** Confirmations, focused interactions.")
 
     with Dialog(state=ui_state["dialog"]) as dlg:
         ui.label("Confirm Action").classes("demo-subtitle")
@@ -285,11 +270,7 @@ def section_dialog(ui_state):
 
 async def section_tabs(ui_state, product_store, category_store):
     ui.label("Tabs").classes("demo-section-heading")
-    ui.markdown(
-        "**Use case:** Organise content into sections without a full page load. "
-        "All panels render upfront; visibility is toggled. "
-        "External state control: the button below switches tabs programmatically."
-    )
+    ui.markdown("**Use case:** Multiple panels with tab navigation. Content is rendered upfront; visibility is toggled.")
 
     async def render_products():
         config = TableConfig(
@@ -318,22 +299,23 @@ async def section_tabs(ui_state, product_store, category_store):
     ])
     await tabs.build()
 
+    with Row():
+        ui.label("Current state:")
+        ui.label("").bind_text_from(ui_state["tabs"], "active").style("font-style: italic;")
+
     with Row(style="margin-top: 0.5rem"):
+        def open_tab(key: str):
+            ui_state["tabs"]["active"] = key
+
+        ui.label("Switch tabs by modifying state:")
         # External state control: switch tabs by modifying state directly
         for key, label in [("products", "→ Products"), ("categories", "→ Categories"), ("about", "→ About")]:
-            ui.button(label, on_click=lambda k=key: ui_state["tabs"].update({"active": k})).props("flat dense")
-        active_label = ui.label("").classes("demo-caption")
-        active_label.bind_text_from(ui_state["tabs"], "active",
-                                    backward=lambda v: f"active: {v}")
+            Button(label, on_click=lambda k=key: open_tab(k), variant="secondary")
 
 
 async def section_viewstack(ui_state, category_store, product_store):
     ui.label("ViewStack").classes("demo-section-heading")
-    ui.markdown(
-        "**Use case:** List → detail → edit navigation. "
-        "The list panel stays alive while navigating — back is instant. "
-        "State is preserved across view switches."
-    )
+    ui.markdown("**Use case:** List → detail → edit navigation.")
 
     edit_form = FormConfig(
         columns=category_form_cols,
@@ -409,10 +391,7 @@ async def section_viewstack(ui_state, category_store, product_store):
 
 async def section_wizard(product_store, category_store):
     ui.label("StepWizard").classes("demo-section-heading")
-    ui.markdown(
-        "**Use case:** Multi-step forms, guided flows. "
-        "Each step renders into a shared state dict; validation gates Next."
-    )
+    ui.markdown("**Use case:** Multi-step forms, guided flows.")
 
     wizard_btn_area = Row().element
 
@@ -503,10 +482,11 @@ class HighlightTable(ObservableRdmComponent):
 async def section_custom_component(ui_state):
     ui.label("Custom Component (ObservableRdmComponent)").classes("demo-section-heading")
     ui.markdown(
-        "**Use case:** Any custom UI that needs reactive store binding. "
-        "Subclass `ObservableRdmComponent`, implement `@ui.refreshable_method build()`, "
-        "call `self.load_data()`. The `observe()` call subscribes; "
-        "store changes trigger automatic rebuild."
+        """
+1. Subclass and instantiate a ObservableRdmComponent, automatically observing the store
+2. Implement @ui.refreshable_method build()
+3. Call self.load_data()
+4. If store data changes, build.refresh() is automatically triggered, UI is updated"""
     )
 
     highlight_table = HighlightTable(
@@ -517,7 +497,9 @@ async def section_custom_component(ui_state):
     )
     await highlight_table.build()
 
-    ui.label("High-priority rows are highlighted. Try adding a task:").classes("demo-caption").style("margin-top: 0.5rem")
+    with Row(style="display: block; margin-top: 0.5rem;"):
+        ui.label("High-priority rows are highlighted.")
+        ui.label("Try adding a task:")
 
     with Row(align="flex-end", style="flex-wrap: wrap"):
         title_input = ui.input("Task title")
@@ -533,6 +515,13 @@ async def section_custom_component(ui_state):
 
         Button("Add Task", on_click=add_task)
 
+        async def modify_task():
+            items = await task_store.read_items()
+            if items:
+                item = items[1]
+                await task_store.update_item(item["id"], {"priority": "high" if item["priority"] == "normal" else "normal"})
+
+        Button("Toggle Task #2", on_click=modify_task)
 
 # =============================================================================
 # Main page
@@ -564,7 +553,7 @@ async def main(client: Client):
 
     with Col(classes="demo-content-column"):
         ui.label("ng_rdm components showcase").style("font-size: 2rem")
-        ui.label("No Quasar tables and dialogs, just lovely old html.").style("margin-bottom: 1rem")
+        ui.label("No Quasar tables and dialogs, just lovely old html and css.").style("margin-bottom: 1rem")
 
         with _section_card("action"):
             await section_action_button_table(ui_state, product_store, category_store)

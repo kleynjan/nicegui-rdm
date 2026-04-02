@@ -394,9 +394,9 @@ enable this block to see refresh animated
     color: var(--rdm-text);
 }
 
-.rdm-card-body {
+/* .rdm-card-body {
     padding: var(--rdm-spacing-xl);
-}
+} */
 
 .rdm-card-footer {
     padding: var(--rdm-spacing-lg) var(--rdm-spacing-xl);
@@ -908,11 +908,11 @@ enable this block to see refresh animated
         height: var(--rdm-input-height);
     }
     
-    /* Notification styling */
-    .q-notification {
+    /* Notification styling -- now unused, see component._notify */
+    /* .q-notification {
         font-family: var(--rdm-font-family);
         font-size: 22px;
         margin-bottom: 100px;
         margin-left: 50px;
-    }
+    } */
 }
