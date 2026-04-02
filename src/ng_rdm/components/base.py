@@ -204,7 +204,7 @@ class ObservableRdmComponent(RdmComponent):
     """RdmComponent with reactive data binding via observer pattern.
 
     Observer subscription is explicit via observe()/unobserve() methods.
-    Call observe() at page level after construction for clear lifecycle management.
+    Call observe() at page level after construction for explicit lifecycle management.
     """
 
     def __init__(self, state: dict, data_source: RdmDataSource):

@@ -1,9 +1,8 @@
 """
-DetailCard - read-only detail view with inline actions.
+DetailCard - read-only detail view with item actions.
 
-Renders item content via a render callback inside a structured header/body layout.
-Edit/Delete action buttons sit inline in the header row (right-aligned), so any
-extended body content (sub-tables, related lists) does not push them to the bottom.
+Renders item attributes via render_summary, then action buttons (Edit/Delete),
+then optional related content (sub-tables, linked items) via render_related.
 
 No observer integration — the caller (ViewStack or page-level observer) handles refresh.
 """
@@ -17,20 +16,21 @@ from ..protocol import RdmDataSource
 
 
 class DetailCard(RdmComponent):
-    """Read-only detail card with structured header/body layout.
+    """Read-only detail card with summary / actions / related layout.
 
     Layout:
         div.rdm-detail.rdm-component
-          div.rdm-detail-header          ← flex row
-            div.rdm-detail-title-group   ← render(item) output (flex:1)
-            div.rdm-detail-actions       ← Edit / Delete buttons (right-aligned)
-          [render_body(item) output]     ← optional extended content (sub-tables etc.)
+          div.rdm-detail-summary         ← item attributes + action buttons
+            [render_summary(item)]       ← rendered directly (no inner wrapper)
+            div.rdm-detail-actions       ← Edit / Delete buttons
+          div.rdm-detail-related         ← optional extended content (sub-tables etc.)
+            [render_related(item)]
 
     Args:
         state: External state dict (from ui_state). Key: 'item'.
         data_source: Used for delete operations.
-        render: Async callback rendering header/summary content (title, key fields).
-        render_body: Optional async callback for extended content below the header.
+        render_summary: Async callback rendering item attributes (title, key fields).
+        render_related: Optional async callback for extended content (sub-tables etc.).
         on_edit: Called with item when Edit is clicked (typically vs.show_edit_existing).
         on_deleted: Called (no args) after successful delete (typically vs.show_list).
         show_edit: Whether to show the Edit button.
@@ -41,8 +41,8 @@ class DetailCard(RdmComponent):
         self,
         state: dict,
         data_source: RdmDataSource,
-        render: Callable[[dict], Awaitable[None]],
-        render_body: Callable[[dict], Awaitable[None]] | None = None,
+        render_summary: Callable[[dict], Awaitable[None]],
+        render_related: Callable[[dict], Awaitable[None]] | None = None,
         on_edit: Callable[[dict], None] | None = None,
         on_deleted: Callable[[], None] | None = None,
         show_edit: bool = True,
@@ -51,8 +51,8 @@ class DetailCard(RdmComponent):
         super().__init__(data_source)
         self.state = state
         self.state.setdefault("item", None)
-        self._render = render
-        self._render_body = render_body
+        self._render_summary = render_summary
+        self._render_related = render_related
         self.on_edit = on_edit
         self.on_deleted = on_deleted
         self.show_edit = show_edit
@@ -76,9 +76,8 @@ class DetailCard(RdmComponent):
         show_actions = (self.show_edit and self.on_edit) or (self.show_delete and self.on_deleted)
 
         with html.div().classes("rdm-detail rdm-component"):
-            with html.div().classes("rdm-detail-header"):
-                with html.div().classes("rdm-detail-title-group"):
-                    await self._render(item)
+            with html.div().classes("rdm-detail-summary"):
+                await self._render_summary(item)
                 if show_actions:
                     with html.div().classes("rdm-detail-actions"):
                         if self.show_edit and self.on_edit:
@@ -91,5 +90,6 @@ class DetailCard(RdmComponent):
                                 "click", self._handle_delete
                             ):
                                 html.span(_("Delete"))
-            if self._render_body:
-                await self._render_body(item)
+            if self._render_related:
+                with html.div().classes("rdm-detail-related"):
+                    await self._render_related(item)

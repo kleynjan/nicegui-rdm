@@ -1,8 +1,14 @@
-/* ── Typography ─────────────────────────────────────────────────────────── */
+/* ── Refine Nicegui/rdm styles ──────────────────────────────────────────── */
 
 .nicegui-content {
     font-size: 18px;
 }
+
+.rdm-table-card {
+    margin-top: 1.8rem;
+}
+
+/* ── Typography ─────────────────────────────────────────────────────────── */
 
 .demo-section-heading {
     font-size: var(--rdm-font-size-xl);
@@ -16,10 +22,6 @@
 .demo-table {
     margin-top: 1rem;
 }
-
-/* .demo-caption {
-    font-size: var(--rdm-font-size-xs);
-} */
 
 /* ── Layout ──────────────────────────────────────────────────────────────── */
 

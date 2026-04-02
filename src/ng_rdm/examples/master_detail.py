@@ -236,8 +236,8 @@ async def main(client: Client):
             detail = DetailCard(
                 state=ui_state["detail_card"],
                 data_source=product_store,
-                render=render_header,
-                render_body=render_body,
+                render_summary=render_header,
+                render_related=render_body,
                 on_edit=lambda i: vs.show_edit_existing(i),
                 on_deleted=vs.show_list,
             )

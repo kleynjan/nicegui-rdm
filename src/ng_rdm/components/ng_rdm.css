@@ -521,6 +521,7 @@ enable this block to see refresh animated
 
 .rdm-dialog-header {
     /* padding: var(--rdm-spacing-lg) var(--rdm-spacing-xl); */
+    padding-bottom: var(--rdm-spacing-lg);
     border-bottom: 1px solid var(--rdm-border-light);
     display: flex;
     align-items: center;
@@ -609,8 +610,14 @@ enable this block to see refresh animated
    Back Navigation (ViewStack)
    ============================================================================= */
 
-.rdm-view-stack-detail {
+.rdm-view-stack-panel {
     position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.rdm-view-stack-content {
+    flex: 1;
 }
 
 .rdm-back-nav {
@@ -652,11 +659,8 @@ enable this block to see refresh animated
     width: 100%;
 }
 
-.rdm-detail-header {
+.rdm-detail-summary {
     width: 100%;
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
     margin-bottom: 1.5rem;
 }
 
@@ -673,11 +677,8 @@ enable this block to see refresh animated
     background-color: var(--rdm-bg-page);
 }
 
-.rdm-detail-title-group {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
+.rdm-detail-related {
+    width: 100%;
 }
 
 .rdm-detail-title {

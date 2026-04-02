@@ -60,7 +60,7 @@ class ViewStack:
     def show_detail(self, item: dict):
         self.state["view"] = "detail"
         self.state["item"] = item
-        self._detail_edit.refresh()  # type: ignore[attr-defined]
+        self._content.refresh()  # type: ignore[attr-defined]
 
     def show_edit_existing(self, item: dict | None = None):
         item = item or self.state["item"]
@@ -68,12 +68,12 @@ class ViewStack:
             return
         self.state["view"] = "edit"
         self.state["item"] = item
-        self._detail_edit.refresh()  # type: ignore[attr-defined]
+        self._content.refresh()  # type: ignore[attr-defined]
 
     def show_edit_new(self):
         self.state["view"] = "edit"
         self.state["item"] = None
-        self._detail_edit.refresh()  # type: ignore[attr-defined]
+        self._content.refresh()  # type: ignore[attr-defined]
 
     def go_back(self):
         if self.state["view"] == "edit" and self.state["item"]:
@@ -81,10 +81,10 @@ class ViewStack:
         else:
             self.show_list()
 
-    # ── Detail / Edit content ──
+    # ── Active content (detail or edit) ──
 
     @ui.refreshable_method
-    async def _detail_edit(self):
+    async def _content(self):
         view = self.state["view"]
         item = self.state["item"]
         if view == "detail":
@@ -103,9 +103,10 @@ class ViewStack:
             await self._render_list(self)
         list_panel.bind_visibility_from(self.state, "view", value="list")
 
-        # Detail/edit panel: back arrow + refreshable content.
-        with html.div().classes("rdm-view-stack-detail") as detail_panel:
+        # Non-list panel: back arrow + content wrapper.
+        with html.div().classes("rdm-view-stack-panel") as panel:
             with html.button().classes("rdm-back-nav rdm-btn rdm-btn-icon").on("click", self.go_back):
                 html.i().classes("bi bi-arrow-left")
-            await self._detail_edit()
-        detail_panel.bind_visibility_from(self.state, "view", backward=lambda v: v != "list")
+            with html.div().classes("rdm-view-stack-content"):
+                await self._content()
+        panel.bind_visibility_from(self.state, "view", backward=lambda v: v != "list")
