@@ -31,9 +31,10 @@ class ListTable(ObservableRdmTable):
 
     def __init__(
         self,
-        state: dict,
         data_source: RdmDataSource,
         config: TableConfig,
+        state: dict | None = None,
+        *,
         filter_by: dict[str, Any] | None = None,
         on_click: Callable[[int | None], Union[Awaitable[None], None]] | None = None,
         on_add: Callable[[], Awaitable[None] | None] | None = None,
@@ -44,7 +45,7 @@ class ListTable(ObservableRdmTable):
         auto_observe: bool = True,
     ):
         super().__init__(
-            state, data_source, config,
+            data_source=data_source, config=config, state=state,
             filter_by=filter_by, transform=transform,
             join_fields=join_fields, on_add=on_add,
             render_toolbar=render_toolbar, auto_observe=auto_observe,

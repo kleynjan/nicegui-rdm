@@ -42,13 +42,13 @@ class Dialog:
 
     def __init__(
         self,
-        state: dict,
+        state: dict | None = None,
         title: str | None = None,
         dialog_class: str = "",
         on_close: Callable[[], None] | None = None,
     ):
         self._client = ui.context.client
-        self.state = state
+        self.state = state if state is not None else {}
         self.state.setdefault("is_open", False)
         self.title = title
         self.dialog_class = dialog_class

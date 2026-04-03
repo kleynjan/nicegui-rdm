@@ -39,9 +39,10 @@ class DetailCard(RdmComponent):
 
     def __init__(
         self,
-        state: dict,
         data_source: RdmDataSource,
         render_summary: Callable[[dict], Awaitable[None]],
+        state: dict | None = None,
+        *,
         render_related: Callable[[dict], Awaitable[None]] | None = None,
         on_edit: Callable[[dict], None] | None = None,
         on_deleted: Callable[[], None] | None = None,
@@ -49,7 +50,7 @@ class DetailCard(RdmComponent):
         show_delete: bool = True,
     ):
         super().__init__(data_source)
-        self.state = state
+        self.state = state if state is not None else {}
         self.state.setdefault("item", None)
         self._render_summary = render_summary
         self._render_related = render_related

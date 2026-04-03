@@ -207,9 +207,9 @@ class ObservableRdmComponent(RdmComponent):
     Call observe() at page level after construction for explicit lifecycle management.
     """
 
-    def __init__(self, state: dict, data_source: RdmDataSource):
+    def __init__(self, data_source: RdmDataSource, state: dict | None = None):
         super().__init__(data_source)
-        self.state = state
+        self.state = state if state is not None else {}
         self.data: list[dict[str, Any]] = []
         self._observed_topics: dict[str, Any] | None = None
         self._is_observing = False
@@ -311,9 +311,10 @@ class ObservableRdmTable(ObservableRdmComponent):
 
     def __init__(
         self,
-        state: dict,
         data_source: RdmDataSource,
         config: TableConfig,
+        state: dict | None = None,
+        *,
         filter_by: dict[str, Any] | None = None,
         transform: Callable[[list[dict]], list[dict]] | None = None,
         join_fields: list[str] | None = None,
@@ -321,7 +322,7 @@ class ObservableRdmTable(ObservableRdmComponent):
         render_toolbar: Callable[[], None] | None = None,
         auto_observe: bool = True,
     ):
-        super().__init__(state, data_source)
+        super().__init__(data_source=data_source, state=state)
         self.config = config
         self.filter_by = filter_by
         self.transform = transform

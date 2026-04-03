@@ -31,9 +31,10 @@ class SelectionTable(ObservableRdmTable):
 
     def __init__(
         self,
-        state: dict,
         data_source: RdmDataSource,
         config: TableConfig,
+        state: dict | None = None,
+        *,
         filter_by: dict[str, Any] | None = None,
         transform: Callable[[list[dict]], list[dict]] | None = None,
         row_key: str = "id",
@@ -43,7 +44,7 @@ class SelectionTable(ObservableRdmTable):
         auto_observe: bool = True,
     ):
         super().__init__(
-            state, data_source, config,
+            data_source=data_source, config=config, state=state,
             filter_by=filter_by, transform=transform,
             join_fields=join_fields, render_toolbar=render_toolbar, auto_observe=auto_observe,
         )

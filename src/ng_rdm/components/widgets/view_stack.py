@@ -28,12 +28,12 @@ class ViewStack:
 
     def __init__(
         self,
-        state: dict,
         render_list: Callable[["ViewStack"], Awaitable[None]],
         render_detail: Callable[["ViewStack", dict], Awaitable[None]],
         render_edit: Callable[["ViewStack", dict | None], Awaitable[None]],
+        state: dict | None = None,
     ):
-        self.state = state
+        self.state = state if state is not None else {}
         self.state.setdefault("view", "list")
         self.state.setdefault("item", None)
 

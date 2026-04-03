@@ -24,11 +24,11 @@ class Tabs:
 
     def __init__(
         self,
-        state: dict,
         tabs: list[tuple[str, str, Callable[[], Awaitable[None]]]],
+        state: dict | None = None,
         # default: str | None = None,
     ):
-        self.state = state
+        self.state = state if state is not None else {}
         self.tabs = tabs
         self.state.setdefault("active", tabs[0][0])
 

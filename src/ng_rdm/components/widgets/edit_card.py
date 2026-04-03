@@ -19,14 +19,15 @@ class EditCard(RdmComponent):
 
     def __init__(
         self,
-        state: dict,
         data_source: RdmDataSource,
         config: FormConfig,
+        state: dict | None = None,
+        *,
         on_saved: Callable[[dict], None] | None = None,
         on_cancel: Callable[[], None] | None = None,
     ):
         super().__init__(data_source)
-        self.state = state
+        self.state = state if state is not None else {}
         self.state.setdefault("item_id", None)
         self.state.setdefault("form", {})
         self.config = config

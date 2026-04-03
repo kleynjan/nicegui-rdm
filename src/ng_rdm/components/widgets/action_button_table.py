@@ -36,9 +36,10 @@ class ActionButtonTable(ObservableRdmTable):
 
     def __init__(
         self,
-        state: dict,
         data_source: RdmDataSource,
         config: TableConfig,
+        state: dict | None = None,
+        *,
         filter_by: dict[str, Any] | None = None,
         action_style: Literal["icon", "button"] = "icon",
         on_add: Callable[[], Awaitable[None] | None] | None = None,
@@ -50,7 +51,7 @@ class ActionButtonTable(ObservableRdmTable):
         auto_observe: bool = True,
     ):
         super().__init__(
-            state, data_source, config,
+            data_source=data_source, config=config, state=state,
             filter_by=filter_by, on_add=on_add,
             render_toolbar=render_toolbar, auto_observe=auto_observe,
         )
