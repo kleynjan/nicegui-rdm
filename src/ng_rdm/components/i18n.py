@@ -4,6 +4,7 @@ Minimal i18n for ng_rdm components.
 Self-contained translations for generic CRUD UI strings.
 Separate from app-level services/i18n.py to keep this package portable.
 """
+from ng_rdm.utils import logger
 
 _translations: dict[str, dict[str, str]] = {
     'nl_nl': {
@@ -11,23 +12,22 @@ _translations: dict[str, dict[str, str]] = {
         '(none)': '(geen)',
         'Add': 'Toevoegen',
         'Add new': 'Nieuw toevoegen',
-        'Are you sure?': 'Weet je het zeker?',
+        '← Back': '← Terug',
         'Cancel': 'Annuleren',
+        'Create': 'Aanmaken',
         'Delete': 'Verwijderen',
         'Delete item?': 'Item verwijderen?',
-        'Delete this item?': 'Dit item verwijderen?',
         'Edit': 'Bewerken',
+        'enter a valid date': 'voer een geldige datum in',
         'Item created': 'Item aangemaakt',
         'Item deleted': 'Item verwijderd',
         'Item updated': 'Item bijgewerkt',
-        'New': 'Nieuw',
-        'No': 'Nee',
+        'Next →': 'Volgende →',
         'No data': 'Geen gegevens',
         'Save': 'Opslaan',
         'This action cannot be undone': 'Deze actie kan niet ongedaan worden gemaakt',
-        'This action cannot be undone.': 'Deze actie kan niet ongedaan worden gemaakt.',
         'Update failed': 'Bijwerken mislukt',
-        'Yes': 'Ja',
+        'This field is required': 'Dit veld is verplicht',
     },
 }
 
@@ -36,7 +36,10 @@ _language: str = 'en_gb'
 def set_language(lang: str) -> None:
     """Set the current language for crud i18n."""
     global _language
-    _language = lang
+    if lang in _translations:
+        _language = lang
+    else:
+        logger.warning(f"Language '{lang}' not found in translations. Falling back to English.")
 
 
 def set_translations(translations: dict[str, dict[str, str]]) -> None:
@@ -50,6 +53,8 @@ def _(key: str) -> str:
     if _language != 'en_gb':
         if tl := _translations.get(_language):
             return tl.get(key, key)
+        else:
+            logger.warning(f"No translation found for '{key}' in language '{_language}'")
     return key
 
 # Convenience formatters for Column.formatter

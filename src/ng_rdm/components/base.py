@@ -158,7 +158,7 @@ class RdmComponent:
 
         if not valid and notify:
             self._notify(
-                f"{error_dict['col_name']} {error_dict['error_value']}: {error_dict['error_msg']}",
+                f"{error_dict['col_name']} {error_dict['error_value']}: {_(error_dict['error_msg'])}",
                 type="warning",
                 timeout=1500,
             )

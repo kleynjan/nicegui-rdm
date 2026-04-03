@@ -48,7 +48,7 @@ class EditCard(RdmComponent):
         valid, error_dict = self.data_source.validate(item_data)
         if not valid:
             self._notify(
-                f"{error_dict['col_name']} {error_dict['error_value']}: {error_dict['error_msg']}",
+                f"{error_dict['col_name']} {error_dict['error_value']}: {_(error_dict['error_msg'])}",
                 type="warning", timeout=1500,
             )
             return

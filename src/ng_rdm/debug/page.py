@@ -3,6 +3,7 @@ RDM Debug Page - real-time event stream visualization.
 
 Provides a /rdm-debug route showing store activity, observers, and event stream.
 """
+# i18n: This debug page is developer-facing and intentionally untranslated.
 
 import time
 

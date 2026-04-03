@@ -24,6 +24,7 @@ from ng_rdm.components import (
 )
 from ng_rdm.store import TortoiseStore, DictStore, init_db, close_db, store_registry
 from ng_rdm.models import QModel, FieldSpec, Validator
+from ng_rdm.components.i18n import set_language
 
 
 # =============================================================================
@@ -534,6 +535,7 @@ async def main(client: Client):
         return html.div().classes("catalog-section")
 
     rdm_init(extra_css="examples.css")
+    set_language("en_gb")
     await client.connected()
 
     # component state in app.storage.user => persistence across refreshes

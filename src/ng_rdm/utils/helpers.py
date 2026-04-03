@@ -4,6 +4,8 @@ import secrets
 from datetime import date, datetime
 import pytz
 
+from ng_rdm.components.i18n import _
+
 TIMEZONE_STRING = 'Europe/Amsterdam'
 TIMEZONE_PYTZ = pytz.timezone(TIMEZONE_STRING)  # Replace with your desired timezone
 
@@ -79,7 +81,7 @@ def vali_date_str(date_str: str) -> None | str:
         datetime.strptime(date_str, '%Y-%m-%d')
         return None
     except ValueError:
-        return "voer een geldige datum in"
+        return _("enter a valid date")
 
 
 # -----
