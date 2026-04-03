@@ -265,7 +265,7 @@ class ObservableRdmComponent(RdmComponent):
             )
         else:
             display = col.formatter(value) if col.formatter else (str(value) if value else "")
-            html.span(display)
+            html.span(display).classes(f"rdm-cell-{col.name}")
 
     # ── Subclass contract ──
     # Subclasses MUST implement:

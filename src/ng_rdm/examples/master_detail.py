@@ -208,15 +208,17 @@ async def main(client: Client):
             async def on_delete_component(row: dict):
                 await component_store.delete_item(row)
 
-            async def render_header(i: dict):
+            async def render_summary(i: dict):
                 ui.label(i.get("name", "")).style("font-size: 1.25rem; font-weight: 500")
-                price = i.get("price")
-                if price:
-                    ui.label(f"${float(price):.2f}").classes("rdm-text-muted")
+                for k, v in [("Price", i.get("price")), ("Stock", i.get("stock"))]:
+                    if v is not None:
+                        if k == "Price":
+                            v = f"${float(v):.2f}"
+                        ui.label(f"{k}: {v}").classes("rdm-text-muted")
 
-            async def render_body(_: dict):
-                Separator()
-                ui.label("Components").style("font-size: 0.875rem; font-weight: 500; margin-top: 0.5rem")
+            async def render_related(_: dict):
+                # Separator()
+                # ui.label("Components").style("font-size: 0.875rem; font-weight: 500; margin-top: 0.5rem")
                 component_table = ActionButtonTable(
                     state=ui_state["component_table"],
                     data_source=component_store,
@@ -236,8 +238,8 @@ async def main(client: Client):
             detail = DetailCard(
                 state=ui_state["detail_card"],
                 data_source=product_store,
-                render_summary=render_header,
-                render_related=render_body,
+                render_summary=render_summary,
+                render_related=render_related,
                 on_edit=lambda i: vs.show_edit_existing(i),
                 on_deleted=vs.show_list,
             )
@@ -268,4 +270,4 @@ async def main(client: Client):
         await stack.build()
 
 
-ui.run(title="Master/Detail — ng_rdm", port=8080, storage_secret="masterdetail_1928")
+ui.run(title="Master/Detail — ng_rdm", port=8081, show=False, storage_secret="md_1928")

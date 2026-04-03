@@ -11,7 +11,7 @@ from .edit_dialog import EditDialog
 from .view_stack import ViewStack
 from .wizard import WizardStep, StepWizard
 from .button import Button, IconButton
-from .layout import Row, Col, Separator
+from .layout import RdmLayoutElement, Row, Col, Separator
 
 __all__ = [
     'ActionButtonTable',
@@ -27,6 +27,7 @@ __all__ = [
     'StepWizard',
     'Button',
     'IconButton',
+    'RdmLayoutElement',
     'Row',
     'Col',
     'Separator',

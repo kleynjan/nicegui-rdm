@@ -79,7 +79,29 @@ init_db(app, f"sqlite://{DB_PATH}", modules={"models": [__name__]}, generate_sch
 app.on_shutdown(close_db)
 
 task_store = DictStore()  # in-memory, for custom component section
+toc_store = DictStore()   # static component reference data
 
+toc_data = [
+    {"component": "ActionButtonTable", "use_case": "CRUD table",
+        "key_api": "on_add, on_edit, on_delete", "anchor": "action"},
+    {"component": "ListTable", "use_case": "Navigation / read-only", "key_api": "on_click(row_id)", "anchor": "list"},
+    {"component": "SelectionTable", "use_case": "Bulk selection", "key_api": "selected_ids, select_all(), clear_selection()",
+     "anchor": "selection"},
+    {"component": "EditCard", "use_case": "In-place form",
+        "key_api": "set_item(item|None), on_saved, on_cancel", "anchor": "editcard"},
+    {"component": "EditDialog", "use_case": "Modal form", "key_api": "open_for_new(), open_for_edit(item)",
+     "anchor": "action"},
+    {"component": "Dialog", "use_case": "Generic modal",
+        "key_api": "open(), close(), state['is_open']", "anchor": "dialog"},
+    {"component": "Tabs", "use_case": "Content sections",
+        "key_api": "state['active'], visibility-toggled panels", "anchor": "tabs"},
+    {"component": "ViewStack", "use_case": "List → detail → edit",
+        "key_api": "show_list/detail/edit_new/edit_existing()", "anchor": "viewstack"},
+    {"component": "StepWizard", "use_case": "Multi-step form",
+        "key_api": "WizardStep(render, validate), on_complete", "anchor": "wizard"},
+    {"component": "ObservableRdmComponent", "use_case": "Custom reactive UI",
+        "key_api": "observe(), @ui.refreshable_method build()", "anchor": "custom"},
+]
 
 async def seed_data():
     if await Category.all().count() > 0:
@@ -98,6 +120,10 @@ async def startup():
     await seed_data()
     store_registry.register_store("default", "category", TortoiseStore(Category))
     store_registry.register_store("default", "product", TortoiseStore(Product))
+    if not await toc_store.read_items():
+        for item in toc_data:
+            await toc_store.create_item(item)
+
     if not await task_store.read_items():
         for item in [
             {"title": "Fix bug #42", "priority": "normal"},
@@ -141,6 +167,32 @@ category_form_cols = [
 # =============================================================================
 # Section renderers
 # =============================================================================
+
+async def section_toc_table():
+    toc_cols = [
+        Column(name="component", label="component", width_percent=28),
+        Column(name="use_case", label="use case", width_percent=32),
+        Column(name="key_api", label="key API", width_percent=40),
+    ]
+
+    async def on_click(row_id: int | None):
+        if row_id is None:
+            return
+        item = await toc_store.read_item_by_id(row_id)
+        if item:
+            ui.navigate.to(f"#{item['anchor']}")
+
+    ui.label("Table of Contents").classes("demo-section-heading")
+
+    table = ListTable(
+        state={},
+        data_source=toc_store,
+        config=TableConfig(columns=toc_cols, show_add_button=False),
+        on_click=on_click,
+        auto_observe=False,
+    )
+    await table.build()
+
 
 async def section_action_button_table(ui_state, product_store, category_store):
     ui.label("ActionButtonTable").classes("demo-section-heading")
@@ -257,8 +309,8 @@ def section_dialog(ui_state):
         ui.label("Confirm Action").classes("demo-subtitle")
         ui.label("Are you sure you want to proceed?")
         with dlg.actions():
-            Button("Cancel", on_click=dlg.close, variant="secondary")
             Button("Confirm", on_click=dlg.close)
+            Button("Cancel", on_click=dlg.close, variant="secondary")
 
     with Row():
         Button("Open Dialog", on_click=dlg.open)
@@ -498,8 +550,10 @@ async def section_custom_component(ui_state):
     )
     await highlight_table.build()
 
-    with Row(style="display: block; margin-top: 0.5rem;"):
+    with Row(style="margin-top: 0.5rem; font-style: italic;"):
         ui.label("High-priority rows are highlighted.")
+
+    with Row(style="margin-top: 1.5rem; font-weight: 500;"):
         ui.label("Try adding a task:")
 
     with Row(align="flex-end", style="flex-wrap: wrap"):
@@ -531,8 +585,8 @@ async def section_custom_component(ui_state):
 @ui.page("/")
 async def main(client: Client):
 
-    def _section_card(title: str):
-        return html.div().classes("catalog-section")
+    def _section_card(anchor: str):
+        return html.div().classes(f"catalog-section catalog-section-{anchor}").props(f'id={anchor}')
 
     rdm_init(extra_css="examples.css")
     set_language("en_gb")
@@ -554,8 +608,14 @@ async def main(client: Client):
     category_store = store_registry.get_store("default", "category")
 
     with Col(classes="demo-content-column"):
+
         ui.label("ng_rdm components showcase").style("font-size: 2rem")
         ui.label("No Quasar tables and dialogs, just lovely old html and css.").style("margin-bottom: 1rem")
+
+        with _section_card("toc"):
+            await section_toc_table()
+
+        Separator()
 
         with _section_card("action"):
             await section_action_button_table(ui_state, product_store, category_store)
@@ -584,23 +644,9 @@ async def main(client: Client):
         with _section_card("custom"):
             await section_custom_component(ui_state)
 
-        Separator()
-        ui.markdown("""
-        ### Quick Reference
+        Separator(style="margin-top: 2rem;")
 
-        | Component | Use Case | Key API |
-        |-----------|----------|---------|
-        | **ActionButtonTable** | CRUD table | `on_add`, `on_edit`, `on_delete` |
-        | **ListTable** | Navigation / read-only | `on_click(row_id)` |
-        | **SelectionTable** | Bulk selection | `selected_ids`, `select_all()`, `clear_selection()` |
-        | **EditCard** | In-place form | `set_item(item or None)`, `on_saved`, `on_cancel` |
-        | **EditDialog** | Modal form | `open_for_new()`, `open_for_edit(item)` |
-        | **Dialog** | Generic modal | `open()`, `close()`, `state["is_open"]` |
-        | **Tabs** | Content sections | `state["active"]`, visibility-toggled panels |
-        | **ViewStack** | List → detail → edit | `show_list/detail/edit_new/edit_existing()` |
-        | **StepWizard** | Multi-step form | `WizardStep(render, validate)`, `on_complete` |
-        | **ObservableRdmComponent** | Custom reactive UI | `observe()`, `@ui.refreshable_method build()` |
-        """)
+        ui.label("Return to top").classes(
+            "demo-caption").style("cursor: pointer;").on("click", lambda: ui.navigate.to("#toc"))
 
-
-ui.run(title="ng_rdm Component Catalog", port=8080, storage_secret="catalog_1928")
+ui.run(title="ng_rdm Component Catalog", port=8080, show=False, storage_secret="catalog_1928")

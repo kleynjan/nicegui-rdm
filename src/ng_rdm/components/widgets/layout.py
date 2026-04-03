@@ -2,12 +2,43 @@
 Layout primitives — Row, Col, Separator.
 
 Thin wrappers around html.div / html.hr that apply flexbox layout
-without Quasar wrappers. Follow the same pattern as Button.
+without Quasar wrappers. All share RdmLayoutElement as base.
 """
 from nicegui import html
 
 
-class Row:
+class RdmLayoutElement:
+    """Base for lightweight layout elements (Row, Col, Separator).
+
+    Handles element creation, CSS classes, inline styles, and context manager protocol.
+    Subclasses set _html_tag and _css_class, then call super().__init__().
+    """
+    _html_tag = html.div
+    _css_class: str = ''
+
+    def __init__(self, *, classes: str = '', style: str = ''):
+        css = f'{self._css_class} {classes}'.strip()
+        self.element = self._html_tag().classes(css)
+        if style:
+            self.element.style(style)
+
+    def classes(self, c: str):
+        self.element.classes(c)
+        return self
+
+    def style(self, s: str):
+        self.element.style(s)
+        return self
+
+    def __enter__(self):
+        self.element.__enter__()
+        return self
+
+    def __exit__(self, *args):
+        return self.element.__exit__(*args)
+
+
+class Row(RdmLayoutElement):
     """Flex row container using native html.div.
 
     Args:
@@ -23,36 +54,15 @@ class Row:
         with Row(gap="2rem", align="flex-start"):
             ...
     """
+    _css_class = 'rdm-row'
 
-    def __init__(
-        self,
-        *,
-        gap: str = "1rem",
-        align: str = "center",
-        classes: str = "",
-        style: str = "",
-    ):
-        base = f"display:flex; align-items:{align}; gap:{gap}"
-        combined = f"{base}; {style}" if style else base
-        self.element = html.div().classes(f"rdm-row {classes}".strip()).style(combined)
-
-    def classes(self, c: str):
-        self.element.classes(c)
-        return self
-
-    def style(self, s: str):
-        self.element.style(s)
-        return self
-
-    def __enter__(self):
-        self.element.__enter__()
-        return self
-
-    def __exit__(self, *args):
-        return self.element.__exit__(*args)
+    def __init__(self, *, gap: str = '1rem', align: str = 'center', classes: str = '', style: str = ''):
+        base = f'display:flex; align-items:{align}; gap:{gap}'
+        combined = f'{base}; {style}' if style else base
+        super().__init__(classes=classes, style=combined)
 
 
-class Col:
+class Col(RdmLayoutElement):
     """Flex column container using native html.div.
 
     Args:
@@ -66,42 +76,31 @@ class Col:
         with Col(gap="1rem", style="max-width: 56rem; margin: 0 auto"):
             ...
     """
+    _css_class = 'rdm-col'
 
-    def __init__(
-        self,
-        *,
-        gap: str = "",
-        classes: str = "",
-        style: str = "",
-    ):
-        base = "display:flex; flex-direction:column"
+    def __init__(self, *, gap: str = '', classes: str = '', style: str = ''):
+        base = 'display:flex; flex-direction:column'
         if gap:
-            base += f"; gap:{gap}"
-        combined = f"{base}; {style}" if style else base
-        self.element = html.div().classes(f"rdm-col {classes}".strip()).style(combined)
-
-    def classes(self, c: str):
-        self.element.classes(c)
-        return self
-
-    def style(self, s: str):
-        self.element.style(s)
-        return self
-
-    def __enter__(self):
-        self.element.__enter__()
-        return self
-
-    def __exit__(self, *args):
-        return self.element.__exit__(*args)
+            base += f'; gap:{gap}'
+        combined = f'{base}; {style}' if style else base
+        super().__init__(classes=classes, style=combined)
 
 
-class Separator:
+class Separator(RdmLayoutElement):
     """Horizontal rule using rdm-separator styling.
+
+    Args:
+        classes: Additional CSS classes
+        style: Additional inline styles
 
     Example:
         Separator()
+        Separator(style="margin: 2rem 0")
     """
+    _html_tag = html.hr
+    _css_class = 'rdm-separator'
 
-    def __init__(self):
-        html.hr().classes("rdm-separator").style("border: none")
+    def __init__(self, *, classes: str = '', style: str = ''):
+        base = 'border: none'
+        combined = f'{base}; {style}' if style else base
+        super().__init__(classes=classes, style=combined)

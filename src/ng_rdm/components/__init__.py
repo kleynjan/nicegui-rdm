@@ -26,7 +26,7 @@ from .widgets import (
     ActionButtonTable, ListTable, SelectionTable,
     Dialog, Tabs, DetailCard, EditCard, EditDialog,
     ViewStack, WizardStep, StepWizard,
-    Button, IconButton, Row, Col, Separator,
+    Button, IconButton, RdmLayoutElement, Row, Col, Separator,
 )
 
 
@@ -95,6 +95,7 @@ __all__ = [
     'StepWizard',
     'Button',
     'IconButton',
+    'RdmLayoutElement',
     'Row',
     'Col',
     'Separator',
