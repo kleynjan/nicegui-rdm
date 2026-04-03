@@ -193,7 +193,7 @@ async def section_toc_table():
     await table.build()
 
 
-async def section_action_button_table(action_table, action_dialog, product_store, category_store):
+async def section_action_button_table(product_store, category_store):
     ui.label("ActionButtonTable").classes("demo-section-heading")
     ui.markdown("**Use case:** Primary CRUD interface. Edit/delete per row, add at top or bottom.")
 
@@ -205,7 +205,6 @@ async def section_action_button_table(action_table, action_dialog, product_store
     ]
 
     dialog = EditDialog(
-        state=action_dialog,
         data_source=product_store,
         config=FormConfig(columns=form_cols, title_add="Add Product", title_edit="Edit Product"),
     )
@@ -214,7 +213,6 @@ async def section_action_button_table(action_table, action_dialog, product_store
         await product_store.delete_item(row)
 
     table = ActionButtonTable(
-        state=action_table,
         data_source=product_store,
         config=TableConfig(
             columns=product_cols,
@@ -230,9 +228,9 @@ async def section_action_button_table(action_table, action_dialog, product_store
     await table.build()
 
 
-async def section_list_table(list_table, category_store):
+async def section_list_table(category_store):
     ui.label("ListTable").classes("demo-section-heading")
-    ui.markdown("**Use case:** Navigation lists, master-detail (e.g, in viewstack).")
+    ui.markdown("**Use case:** Navigation lists, master-detail (e.g, in viewstack). Click and forget: no persistent state.")
 
     selected_label = ui.label("Click a row").classes("demo-caption")
 
@@ -242,45 +240,51 @@ async def section_list_table(list_table, category_store):
             selected_label.text = f"Selected: {items[0]['name']}"
 
     table = ListTable(
-        state=list_table,
         data_source=category_store,
         config=TableConfig(columns=category_cols, show_add_button=False, empty_message="No categories"),
-
         on_click=on_click,
     )
     await table.build()
 
 
-async def section_selection_table(selection, product_store):
+async def section_selection_table(selection_state, product_store):
     ui.label("SelectionTable").classes("demo-section-heading")
     ui.markdown("**Use case:** Multi-select, eg for bulk operations.")
 
     def render_toolbar():
-        Button("Select All", on_click=table.select_all)  # type: ignore[arg-type]
-        Button("Clear", on_click=table.clear_selection, variant="secondary")  # type: ignore[arg-type]
+        def handle_multi_select_changed():
+            selection_state["multi_select"] = not selection_state.get("multi_select", False)
+            select_button.props("disabled" if not selection_state["multi_select"] else "")
+
+        select_button = Button("Select All", on_click=table.select_all)
+        Button("Clear", on_click=table.clear_selection, variant="secondary")
+        ui.checkbox("Multi-select", on_change=handle_multi_select_changed)
+        # .bind_value(selection_state, "multi_select")
+        ui.checkbox("Show checkboxes", on_change=table.build.refresh).bind_value(selection_state, "show_checkboxes")
 
     table = SelectionTable(
-        state=selection,
+        state=selection_state,
         data_source=product_store,
         config=TableConfig(
-            # columns=product_cols[:3],
             columns=product_cols,
             show_add_button=False,
             show_edit_button=False,
             show_delete_button=False,
         ),
+        show_checkboxes=True,
+        multi_select=False,
         render_toolbar=render_toolbar,
     )
-    await table.build()
+    await table.build_with_toolbars()
 
     count_label = ui.label("").classes("demo-caption")
     count_label.bind_text_from(
-        selection, "selected_ids",
+        selection_state, "selected_ids",
         backward=lambda ids: f"{len(ids)} selected" if ids else "None selected",
     )
 
 
-async def section_edit_card(editcard, category_store):
+async def section_edit_card(category_store):
     ui.label("EditCard").classes("demo-section-heading")
     ui.markdown("**Use case:** In-place editing inside a ViewStack edit view or standalone form.")
 
@@ -290,7 +294,6 @@ async def section_edit_card(editcard, category_store):
     saved_label = ui.label("").classes("demo-caption")
 
     edit = EditCard(
-        state=editcard,
         data_source=category_store,
         config=FormConfig(columns=category_form_cols, title_edit="Edit Category"),
         on_saved=lambda saved: saved_label.set_text(f"Saved: {saved['name']}"),
@@ -382,7 +385,6 @@ async def section_viewstack(viewstack, vs_list, detail_card, vs_editcard, catego
                 vs.show_detail(items[0])
 
         table = ListTable(
-            state=vs_list,
             data_source=category_store,
             config=TableConfig(
                 columns=category_cols,
@@ -593,10 +595,7 @@ async def main(client: Client):
 
     # component state in app.storage.user => persistence across refreshes
     ui_state = app.storage.user.setdefault("ui_state", {
-        "action_table": {}, "action_dialog": {},
-        "list_table": {},
-        "selection": {},
-        "editcard": {},
+        "selection": {'multi_select': True, 'show_checkboxes': True, 'selected_ids': []},
         "dialog": {},
         "tabs": {},
         "viewstack": {}, "vs_list": {}, "vs_editcard": {}, "detail_card": {},
@@ -617,16 +616,16 @@ async def main(client: Client):
         Separator()
 
         with _section_card("action"):
-            await section_action_button_table(ui_state["action_table"], ui_state["action_dialog"], product_store, category_store)
+            await section_action_button_table(product_store, category_store)
 
         with _section_card("list"):
-            await section_list_table(ui_state["list_table"], category_store)
+            await section_list_table(category_store)
 
         with _section_card("selection"):
             await section_selection_table(ui_state["selection"], product_store)
 
         with _section_card("editcard"):
-            await section_edit_card(ui_state["editcard"], category_store)
+            await section_edit_card(category_store)
 
         with _section_card("dialog"):
             section_dialog(ui_state["dialog"])

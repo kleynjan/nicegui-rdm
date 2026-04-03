@@ -260,7 +260,7 @@ class ObservableRdmComponent(RdmComponent):
             raw_value = row.get(col.name, "") or ""
             display = col.formatter(raw_value) if col.formatter else str(raw_value)
             handler = col.on_click
-            html.span(display).classes("rdm-link").on(
+            html.span(display).classes("rdm-link rdm-on-click").on(
                 "click", lambda _, r=row, h=handler: h(r)
             )
         else:
@@ -292,11 +292,7 @@ class ObservableRdmComponent(RdmComponent):
             if not [t for t in build.targets if t.instance == self]:
                 self.unobserve()
                 return
-        # # build: Any = self.build  # subclasses decorate with @ui.refreshable_method
-        # self.build.prune()
-        # if not [t for t in self.build.targets if t.instance == self]:
-        #     self.unobserve()
-        #     return
+
         await self.build.refresh()      # type: ignore
 
 
@@ -362,6 +358,16 @@ class ObservableRdmTable(ObservableRdmComponent):
                     html.span(self.config.add_button or _("Add new"))
             if self.render_toolbar:
                 self.render_toolbar()
+
+    async def build_with_toolbars(self):
+        """Build the table with toolbars. Call this instead of build() if using toolbars."""
+        self._build_toolbar("top")
+        await self.build()
+        self._build_toolbar("bottom")
+
+    async def build(self):
+        """Subclasses must implement build() to render the table itself."""
+        raise NotImplementedError("Subclasses must implement build()")
 
     def _default_on_add(self):
         """Default add handler — no-op. Subclasses with modal support override this."""

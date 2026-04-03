@@ -2,17 +2,17 @@
 """
 Shared pytest fixtures for ng_rdm tests.
 """
+from ng_rdm.models import QModel
+from tortoise import fields
+from ng_rdm.models import FieldSpec, Validator
+from ng_rdm.store import DictStore, StoreRegistry
 import pytest
 from tortoise import Tortoise
 
-from ng_rdm.store import DictStore, StoreRegistry
-from ng_rdm.models import FieldSpec, Validator
+pytest_plugins = ['nicegui.testing.user_plugin']
 
 
 # --- Test models for ORM tests ---
-
-from tortoise import fields
-from ng_rdm.models import QModel
 
 
 class Author(QModel):
