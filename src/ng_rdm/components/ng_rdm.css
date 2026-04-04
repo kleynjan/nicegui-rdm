@@ -125,7 +125,9 @@ enable this block to see refresh animated
 ------------------------------------------------------ */
 
 /* =============================================================================
-   Buttons
+   Buttons (native <button> elements)
+   Used by: tabs.py (rdm-tab), test_buttons.py (visual reference).
+   Production components use Button/IconButton (q-btn) — see @layer quasar_overrides.
    ============================================================================= */
 
 .rdm-btn {
@@ -890,21 +892,42 @@ enable this block to see refresh animated
         font-family: var(--rdm-font-family);
         font-size: var(--rdm-font-size);
         font-weight: var(--rdm-font-weight-medium);
+        line-height: 1 !important;
         border-radius: var(--rdm-radius);
         transition: var(--rdm-transition);
-        min-height: var(--rdm-btn-height);
+        height: var(--rdm-btn-height) !important;
+        min-height: var(--rdm-btn-height) !important;
+        padding: 0 var(--rdm-spacing-lg) !important;
+        border: 1px solid transparent !important;
     }
-    
+
+    /* Strip Quasar's internal wrapper padding and hover overlay */
+    .q-btn .q-btn__wrapper {
+        padding: 0 !important;
+        min-height: unset !important;
+    }
+
+    .q-btn .q-btn__wrapper::before,
+    .q-btn .q-btn__wrapper::after {
+        display: none !important;
+    }
+
+    /* Strip Quasar's inner content padding; keep gap for icon+text */
+    .q-btn .q-btn__content {
+        padding: 0 !important;
+        gap: var(--rdm-spacing-xs) !important;
+    }
+
     /* Remove hover/focus shadows */
     .q-btn::before {
         box-shadow: none !important;
     }
-    
+
     /* Kill ripple animation */
     .q-btn .q-ripple {
         display: none !important;
     }
-    
+
     /* Remove focus ring (we'll add our own) */
     .q-btn .q-focus-helper {
         display: none !important;
@@ -971,33 +994,37 @@ enable this block to see refresh animated
     .q-btn.rdm-btn-text {
         background-color: transparent !important;
         color: var(--rdm-primary) !important;
+        padding: 0 var(--rdm-spacing-sm) !important;
     }
-    
+
     .q-btn.rdm-btn-text:hover:not(:disabled) {
         background-color: var(--rdm-primary-light) !important;
     }
     
     /* Small button variant */
     .q-btn.rdm-btn-sm {
-        min-height: var(--rdm-btn-height-sm);
+        height: var(--rdm-btn-height-sm) !important;
+        min-height: var(--rdm-btn-height-sm) !important;
         font-size: var(--rdm-font-size-sm);
-        padding: 0 var(--rdm-spacing-md);
+        padding: 0 var(--rdm-spacing-md) !important;
     }
     
     /* Icon-only button */
     .q-btn.rdm-btn-icon {
-        width: var(--rdm-btn-height);
-        min-height: var(--rdm-btn-height);
-        padding: 0;
+        width: var(--rdm-btn-height) !important;
+        height: var(--rdm-btn-height) !important;
+        min-height: var(--rdm-btn-height) !important;
+        padding: 0 !important;
         background: transparent !important;
+        border-color: transparent !important;
         color: var(--rdm-text-secondary) !important;
     }
-    
+
     .q-btn.rdm-btn-icon:hover:not(:disabled) {
         color: var(--rdm-primary) !important;
         background-color: var(--rdm-bg-hover) !important;
     }
-    
+
     .q-btn.rdm-btn-icon i {
         font-size: 24px;
     }

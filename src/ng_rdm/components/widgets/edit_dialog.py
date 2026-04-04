@@ -10,6 +10,7 @@ from nicegui import ui
 
 from ..i18n import _
 from ..base import RdmComponent, FormConfig
+from .button import Button, IconButton
 from .dialog import Dialog
 from ..fields import build_form_field
 from ..protocol import RdmDataSource
@@ -83,8 +84,7 @@ class EditDialog(RdmComponent):
                 from nicegui import html
                 with html.div().classes("rdm-dialog-header"):
                     ui.label(title).classes("rdm-dialog-title")
-                    with html.button().classes("rdm-dialog-close").on("click", self._dlg.close):
-                        html.i().classes("bi bi-x-lg")
+                    IconButton("x-lg", on_click=self._dlg.close).classes("rdm-dialog-close")
 
                 # Form fields
                 for col in fc.columns:
@@ -94,16 +94,9 @@ class EditDialog(RdmComponent):
             _content()
 
             # Footer - action buttons (outside refreshable for stability)
-            from nicegui import html
             with self._dlg.actions():
-                with html.button().classes("rdm-btn rdm-btn-primary").on(
-                    "click", self._handle_save
-                ):
-                    html.span(_("Save"))
-                with html.button().classes("rdm-btn rdm-btn-secondary").on(
-                    "click", self._dlg.close
-                ):
-                    html.span(_("Cancel"))
+                Button(_("Save"), on_click=self._handle_save)
+                Button(_("Cancel"), color="secondary", on_click=self._dlg.close)
 
     async def _handle_save(self):
         """Handle save button click in dialog."""

@@ -16,7 +16,7 @@ from nicegui import app, ui, Client
 
 from ng_rdm import DictStore, store_registry
 from ng_rdm.store import StoreEvent
-from ng_rdm.components import Row, Col, Separator
+from ng_rdm.components import Row, Col, Separator, Button
 
 
 # =============================================================================
@@ -113,7 +113,7 @@ async def main(client: Client):
                 await store.update_item(item_select.value, {"name": name_input.value.strip()})
                 name_input.set_value("")
 
-            ui.button("Save", on_click=save_edit)
+            Button("Save", on_click=save_edit)
 
         # ── add form ──────────────────────────────────────────────────────────
 
@@ -137,7 +137,7 @@ async def main(client: Client):
                 new_name.set_value("")
                 new_price.set_value(0)
 
-            ui.button("Add", on_click=add_product)
+            Button("Add", on_click=add_product)
 
         # ── event log ─────────────────────────────────────────────────────────
 

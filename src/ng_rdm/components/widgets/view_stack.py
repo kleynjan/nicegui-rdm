@@ -8,6 +8,8 @@ from typing import Awaitable, Callable
 
 from nicegui import html, ui
 
+from .button import IconButton
+
 
 class ViewStack:
     """Coordinates list/detail/edit views with back-arrow navigation.
@@ -105,8 +107,7 @@ class ViewStack:
 
         # Non-list panel: back arrow + content wrapper.
         with html.div().classes("rdm-view-stack-panel") as panel:
-            with html.button().classes("rdm-back-nav rdm-btn rdm-btn-icon").on("click", self.go_back):
-                html.i().classes("bi bi-arrow-left")
+            IconButton("arrow-left", on_click=self.go_back).classes("rdm-back-nav")
             with html.div().classes("rdm-view-stack-content"):
                 await self._content()
         panel.bind_visibility_from(self.state, "view", backward=lambda v: v != "list")

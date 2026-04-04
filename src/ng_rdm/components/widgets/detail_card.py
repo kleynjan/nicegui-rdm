@@ -13,6 +13,7 @@ from nicegui import html
 from ..i18n import _
 from ..base import RdmComponent, confirm_dialog
 from ..protocol import RdmDataSource
+from .button import Button
 
 
 class DetailCard(RdmComponent):
@@ -82,15 +83,9 @@ class DetailCard(RdmComponent):
                 if show_actions:
                     with html.div().classes("rdm-detail-actions"):
                         if self.show_edit and self.on_edit:
-                            with html.button().classes("rdm-btn rdm-btn-primary").on(
-                                "click", lambda _, i=item: self.on_edit(i)  # type: ignore[misc]
-                            ):
-                                html.span(_("Edit"))
+                            Button(_("Edit"), on_click=lambda _, i=item: self.on_edit(i))  # type: ignore[misc]
                         if self.show_delete and self.on_deleted:
-                            with html.button().classes("rdm-btn rdm-btn-danger").on(
-                                "click", self._handle_delete
-                            ):
-                                html.span(_("Delete"))
+                            Button(_("Delete"), color="danger", on_click=self._handle_delete)
             if self._render_related:
                 with html.div().classes("rdm-detail-related"):
                     await self._render_related(item)

@@ -26,6 +26,8 @@ from typing import Callable
 
 from nicegui import context, html, ui
 
+from .button import IconButton
+
 
 class Dialog:
     """Positioned card overlay with backdrop.
@@ -84,8 +86,7 @@ class Dialog:
             self._header_div = html.div().classes('rdm-dialog-header')
             with self._header_div:
                 ui.label(self.title).classes('rdm-dialog-title')
-                with html.button().classes('rdm-dialog-close').on('click', self.close):
-                    html.i().classes('bi bi-x-lg')
+                IconButton("x-lg", on_click=self.close).classes("rdm-dialog-close")
 
         # Body section for content
         self._body_div = html.div().classes('rdm-dialog-body')

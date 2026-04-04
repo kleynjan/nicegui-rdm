@@ -353,9 +353,9 @@ class ObservableRdmTable(ObservableRdmComponent):
             return
         with html.div().classes("rdm-table-toolbar"):
             if self.config.show_add_button:
+                from .widgets.button import Button
                 add_handler = self.on_add or self._default_on_add
-                with html.button().classes("rdm-btn rdm-btn-primary").on("click", add_handler):
-                    html.span(self.config.add_button or _("Add new"))
+                Button(self.config.add_button or _("Add new"), on_click=add_handler)
             if self.render_toolbar:
                 self.render_toolbar()
 
@@ -406,15 +406,10 @@ async def confirm_dialog(item: dict | None = None, prompts: dict | None = None):
                         html.div(explanation).classes("rdm-confirm-explanation")
 
                 # Footer with action buttons
+                from .widgets.button import Button
                 with html.div().classes("rdm-dialog-footer"):
-                    with html.button().classes("rdm-btn rdm-btn-danger").on(
-                        "click", lambda: d.submit(True)
-                    ):
-                        html.span(yes_button)
-                    with html.button().classes("rdm-btn rdm-btn-secondary").on(
-                        "click", lambda: d.submit(False)
-                    ):
-                        html.span(no_button)
+                    Button(yes_button, color="danger", on_click=lambda: d.submit(True))
+                    Button(no_button, color="secondary", on_click=lambda: d.submit(False))
 
     result = await dialog
     return result

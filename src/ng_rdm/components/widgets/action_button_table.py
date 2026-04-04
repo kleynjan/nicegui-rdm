@@ -12,6 +12,7 @@ from nicegui import html, ui
 from ..i18n import _
 from ..base import ObservableRdmTable, TableConfig
 from ..protocol import RdmDataSource
+from .button import Button, IconButton
 
 
 class ActionButtonTable(ObservableRdmTable):
@@ -136,68 +137,33 @@ class ActionButtonTable(ObservableRdmTable):
             effective_style = self.action_style
 
         # Render based on style
+        def handler(_, r=row, a=action):
+            return self._handle_custom_action(a, r)
+
         if effective_style == "icon" and action.icon:
-            btn = html.button().classes("rdm-btn rdm-btn-icon").on(
-                "click", lambda _, r=row, a=action: self._handle_custom_action(a, r)
-            )
-            with btn:
-                html.i().classes(f"bi bi-{action.icon}")
-            if action.tooltip:
-                btn.props(f'title="{action.tooltip}"')
+            IconButton(action.icon, on_click=handler, tooltip=action.tooltip or None)
         elif effective_style in ("primary", "secondary", "danger") and action.label:
-            # Explicit variant with label
-            btn_class = f"rdm-btn rdm-btn-{effective_style} rdm-btn-sm"
-            with html.button().classes(btn_class).on(
-                "click", lambda _, r=row, a=action: self._handle_custom_action(a, r)
-            ):
-                html.span(action.label)
+            Button(action.label, color=effective_style, on_click=handler).classes("rdm-btn-sm")
         elif effective_style == "button" and action.label:
-            # Generic button style - default to primary
-            with html.button().classes("rdm-btn rdm-btn-primary rdm-btn-sm").on(
-                "click", lambda _, r=row, a=action: self._handle_custom_action(a, r)
-            ):
-                html.span(action.label)
+            Button(action.label, on_click=handler).classes("rdm-btn-sm")
         elif action.label:
-            # Fallback: have label but no matching style, render as primary button
-            with html.button().classes("rdm-btn rdm-btn-primary rdm-btn-sm").on(
-                "click", lambda _, r=row, a=action: self._handle_custom_action(a, r)
-            ):
-                html.span(action.label)
+            Button(action.label, on_click=handler).classes("rdm-btn-sm")
         elif action.icon:
-            # Fallback: have icon but button style requested, render as icon anyway
-            btn = html.button().classes("rdm-btn rdm-btn-icon").on(
-                "click", lambda _, r=row, a=action: self._handle_custom_action(a, r)
-            )
-            with btn:
-                html.i().classes(f"bi bi-{action.icon}")
-            if action.tooltip:
-                btn.props(f'title="{action.tooltip}"')
+            IconButton(action.icon, on_click=handler, tooltip=action.tooltip or None)
 
     def _render_edit_button(self, row: dict):
         """Render edit button based on action_style."""
         if self.action_style == "icon":
-            with html.button().classes("rdm-btn rdm-btn-icon").on(
-                "click", lambda _, r=row: self._handle_edit(r)
-            ):
-                html.i().classes("bi bi-pencil")
+            IconButton("pencil", on_click=lambda _, r=row: self._handle_edit(r))
         else:
-            with html.button().classes("rdm-btn rdm-btn-primary rdm-btn-sm").on(
-                "click", lambda _, r=row: self._handle_edit(r)
-            ):
-                html.span(self.edit_label)
+            Button(self.edit_label, on_click=lambda _, r=row: self._handle_edit(r)).classes("rdm-btn-sm")
 
     def _render_delete_button(self, row: dict):
         """Render delete button based on action_style."""
         if self.action_style == "icon":
-            with html.button().classes("rdm-btn rdm-btn-icon").on(
-                "click", lambda _, r=row: self._handle_delete(r)
-            ):
-                html.i().classes("bi bi-trash")
+            IconButton("trash", on_click=lambda _, r=row: self._handle_delete(r))
         else:
-            with html.button().classes("rdm-btn rdm-btn-secondary rdm-btn-sm").on(
-                "click", lambda _, r=row: self._handle_delete(r)
-            ):
-                html.span(self.delete_label)
+            Button(self.delete_label, color="secondary", on_click=lambda _, r=row: self._handle_delete(r)).classes("rdm-btn-sm")
 
     async def _handle_custom_action(self, action, row: dict):
         """Handle custom action button click."""

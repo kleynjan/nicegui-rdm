@@ -20,6 +20,7 @@ from ng_rdm.components import (
     EditCard, EditDialog, ViewStack, Dialog, Tabs,
     WizardStep, StepWizard, DetailCard,
     ObservableRdmComponent,
+    Button,
     Row, Col, Separator,
 )
 from ng_rdm.store import TortoiseStore, DictStore, init_db, close_db, store_registry
@@ -252,14 +253,12 @@ async def section_selection_table(selection_state, product_store):
     ui.markdown("**Use case:** Multi-select, eg for bulk operations.")
 
     def render_toolbar():
-        def handle_multi_select_changed():
-            selection_state["multi_select"] = not selection_state.get("multi_select", False)
-            select_button.props("disabled" if not selection_state["multi_select"] else "")
-
-        select_button = ui.button("Select All", on_click=table.select_all)
-        ui.button("Clear", on_click=table.clear_selection).classes("rdm-btn-secondary")
-        ui.checkbox("Multi-select", on_change=handle_multi_select_changed)
-        # .bind_value(selection_state, "multi_select")
+        # def handle_multi_select_changed():
+        #     selection_state["multi_select"] = not selection_state.get("multi_select", False)
+        #     select_button.props("disabled" if not selection_state["multi_select"] else "")
+        Button("Select All", on_click=table.select_all).bind_enabled_from(selection_state, "multi_select")
+        Button("Clear", color="secondary", on_click=table.clear_selection)
+        ui.checkbox("Multi-select").bind_value(selection_state, "multi_select")
         ui.checkbox("Show checkboxes", on_change=table.build.refresh).bind_value(selection_state, "show_checkboxes")
 
     table = SelectionTable(
@@ -311,13 +310,13 @@ def section_dialog(dialog):
         ui.label("Confirm Action").classes("demo-subtitle")
         ui.label("Are you sure you want to proceed?")
         with dlg.actions():
-            ui.button("Confirm", on_click=dlg.close)
-            ui.button("Cancel", on_click=dlg.close).classes("rdm-btn-secondary")
+            Button("Confirm", on_click=dlg.close)
+            Button("Cancel", color="secondary", on_click=dlg.close)
 
     with Row():
-        ui.button("Open Dialog", on_click=dlg.open)
+        Button("Open Dialog", on_click=dlg.open)
         # External state control: open via state dict
-        ui.button("Open via state", on_click=lambda: dlg.open()).classes("rdm-btn-secondary")
+        Button("Open via state", color="secondary", on_click=lambda: dlg.open())
         status = ui.label("").classes("demo-caption")
         status.bind_text_from(dialog, "is_open",
                               backward=lambda v: "open" if v else "closed")
@@ -365,7 +364,7 @@ async def section_tabs(tabs, product_store, category_store):
         ui.label("Switch tabs by modifying state:")
         # External state control: switch tabs by modifying state directly
         for key, label in [("products", "→ Products"), ("categories", "→ Categories"), ("about", "→ About")]:
-            ui.button(label, on_click=lambda _, k=key: open_tab(k)).classes("rdm-btn-secondary")
+            Button(label, color="secondary", on_click=lambda _, k=key: open_tab(k))
 
 
 async def section_viewstack(viewstack, vs_list, detail_card, vs_editcard, category_store, product_store):
@@ -499,7 +498,7 @@ async def section_wizard(product_store, category_store):
         await wizard.show()
 
     with wizard_btn_area:
-        ui.button("Launch Wizard", on_click=show_wizard)
+        Button("Launch Wizard", on_click=show_wizard)
 
 
 # Custom table component (demonstrates ObservableRdmComponent) - final section
@@ -569,7 +568,7 @@ async def section_custom_component(highlight):
                 })
                 title_input.set_value("")
 
-        ui.button("Add Task", on_click=add_task)
+        Button("Add Task", on_click=add_task)
 
         async def modify_task():
             items = await task_store.read_items()
@@ -577,7 +576,7 @@ async def section_custom_component(highlight):
                 item = items[1]
                 await task_store.update_item(item["id"], {"priority": "high" if item["priority"] == "normal" else "normal"})
 
-        ui.button("Toggle Task #2", on_click=modify_task)
+        Button("Toggle Task #2", color="secondary", on_click=modify_task)
 
 # =============================================================================
 # Main page

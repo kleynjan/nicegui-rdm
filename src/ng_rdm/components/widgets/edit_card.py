@@ -12,6 +12,7 @@ from ..i18n import _
 from ..base import RdmComponent, FormConfig
 from ..fields import build_form_field
 from ..protocol import RdmDataSource
+from .button import Button
 
 
 class EditCard(RdmComponent):
@@ -77,11 +78,5 @@ class EditCard(RdmComponent):
                     build_form_field(col, self.state["form"])
 
             with html.div().classes("rdm-edit-actions"):
-                with html.button().classes("rdm-btn rdm-btn-primary").on(
-                    "click", self._handle_save
-                ):
-                    html.span(_("Save") if not self.is_new else _("Add"))
-                with html.button().classes("rdm-btn rdm-btn-secondary").on(
-                    "click", self._handle_cancel
-                ):
-                    html.span(_("Cancel"))
+                Button(_("Save") if not self.is_new else _("Add"), on_click=self._handle_save)
+                Button(_("Cancel"), color="secondary", on_click=self._handle_cancel)

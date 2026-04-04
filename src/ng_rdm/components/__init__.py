@@ -26,7 +26,7 @@ from .widgets import (
     ActionButtonTable, ListTable, SelectionTable,
     Dialog, Tabs, DetailCard, EditCard, EditDialog,
     ViewStack, WizardStep, StepWizard,
-    icon_button, RdmLayoutElement, Row, Col, Separator,
+    Button, IconButton, icon_button, RdmLayoutElement, Row, Col, Separator,
 )
 
 
@@ -51,9 +51,6 @@ def rdm_init(
     ui.add_head_html(
         '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">'
     )
-
-    # Global ui.button defaults: strip Material Design chrome
-    ui.button.default_props('flat unelevated no-caps')
 
     # Load ng_rdm.css (design system)
     css_path = Path(__file__).parent / 'ng_rdm.css'
@@ -85,6 +82,8 @@ __all__ = [
     'none_as_text',
 
     # Core components
+    'Button',
+    'IconButton',
     'ActionButtonTable',
     'ListTable',
     'SelectionTable',

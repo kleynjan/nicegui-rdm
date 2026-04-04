@@ -1,7 +1,7 @@
 """Concrete UI widget components."""
 
 from .action_button_table import ActionButtonTable
-from .button import icon_button
+from .button import Button, IconButton, icon_button
 from .detail_card import DetailCard
 from .dialog import Dialog
 from .edit_card import EditCard
@@ -25,6 +25,8 @@ __all__ = [
     'ViewStack',
     'WizardStep',
     'StepWizard',
+    'Button',
+    'IconButton',
     'icon_button',
     'RdmLayoutElement',
     'Row',

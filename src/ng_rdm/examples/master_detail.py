@@ -184,7 +184,6 @@ async def main(client: Client):
                     vs.show_detail(items[0])
 
             table = ListTable(
-                state=ui_state["list_table"],
                 data_source=product_store,
                 config=TableConfig(
                     columns=product_list_cols,
