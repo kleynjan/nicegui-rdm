@@ -879,17 +879,138 @@ enable this block to see refresh animated
    ============================================================================= */
 
 @layer quasar_overrides {
-    /* Remove Quasar button text transform */
-    /* .rdm-component .q-btn {
-        text-transform: none !important;
-    } */
+    /* ==========================================================================
+       QButton Global Overrides - Strip Material Design Chrome
+       ========================================================================== */
     
-    /* Remove Quasar card shadow, use our styling */
-    /* .rdm-component .q-card {
+    /* Base button styling - remove all Material effects */
+    .q-btn {
+        text-transform: none !important;
         box-shadow: none !important;
-        border: 1px solid var(--rdm-border-light);
+        font-family: var(--rdm-font-family);
+        font-size: var(--rdm-font-size);
+        font-weight: var(--rdm-font-weight-medium);
         border-radius: var(--rdm-radius);
-    } */
+        transition: var(--rdm-transition);
+        min-height: var(--rdm-btn-height);
+    }
+    
+    /* Remove hover/focus shadows */
+    .q-btn::before {
+        box-shadow: none !important;
+    }
+    
+    /* Kill ripple animation */
+    .q-btn .q-ripple {
+        display: none !important;
+    }
+    
+    /* Remove focus ring (we'll add our own) */
+    .q-btn .q-focus-helper {
+        display: none !important;
+    }
+    
+    /* Primary button (default) */
+    .q-btn.bg-primary {
+        background-color: var(--rdm-primary) !important;
+        color: var(--rdm-text-white) !important;
+    }
+    
+    .q-btn.bg-primary:hover:not(:disabled) {
+        background-color: var(--rdm-primary-hover) !important;
+    }
+    
+    /* RDM variant classes for ui.button */
+    .q-btn.rdm-btn-primary {
+        background-color: var(--rdm-primary) !important;
+        color: var(--rdm-text-white) !important;
+    }
+    
+    .q-btn.rdm-btn-primary:hover:not(:disabled) {
+        background-color: var(--rdm-primary-hover) !important;
+    }
+    
+    .q-btn.rdm-btn-secondary {
+        background-color: var(--rdm-bg) !important;
+        border: 1px solid var(--rdm-border) !important;
+        color: var(--rdm-text-regular) !important;
+    }
+    
+    .q-btn.rdm-btn-secondary:hover:not(:disabled) {
+        border-color: var(--rdm-primary) !important;
+        color: var(--rdm-primary) !important;
+    }
+    
+    .q-btn.rdm-btn-success {
+        background-color: var(--rdm-success) !important;
+        color: var(--rdm-text-white) !important;
+    }
+    
+    .q-btn.rdm-btn-success:hover:not(:disabled) {
+        background-color: #85ce61 !important;
+    }
+    
+    .q-btn.rdm-btn-danger {
+        background-color: var(--rdm-danger) !important;
+        color: var(--rdm-text-white) !important;
+    }
+    
+    .q-btn.rdm-btn-danger:hover:not(:disabled) {
+        background-color: #f78989 !important;
+    }
+    
+    .q-btn.rdm-btn-warning {
+        background-color: var(--rdm-warning) !important;
+        color: var(--rdm-text-white) !important;
+    }
+    
+    .q-btn.rdm-btn-warning:hover:not(:disabled) {
+        background-color: #ebb563 !important;
+    }
+    
+    .q-btn.rdm-btn-text {
+        background-color: transparent !important;
+        color: var(--rdm-primary) !important;
+    }
+    
+    .q-btn.rdm-btn-text:hover:not(:disabled) {
+        background-color: var(--rdm-primary-light) !important;
+    }
+    
+    /* Small button variant */
+    .q-btn.rdm-btn-sm {
+        min-height: var(--rdm-btn-height-sm);
+        font-size: var(--rdm-font-size-sm);
+        padding: 0 var(--rdm-spacing-md);
+    }
+    
+    /* Icon-only button */
+    .q-btn.rdm-btn-icon {
+        width: var(--rdm-btn-height);
+        min-height: var(--rdm-btn-height);
+        padding: 0;
+        background: transparent !important;
+        color: var(--rdm-text-secondary) !important;
+    }
+    
+    .q-btn.rdm-btn-icon:hover:not(:disabled) {
+        color: var(--rdm-primary) !important;
+        background-color: var(--rdm-bg-hover) !important;
+    }
+    
+    .q-btn.rdm-btn-icon i {
+        font-size: 24px;
+    }
+    
+    /* Focus visible state */
+    .q-btn:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 2px var(--rdm-primary-light) !important;
+    }
+    
+    /* ==========================================================================
+       Quasar Input Overrides
+       ========================================================================== */
     
     /* Style Quasar inputs to match our design */
     .rdm-component .q-field--outlined .q-field__control {
@@ -913,12 +1034,4 @@ enable this block to see refresh animated
     .rdm-component .q-field--dense .q-field__marginal {
         height: var(--rdm-input-height);
     }
-    
-    /* Notification styling -- now unused, see component._notify */
-    /* .q-notification {
-        font-family: var(--rdm-font-family);
-        font-size: 22px;
-        margin-bottom: 100px;
-        margin-left: 50px;
-    } */
 }

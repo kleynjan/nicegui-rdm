@@ -18,7 +18,7 @@ from ng_rdm import DictStore, store_registry
 from ng_rdm.store import StoreEvent
 from ng_rdm.components import (
     rdm_init, Column, TableConfig, FormConfig,
-    ActionButtonTable, SelectionTable, EditDialog, Button,
+    ActionButtonTable, SelectionTable, EditDialog,
     Row, Col, Separator,
 )
 
@@ -169,8 +169,9 @@ async def index(client: Client):
         )
 
         with Row():
-            Button("Select All", on_click=sel_table.select_all)  # type: ignore[arg-type]
-            Button("Clear", on_click=sel_table.clear_selection, variant="secondary")  # type: ignore[arg-type]
+            ui.button("Select All", on_click=sel_table.select_all)  # type: ignore[arg-type]
+            ui.button("Clear", on_click=sel_table.clear_selection).classes(
+                "rdm-btn-secondary")  # type: ignore[arg-type]
 
         # ── section 3: event log ──────────────────────────────────────────────
 

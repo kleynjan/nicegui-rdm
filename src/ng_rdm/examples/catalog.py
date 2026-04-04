@@ -18,7 +18,7 @@ from ng_rdm.components import (
     rdm_init, Column, TableConfig, FormConfig, RowAction,
     ActionButtonTable, ListTable, SelectionTable,
     EditCard, EditDialog, ViewStack, Dialog, Tabs,
-    WizardStep, StepWizard, Button, DetailCard,
+    WizardStep, StepWizard, DetailCard,
     ObservableRdmComponent,
     Row, Col, Separator,
 )
@@ -256,8 +256,8 @@ async def section_selection_table(selection_state, product_store):
             selection_state["multi_select"] = not selection_state.get("multi_select", False)
             select_button.props("disabled" if not selection_state["multi_select"] else "")
 
-        select_button = Button("Select All", on_click=table.select_all)
-        Button("Clear", on_click=table.clear_selection, variant="secondary")
+        select_button = ui.button("Select All", on_click=table.select_all)
+        ui.button("Clear", on_click=table.clear_selection).classes("rdm-btn-secondary")
         ui.checkbox("Multi-select", on_change=handle_multi_select_changed)
         # .bind_value(selection_state, "multi_select")
         ui.checkbox("Show checkboxes", on_change=table.build.refresh).bind_value(selection_state, "show_checkboxes")
@@ -311,13 +311,13 @@ def section_dialog(dialog):
         ui.label("Confirm Action").classes("demo-subtitle")
         ui.label("Are you sure you want to proceed?")
         with dlg.actions():
-            Button("Confirm", on_click=dlg.close)
-            Button("Cancel", on_click=dlg.close, variant="secondary")
+            ui.button("Confirm", on_click=dlg.close)
+            ui.button("Cancel", on_click=dlg.close).classes("rdm-btn-secondary")
 
     with Row():
-        Button("Open Dialog", on_click=dlg.open)
+        ui.button("Open Dialog", on_click=dlg.open)
         # External state control: open via state dict
-        Button("Open via state", on_click=lambda: dlg.open(), variant="secondary")
+        ui.button("Open via state", on_click=lambda: dlg.open()).classes("rdm-btn-secondary")
         status = ui.label("").classes("demo-caption")
         status.bind_text_from(dialog, "is_open",
                               backward=lambda v: "open" if v else "closed")
@@ -365,7 +365,7 @@ async def section_tabs(tabs, product_store, category_store):
         ui.label("Switch tabs by modifying state:")
         # External state control: switch tabs by modifying state directly
         for key, label in [("products", "→ Products"), ("categories", "→ Categories"), ("about", "→ About")]:
-            Button(label, on_click=lambda k=key: open_tab(k), variant="secondary")
+            ui.button(label, on_click=lambda _, k=key: open_tab(k)).classes("rdm-btn-secondary")
 
 
 async def section_viewstack(viewstack, vs_list, detail_card, vs_editcard, category_store, product_store):
@@ -499,7 +499,7 @@ async def section_wizard(product_store, category_store):
         await wizard.show()
 
     with wizard_btn_area:
-        Button("Launch Wizard", on_click=show_wizard)
+        ui.button("Launch Wizard", on_click=show_wizard)
 
 
 # Custom table component (demonstrates ObservableRdmComponent) - final section
@@ -569,7 +569,7 @@ async def section_custom_component(highlight):
                 })
                 title_input.set_value("")
 
-        Button("Add Task", on_click=add_task)
+        ui.button("Add Task", on_click=add_task)
 
         async def modify_task():
             items = await task_store.read_items()
@@ -577,7 +577,7 @@ async def section_custom_component(highlight):
                 item = items[1]
                 await task_store.update_item(item["id"], {"priority": "high" if item["priority"] == "normal" else "normal"})
 
-        Button("Toggle Task #2", on_click=modify_task)
+        ui.button("Toggle Task #2", on_click=modify_task)
 
 # =============================================================================
 # Main page
