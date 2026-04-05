@@ -41,7 +41,7 @@ class Tabs:
         with html.div().classes("rdm-tabs rdm-component"):
             for key, label, _ in self.tabs:
                 cls = "rdm-tab rdm-active" if self.state["active"] == key else "rdm-tab"
-                with html.button().classes(cls).on("click", lambda _, k=key: self._select(k)):
+                with html.button().classes(cls).on("click", lambda _, k=key: self._select(k)).mark(f"rdm-tab-{key}"):
                     html.span(label)
 
     async def build(self):

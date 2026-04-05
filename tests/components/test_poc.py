@@ -13,8 +13,6 @@ WORKAROUNDS validated here:
 2. .mark() for element identification (stored in _markers, which ElementFilter CAN check)
 3. Custom helper functions for text content assertions
 """
-import asyncio
-
 import pytest
 
 from nicegui import html, ui
@@ -22,62 +20,12 @@ from nicegui.testing import User
 
 from ng_rdm.store import DictStore
 
+from .conftest import (
+    get_html_texts, html_should_see, html_should_see_async,
+    html_should_not_see, find_html_elements_with_text,
+)
+
 pytestmark = pytest.mark.components
-
-
-# ── Helper functions for HTMLElement testing ──
-
-def get_html_texts(user: User) -> list[str]:
-    """Get all _text values from HTMLElements in the current page."""
-    texts = []
-    with user:
-        for el in user.current_layout.descendants():
-            text = getattr(el, '_text', None)
-            if text:
-                texts.append(text)
-    return texts
-
-
-def html_should_see(user: User, text: str) -> None:
-    """Assert that at least one HTMLElement contains the given text (sync)."""
-    texts = get_html_texts(user)
-    assert any(text in t for t in texts), \
-        f"Expected to find '{text}' in HTML elements, found: {texts}"
-
-
-async def html_should_see_async(user: User, text: str, retries: int = 3) -> None:
-    """Assert with retries — use after clicks that trigger refreshable updates."""
-    for _ in range(retries):
-        texts = get_html_texts(user)
-        if any(text in t for t in texts):
-            return
-        await asyncio.sleep(0.1)
-    raise AssertionError(f"Expected to find '{text}' in HTML elements after {retries} retries, found: {texts}")
-
-
-def html_should_not_see(user: User, text: str) -> None:
-    """Assert that no visible HTMLElement contains the given text."""
-    with user:
-        for el in user.current_layout.descendants():
-            t = getattr(el, '_text', None)
-            if t and text in t and el.visible:
-                raise AssertionError(f"Did not expect to see '{text}' but found it in element")
-
-
-def find_by_mark(user: User, marker: str):
-    """Find elements by .mark() marker and return UserInteraction."""
-    return user.find(marker=marker)
-
-
-def find_html_elements_with_text(user: User, text: str) -> list:
-    """Find all HTMLElements whose _text contains the given string."""
-    results = []
-    with user:
-        for el in user.current_layout.descendants():
-            t = getattr(el, '_text', None)
-            if t and text in t:
-                results.append(el)
-    return results
 
 
 # ── 1. Basic html element visibility via custom helpers ──

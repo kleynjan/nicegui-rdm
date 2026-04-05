@@ -145,7 +145,7 @@ class SelectionTable(ObservableRdmTable):
                                     ui.checkbox(
                                         value=is_checked,
                                         on_change=lambda e, k=key: self.handle_row_click(k)
-                                    )
+                                    ).mark(f"rdm-checkbox-{key}")
 
                             # Data cells
                             for col in self.config.columns:

@@ -111,8 +111,8 @@ class ActionButtonTable(ObservableRdmTable):
                 with html.td().classes("rdm-col-actions"):
                     with html.div().classes("rdm-actions"):
                         # Custom actions first
-                        for action in self.config.custom_actions:
-                            self._render_custom_action(action, row)
+                        for i, action in enumerate(self.config.custom_actions):
+                            self._render_custom_action(action, row, action_index=i)
 
                         # Edit button
                         if self.config.show_edit_button:
@@ -122,7 +122,7 @@ class ActionButtonTable(ObservableRdmTable):
                         if self.config.show_delete_button:
                             self._render_delete_button(row)
 
-    def _render_custom_action(self, action, row: dict):
+    def _render_custom_action(self, action, row: dict, action_index: int = 0):
         """Render a custom action button based on variant or action_style.
 
         Resolution:
@@ -136,34 +136,39 @@ class ActionButtonTable(ObservableRdmTable):
         else:
             effective_style = self.action_style
 
+        row_id = row.get("id", "")
+        mark = f"rdm-action-{action_index}-{row_id}"
+
         # Render based on style
         def handler(_, r=row, a=action):
             return self._handle_custom_action(a, r)
 
         if effective_style == "icon" and action.icon:
-            IconButton(action.icon, on_click=handler, tooltip=action.tooltip or None)
+            IconButton(action.icon, on_click=handler, tooltip=action.tooltip or None).mark(mark)
         elif effective_style in ("primary", "secondary", "danger") and action.label:
-            Button(action.label, color=effective_style, on_click=handler).classes("rdm-btn-sm")
+            Button(action.label, color=effective_style, on_click=handler).classes("rdm-btn-sm").mark(mark)
         elif effective_style == "button" and action.label:
-            Button(action.label, on_click=handler).classes("rdm-btn-sm")
+            Button(action.label, on_click=handler).classes("rdm-btn-sm").mark(mark)
         elif action.label:
-            Button(action.label, on_click=handler).classes("rdm-btn-sm")
+            Button(action.label, on_click=handler).classes("rdm-btn-sm").mark(mark)
         elif action.icon:
-            IconButton(action.icon, on_click=handler, tooltip=action.tooltip or None)
+            IconButton(action.icon, on_click=handler, tooltip=action.tooltip or None).mark(mark)
 
     def _render_edit_button(self, row: dict):
         """Render edit button based on action_style."""
+        row_id = row.get("id", "")
         if self.action_style == "icon":
-            IconButton("pencil", on_click=lambda _, r=row: self._handle_edit(r))
+            IconButton("pencil", on_click=lambda _, r=row: self._handle_edit(r)).mark(f"rdm-edit-{row_id}")
         else:
-            Button(self.edit_label, on_click=lambda _, r=row: self._handle_edit(r)).classes("rdm-btn-sm")
+            Button(self.edit_label, on_click=lambda _, r=row: self._handle_edit(r)).classes("rdm-btn-sm").mark(f"rdm-edit-{row_id}")
 
     def _render_delete_button(self, row: dict):
         """Render delete button based on action_style."""
+        row_id = row.get("id", "")
         if self.action_style == "icon":
-            IconButton("trash", on_click=lambda _, r=row: self._handle_delete(r))
+            IconButton("trash", on_click=lambda _, r=row: self._handle_delete(r)).mark(f"rdm-delete-{row_id}")
         else:
-            Button(self.delete_label, color="secondary", on_click=lambda _, r=row: self._handle_delete(r)).classes("rdm-btn-sm")
+            Button(self.delete_label, color="secondary", on_click=lambda _, r=row: self._handle_delete(r)).classes("rdm-btn-sm").mark(f"rdm-delete-{row_id}")
 
     async def _handle_custom_action(self, action, row: dict):
         """Handle custom action button click."""

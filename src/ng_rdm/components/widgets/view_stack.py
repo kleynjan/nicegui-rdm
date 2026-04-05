@@ -107,7 +107,7 @@ class ViewStack:
 
         # Non-list panel: back arrow + content wrapper.
         with html.div().classes("rdm-view-stack-panel") as panel:
-            IconButton("arrow-left", on_click=self.go_back).classes("rdm-back-nav")
+            IconButton("arrow-left", on_click=self.go_back).classes("rdm-back-nav").mark("rdm-back")
             with html.div().classes("rdm-view-stack-content"):
                 await self._content()
         panel.bind_visibility_from(self.state, "view", backward=lambda v: v != "list")

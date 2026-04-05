@@ -26,7 +26,7 @@ from .widgets import (
     ActionButtonTable, ListTable, SelectionTable,
     Dialog, Tabs, DetailCard, EditCard, EditDialog,
     ViewStack, WizardStep, StepWizard,
-    Button, IconButton, icon_button, RdmLayoutElement, Row, Col, Separator,
+    Button, IconButton, RdmLayoutElement, Row, Col, Separator,
 )
 
 
@@ -60,6 +60,7 @@ def rdm_init(
     if extra_css:
         ui.add_css(extra_css)
 
+    ui.input.default_props("color=None")
     # enable this to add an observer/event log at /rdm-debug
     from ..debug import enable_debug_page
     enable_debug_page()  # Optional: enable debug page for event stream visualization
@@ -95,7 +96,6 @@ __all__ = [
     'ViewStack',
     'WizardStep',
     'StepWizard',
-    'icon_button',
     'RdmLayoutElement',
     'Row',
     'Col',

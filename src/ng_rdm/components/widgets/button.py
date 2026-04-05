@@ -48,12 +48,3 @@ class IconButton(ui.button, default_props='flat unelevated no-caps'):
             self.props(f'title="{tooltip}"')
         with self:
             ui.html(f'<i class="bi bi-{icon}"></i>')
-
-
-def icon_button(
-    icon: str,
-    on_click: Callable[..., Any] | None = None,
-    tooltip: str | None = None,
-) -> ui.button:
-    """Deprecated: use IconButton instead."""
-    return IconButton(icon, on_click=on_click, tooltip=tooltip)

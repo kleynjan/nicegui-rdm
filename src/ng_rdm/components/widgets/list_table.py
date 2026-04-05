@@ -86,7 +86,7 @@ class ListTable(ObservableRdmTable):
                 with html.tbody():
                     for item in self.data:
                         key = item.get(self.row_key)
-                        tr = html.tr().classes("rdm-clickable")
+                        tr = html.tr().classes("rdm-clickable").mark(f"rdm-row-{key}")
                         if self.on_click:
                             tr.on("click", lambda _, k=key: self.on_click(k))  # type: ignore
 

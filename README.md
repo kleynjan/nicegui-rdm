@@ -295,6 +295,12 @@ valid, error = store.validate({'email': 'test', 'age': -1})
 - Tortoise ORM >= 0.20.0
 - pytz
 
+## TODO
+
+- Filter tables
+- "Load more..." mechanism
+- Investigate selective DOM updates for update events - replace @ui.refresh mechanism
+
 ## License
 
 MIT
