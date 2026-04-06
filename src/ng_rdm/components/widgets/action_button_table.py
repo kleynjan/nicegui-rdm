@@ -2,37 +2,31 @@
 ActionButtonTable - Table with action buttons per row.
 
 Uses native HTML <table> elements for clean, semantic markup.
-Supports both icon and button styles for Edit/Delete/custom actions.
-All action semantics delegated to client callbacks.
+Action rendering delegated to RowAction.render().
 """
-from typing import Any, Awaitable, Callable, Literal
+from typing import Any, Awaitable, Callable
 
 from nicegui import html, ui
 
 from ..i18n import _
-from ..base import ObservableRdmTable, TableConfig
+from ..base import ObservableRdmTable, RowAction, TableConfig
 from ..protocol import RdmDataSource
-from .button import Button, IconButton
 
 
 class ActionButtonTable(ObservableRdmTable):
     """Table with action buttons per row.
 
     Uses native HTML table elements with rdm-* CSS classes.
-    Supports icon or button styles for actions.
-    All action semantics (edit, delete, custom) are handled via callbacks.
+    Action rendering is delegated to RowAction.render().
 
     Args:
-        state: Shared state dict
         data_source: RdmDataSource (typically a Store)
-        config: TableConfig with column definitions
+        config: TableConfig with column definitions and custom_actions
+        state: Shared state dict
         filter_by: Optional filter dict for data loading
-        action_style: "icon" for icon buttons, "button" for text buttons
         on_add: Callback when Add button clicked
         on_edit: Callback when Edit button clicked, receives row dict
         on_delete: Callback when Delete button clicked, receives row dict
-        edit_label: Label for edit button (button style only)
-        delete_label: Label for delete button (button style only)
     """
 
     def __init__(
@@ -42,12 +36,9 @@ class ActionButtonTable(ObservableRdmTable):
         state: dict | None = None,
         *,
         filter_by: dict[str, Any] | None = None,
-        action_style: Literal["icon", "button"] = "icon",
         on_add: Callable[[], Awaitable[None] | None] | None = None,
         on_edit: Callable[[dict], Awaitable[None] | None] | None = None,
         on_delete: Callable[[dict], Awaitable[None] | None] | None = None,
-        edit_label: str | None = None,
-        delete_label: str | None = None,
         render_toolbar: Callable[[], None] | None = None,
         auto_observe: bool = True,
     ):
@@ -56,11 +47,12 @@ class ActionButtonTable(ObservableRdmTable):
             filter_by=filter_by, on_add=on_add,
             render_toolbar=render_toolbar, auto_observe=auto_observe,
         )
-        self.action_style = action_style
-        self.on_edit = on_edit
-        self.on_delete = on_delete
-        self.edit_label = edit_label or _("Edit")
-        self.delete_label = delete_label or _("Delete")
+        # Build unified actions list from config and callbacks
+        self._all_actions: list[RowAction] = list(config.custom_actions)
+        if config.show_edit_button:
+            self._all_actions.append(RowAction(icon="pencil", tooltip=_("Edit"), color="default", callback=on_edit))
+        if config.show_delete_button:
+            self._all_actions.append(RowAction(icon="trash", tooltip=_("Delete"), color="default", callback=on_delete))
 
     @ui.refreshable_method
     async def build(self):
@@ -78,7 +70,7 @@ class ActionButtonTable(ObservableRdmTable):
                             if col.width_percent:
                                 th.style(f"width: {col.width_percent}%")
                         # Actions column header
-                        if self.config.show_edit_button or self.config.show_delete_button or self.config.custom_actions:
+                        if self._all_actions:
                             html.th("").classes("rdm-col-actions")
 
                 # Body
@@ -86,7 +78,7 @@ class ActionButtonTable(ObservableRdmTable):
                     if not self.data:
                         with html.tr():
                             colspan = len(self.config.columns)
-                            if self.config.show_edit_button or self.config.show_delete_button or self.config.custom_actions:
+                            if self._all_actions:
                                 colspan += 1
                             with html.td().props(f"colspan={colspan}"):
                                 html.span(
@@ -107,86 +99,9 @@ class ActionButtonTable(ObservableRdmTable):
                     self._render_cell(col, row.get(col.name, ""), row)
 
             # Action buttons column
-            if self.config.show_edit_button or self.config.show_delete_button or self.config.custom_actions:
+            if self._all_actions:
                 with html.td().classes("rdm-col-actions"):
                     with html.div().classes("rdm-actions"):
-                        # Custom actions first
-                        for i, action in enumerate(self.config.custom_actions):
-                            self._render_custom_action(action, row, action_index=i)
-
-                        # Edit button
-                        if self.config.show_edit_button:
-                            self._render_edit_button(row)
-
-                        # Delete button
-                        if self.config.show_delete_button:
-                            self._render_delete_button(row)
-
-    def _render_custom_action(self, action, row: dict, action_index: int = 0):
-        """Render a custom action button based on variant or action_style.
-
-        Resolution:
-        - If action.variant is set, use that style
-        - Otherwise, follow table's action_style
-        - Fall back to whatever is available (icon or label)
-        """
-        # Determine effective style
-        if action.variant:
-            effective_style = action.variant
-        else:
-            effective_style = self.action_style
-
-        row_id = row.get("id", "")
-        mark = f"rdm-action-{action_index}-{row_id}"
-
-        # Render based on style
-        def handler(_, r=row, a=action):
-            return self._handle_custom_action(a, r)
-
-        if effective_style == "icon" and action.icon:
-            IconButton(action.icon, on_click=handler, tooltip=action.tooltip or None).mark(mark)
-        elif effective_style in ("primary", "secondary", "danger") and action.label:
-            Button(action.label, color=effective_style, on_click=handler).classes("rdm-btn-sm").mark(mark)
-        elif effective_style == "button" and action.label:
-            Button(action.label, on_click=handler).classes("rdm-btn-sm").mark(mark)
-        elif action.label:
-            Button(action.label, on_click=handler).classes("rdm-btn-sm").mark(mark)
-        elif action.icon:
-            IconButton(action.icon, on_click=handler, tooltip=action.tooltip or None).mark(mark)
-
-    def _render_edit_button(self, row: dict):
-        """Render edit button based on action_style."""
-        row_id = row.get("id", "")
-        if self.action_style == "icon":
-            IconButton("pencil", on_click=lambda _, r=row: self._handle_edit(r)).mark(f"rdm-edit-{row_id}")
-        else:
-            Button(self.edit_label, on_click=lambda _, r=row: self._handle_edit(r)).classes("rdm-btn-sm").mark(f"rdm-edit-{row_id}")
-
-    def _render_delete_button(self, row: dict):
-        """Render delete button based on action_style."""
-        row_id = row.get("id", "")
-        if self.action_style == "icon":
-            IconButton("trash", on_click=lambda _, r=row: self._handle_delete(r)).mark(f"rdm-delete-{row_id}")
-        else:
-            Button(self.delete_label, color="secondary", on_click=lambda _, r=row: self._handle_delete(r)).classes("rdm-btn-sm").mark(f"rdm-delete-{row_id}")
-
-    async def _handle_custom_action(self, action, row: dict):
-        """Handle custom action button click."""
-        if action.callback:
-            result = action.callback(row)
-            if hasattr(result, '__await__'):
-                await result
-
-    async def _handle_edit(self, row: dict):
-        """Handle edit button click."""
-        if self.on_edit:
-            result = self.on_edit(row)
-            if result is not None and hasattr(result, '__await__'):
-                await result
-
-    async def _handle_delete(self, row: dict):
-        """Handle delete button click."""
-        if self.on_delete:
-            result = self.on_delete(row)
-            if result is not None and hasattr(result, '__await__'):
-                await result
+                        row_id = row.get("id", "")
+                        for i, action in enumerate(self._all_actions):
+                            action.render(row, mark=f"rdm-action-{i}-{row_id}")

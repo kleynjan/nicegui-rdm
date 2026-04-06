@@ -39,6 +39,7 @@ class IconButton(ui.button, default_props='flat unelevated no-caps'):
         icon: str,
         *,
         on_click: Callable[..., Any] | None = None,
+        color: str | None = 'primary',
         tooltip: str | None = None,
         **kwargs: Any,
     ) -> None:
@@ -47,4 +48,25 @@ class IconButton(ui.button, default_props='flat unelevated no-caps'):
         if tooltip:
             self.props(f'title="{tooltip}"')
         with self:
-            ui.html(f'<i class="bi bi-{icon}"></i>')
+            ui.html(f'<i class="bi bi-{icon} rdm-btn-icon-{color}"></i>')
+
+
+class Icon(ui.icon):
+    """RDM-styled icon using Bootstrap Icons."""
+
+    def __init__(
+        self,
+        icon: str,
+        *,
+        on_click: Callable[..., Any] | None = None,
+        color: str | None = 'primary',
+        tooltip: str | None = None,
+    ) -> None:
+        super().__init__(name='', color=None)
+        self.classes('rdm-icon')
+        if tooltip:
+            self.props(f'title="{tooltip}"')
+        if on_click:
+            self.on('click', on_click)
+        with self:
+            ui.html(f'<i class="bi bi-{icon} rdm-icon-{color}"></i>')

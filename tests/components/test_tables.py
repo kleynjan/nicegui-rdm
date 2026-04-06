@@ -64,7 +64,7 @@ async def test_abt_renders_row_data(user: User):
 
 
 async def test_abt_shows_edit_icon_button(user: User):
-    """Default action_style='icon' shows edit icon button with mark."""
+    """Edit icon button renders with action mark."""
     store = DictStore()
 
     @ui.page('/')
@@ -79,12 +79,12 @@ async def test_abt_shows_edit_icon_button(user: User):
         await table.build()
 
     await user.open('/')
-    # Edit button should be findable by mark
-    user.find(marker='rdm-edit-0')
+    # Edit button at index 0 (first in _all_actions), row id 0
+    user.find(marker='rdm-action-0-0')
 
 
 async def test_abt_shows_delete_icon_button(user: User):
-    """Default shows delete icon button with mark."""
+    """Delete icon button renders with action mark."""
     store = DictStore()
 
     @ui.page('/')
@@ -99,7 +99,8 @@ async def test_abt_shows_delete_icon_button(user: User):
         await table.build()
 
     await user.open('/')
-    user.find(marker='rdm-delete-0')
+    # Delete button at index 1 (after edit in _all_actions), row id 0
+    user.find(marker='rdm-action-1-0')
 
 
 async def test_abt_calls_on_edit(user: User):
@@ -120,10 +121,11 @@ async def test_abt_calls_on_edit(user: User):
         await table.build()
 
     await user.open('/')
-    user.find(marker='rdm-edit-0').click()
+    # Edit at index 0, row ids 0 and 1
+    user.find(marker='rdm-action-0-0').click()
     await asyncio.sleep(0.1)
     assert edit_log == ['Alice']
-    user.find(marker='rdm-edit-1').click()
+    user.find(marker='rdm-action-0-1').click()
     await asyncio.sleep(0.1)
     assert edit_log == ['Alice', 'Bob']
 
@@ -145,7 +147,8 @@ async def test_abt_calls_on_delete(user: User):
         await table.build()
 
     await user.open('/')
-    user.find(marker='rdm-delete-0').click()
+    # Delete at index 1 (after edit), row id 0
+    user.find(marker='rdm-action-1-0').click()
     await asyncio.sleep(0.1)
     assert delete_log == ['Alice']
 
@@ -227,7 +230,7 @@ async def test_abt_custom_actions(user: User):
             config=TableConfig(
                 columns=[Column(name='name', label='Name')],
                 custom_actions=[
-                    RowAction(label='Send', variant='primary', callback=lambda row: action_log.append(row['name'])),
+                    RowAction(label='Send', color='primary', callback=lambda row: action_log.append(row['name'])),
                 ],
                 show_edit_button=False,
                 show_delete_button=False,

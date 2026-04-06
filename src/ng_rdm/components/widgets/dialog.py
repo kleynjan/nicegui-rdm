@@ -93,7 +93,8 @@ class Dialog:
         self._body_div.__enter__()
 
         # Keyboard handler for ESC - created once, toggled active on open/close
-        self._keyboard = ui.keyboard(on_key=self._on_key, active=False)
+        # ignore=[] ensures it works even when an input/button is focused
+        self._keyboard = ui.keyboard(on_key=self._on_key, active=False, ignore=[])
 
         return self
 
@@ -109,7 +110,7 @@ class Dialog:
 
     def _on_key(self, e):
         """Handle keyboard events - ESC to close."""
-        if e.action.keydown and e.key.name == 'Escape' and self.state['is_open']:
+        if e.action.keydown and e.key == 'Escape' and self.state.get('is_open'):
             self.close()
 
     @contextmanager

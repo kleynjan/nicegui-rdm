@@ -17,29 +17,45 @@ from ..store import StoreEvent
 
 @dataclass
 class RowAction:
-    """Configuration for a custom row action button.
+    """Configuration for a row action button.
 
-    Can render as icon button or text button depending on fields and table's action_style.
-
-    Resolution logic:
-    - If variant is set, use that style
-    - Otherwise, follow table's action_style:
-      - action_style="icon": use icon if provided, else fall back to label
-      - action_style="button": use label if provided, else fall back to icon with tooltip
+    Renders as icon if `icon` is provided, otherwise as text button using `label`.
 
     Args:
-        icon: Bootstrap icon name (e.g., "send", "eye", "trash")
-        label: Text for button (used in button mode)
+        icon: Bootstrap icon name (e.g., "send", "eye", "trash") — if set, renders as icon
+        label: Text for button (used when no icon)
         tooltip: Hover tooltip text
         callback: Async or sync function called with row dict when clicked
-        variant: Override style ("icon", "primary", "secondary", "danger")
-                 If None, follows table's action_style
+        color: Button/icon color: "primary", "secondary", "danger"
     """
-    icon: str | None = None                                  # Icon name (e.g., "send", "visibility")
-    label: str | None = None                                 # Button text (for button style)
+    icon: str | None = None                                  # Icon name — if set, renders as icon
+    label: str | None = None                                 # Button text (used when no icon)
     tooltip: str = ""                                        # Hover tooltip text
     callback: Callable[[dict], Awaitable[None] | None] | None = None  # Called with row data
-    variant: str | None = None                               # "icon", "primary", "secondary", "danger", or None
+    color: str = "primary"                                   # "primary", "secondary", "danger", etc.
+
+    def render(self, row: dict, mark: str = "") -> None:
+        """Render this action for the given row."""
+        from .widgets.button import Button, Icon
+
+        def handler(_, r=row):
+            return self._invoke(r)
+
+        if self.icon:
+            el = Icon(self.icon, on_click=handler, color=self.color, tooltip=self.tooltip or None)
+        elif self.label:
+            el = Button(self.label, color=self.color, on_click=handler).classes("rdm-btn-sm")
+        else:
+            return  # Nothing to render
+        if mark:
+            el.mark(mark)
+
+    async def _invoke(self, row: dict):
+        """Invoke callback with row data, handling async."""
+        if self.callback:
+            result = self.callback(row)
+            if result is not None and hasattr(result, '__await__'):
+                await result
 
 
 @dataclass

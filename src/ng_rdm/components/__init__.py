@@ -26,13 +26,30 @@ from .widgets import (
     ActionButtonTable, ListTable, SelectionTable,
     Dialog, Tabs, DetailCard, EditCard, EditDialog,
     ViewStack, WizardStep, StepWizard,
-    Button, IconButton, RdmLayoutElement, Row, Col, Separator,
+    Button, Icon, IconButton, RdmLayoutElement, Row, Col, Separator,
 )
 
+show_refresh_css = """
+/* show refreshable components with a green border animation when they update */
+.show-refresh {
+  border: 2px solid green;
+  animation: borderAnimation 2s forwards;
+}
+@keyframes borderAnimation {
+  0% {
+    border: 2px solid green;
+  }
+  100% {
+    border: 2px solid white;
+  }
+}
+"""
 
 def rdm_init(
     custom_translations: dict[str, dict[str, str]] | None = None,
     extra_css: str | None = None,
+    show_refresh_transitions: bool = False,
+    show_store_event_log: bool = False,
 ):
     """Initialize RDM module - styles and optional customizations.
 
@@ -43,6 +60,8 @@ def rdm_init(
         custom_translations: Optional dict to update/extend built-in translations.
                              Structure: {'lang_code': {'key': 'translation', ...}, ...}
         extra_css: Optional CSS string | file to add (in addition to ng_rdm.css).
+        show_refresh_transitions: If True, adds a CSS animation to highlight refreshable components when they update.
+        show_store_event_log: If True, enables a debug page at /rdm-debug to visualize store events.
     """
     if custom_translations:
         set_translations(custom_translations)
@@ -56,14 +75,16 @@ def rdm_init(
     css_path = Path(__file__).parent / 'ng_rdm.css'
     ui.add_css(css_path)
 
+    if show_refresh_transitions:
+        ui.add_css(show_refresh_css)
+
     # Extra CSS (after native styles)
     if extra_css:
         ui.add_css(extra_css)
 
-    ui.input.default_props("color=None")
-    # enable this to add an observer/event log at /rdm-debug
-    from ..debug import enable_debug_page
-    enable_debug_page()  # Optional: enable debug page for event stream visualization
+    if show_store_event_log:
+        from ..debug import enable_debug_page
+        enable_debug_page()  # Optional: enable debug page for event stream visualization
 
 
 __all__ = [
@@ -84,6 +105,7 @@ __all__ = [
 
     # Core components
     'Button',
+    'Icon',
     'IconButton',
     'ActionButtonTable',
     'ListTable',

@@ -105,24 +105,6 @@
     box-sizing: inherit;
 }
 
-/* ---------------------------------------------------
-enable this block to see refresh animated
-*/
-
-.show-refresh {
-  border: 2px solid green;
-  animation: borderAnimation 2s forwards;
-}
-@keyframes borderAnimation {
-  0% {
-    border: 2px solid green;
-  }
-  100% {
-    border: 2px solid white;
-  }
-}
-/*
------------------------------------------------------- */
 
 /* =============================================================================
    Buttons (native <button> elements)
@@ -157,6 +139,31 @@ enable this block to see refresh animated
 .rdm-btn:disabled {
     cursor: not-allowed;
     opacity: 0.5;
+}
+
+/* Icon colors */
+.rdm-icon-default {
+    color: var(--rdm-text);
+}
+
+.rdm-icon-primary {
+    color: var(--rdm-primary);
+}
+
+.rdm-icon-danger {
+    color: var(--rdm-danger);
+}
+
+.rdm-icon-secondary {
+    color: var(--rdm-text-secondary);
+}
+
+.rdm-icon-warning {
+    color: var(--rdm-warning);
+}
+
+.rdm-icon-success {
+    color: var(--rdm-success);
 }
 
 /* Primary Button */
@@ -350,7 +357,7 @@ enable this block to see refresh animated
 
 .rdm-table .rdm-actions {
     display: flex;
-    gap: var(--rdm-spacing-xs);
+    gap: var(--rdm-spacing-md);
     justify-content: flex-end;
 }
 
@@ -1010,7 +1017,8 @@ enable this block to see refresh animated
     }
     
     /* Icon-only button */
-    .q-btn.rdm-btn-icon {
+    /* .q-btn.rdm-btn-icon,
+    .q-icon.rdm-btn-icon {
         width: var(--rdm-btn-height) !important;
         height: var(--rdm-btn-height) !important;
         min-height: var(--rdm-btn-height) !important;
@@ -1018,14 +1026,17 @@ enable this block to see refresh animated
         background: transparent !important;
         border-color: transparent !important;
         color: var(--rdm-text-secondary) !important;
+        cursor: pointer;
     }
 
-    .q-btn.rdm-btn-icon:hover:not(:disabled) {
+    .q-btn.rdm-btn-icon:hover:not(:disabled),
+    .q-icon.rdm-btn-icon:hover:not(:disabled) {
         color: var(--rdm-primary) !important;
         background-color: var(--rdm-bg-hover) !important;
-    }
+    } */
 
-    .q-btn.rdm-btn-icon i {
+    .q-btn.rdm-btn-icon i,
+    .q-icon.rdm-btn-icon i {
         font-size: 24px;
     }
     
@@ -1039,26 +1050,45 @@ enable this block to see refresh animated
        Quasar Input Overrides
        ========================================================================== */
     
+    
     /* Style Quasar inputs to match our design */
-    .rdm-component .q-field--outlined .q-field__control {
-        border-radius: var(--rdm-radius);
-    }
-    
-    .rdm-component .q-field--outlined .q-field__control:before {
-        border-color: var(--rdm-border);
-    }
-    
-    .rdm-component .q-field--outlined .q-field__control:hover:before {
-        border-color: var(--rdm-border);
-    }
-    
-    .rdm-component .q-field--outlined.q-field--focused .q-field__control:before {
-        border-color: var(--rdm-primary);
-    }
-    
-    /* Dense inputs */
-    .rdm-component .q-field--dense .q-field__control,
-    .rdm-component .q-field--dense .q-field__marginal {
-        height: var(--rdm-input-height);
+    .rdm-component {
+
+        .q-field--outlined .q-field__control {
+            border-radius: var(--rdm-radius);
+        }
+        
+        .q-field--outlined .q-field__control:before {
+            border-color: var(--rdm-border);
+        }
+        
+        .q-field--outlined .q-field__control:hover:before {
+            border-color: var(--rdm-border);
+        }
+        
+        .q-field--outlined.q-field--focused .q-field__control:before {
+            border-color: var(--rdm-primary);
+        }
+        
+        /* Dense inputs */
+        .q-field--dense .q-field__control,
+        .q-field--dense .q-field__marginal {
+            height: var(--rdm-input-height);
+        }
+
+        .q-field__label {
+            color: var(--rdm-primary);
+        }
+
+        /* Normal focus - primary color */
+        .q-field--standard.q-field--focused .q-field__control::after,
+        .q-field--standard.q-field--highlighted .q-field__control::after {
+            background-color: var(--rdm-primary) !important;
+        }
+
+        /* Error state overrides (more specific, so wins over focus) */
+        .q-field--standard.q-field--error .q-field__control::after {
+            background-color: var(--rdm-danger) !important;
+        }
     }
 }

@@ -22,6 +22,7 @@ from typing import Callable, Awaitable, Any
 
 from nicegui import ui
 
+from .button import Button
 from .dialog import Dialog
 from .layout import Row
 from ..i18n import _
@@ -138,20 +139,16 @@ class StepWizard:
                 with Row(classes='rdm-edit-actions'):
                     # Next/Complete button
                     if self.is_last_step:
-                        ui.button(self.complete_label,
-                                  on_click=self._handle_next).classes("rdm-btn-primary")
+                        Button(self.complete_label, on_click=self._handle_next)
                     else:
-                        ui.button(step.next_label,
-                                  on_click=self._handle_next).classes("rdm-btn-primary")
+                        Button(step.next_label, on_click=self._handle_next)
 
                     # Back button (not on first step)
                     if not self.is_first_step:
-                        ui.button(step.back_label,
-                                  on_click=self._handle_back).classes("rdm-btn-secondary")
+                        Button(step.back_label, on_click=self._handle_back)
 
                     # Cancel button
-                    ui.button(self.cancel_label,
-                              on_click=self._handle_cancel).classes("rdm-btn-secondary")
+                    Button(self.cancel_label, on_click=self._handle_cancel, color="secondary")
 
             self._content = _content
             await _content()

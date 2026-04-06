@@ -219,7 +219,7 @@ async def section_action_button_table(product_store, category_store):
             columns=product_cols,
             add_button="+ Add Product",
             custom_actions=[
-                RowAction(icon="eye", tooltip="Inspect", callback=lambda row: ui.notify(str(row))),
+                RowAction(icon="eye", tooltip="Inspect", color="default", callback=lambda row: ui.notify(str(row))),
             ],
         ),
         on_add=dialog.open_for_new,
@@ -253,31 +253,25 @@ async def section_selection_table(selection_state, product_store):
     ui.markdown("**Use case:** Multi-select, eg for bulk operations.")
 
     def render_toolbar():
-        # def handle_multi_select_changed():
-        #     selection_state["multi_select"] = not selection_state.get("multi_select", False)
-        #     select_button.props("disabled" if not selection_state["multi_select"] else "")
+        def handle_multi_select_change():
+            if not selection_state["multi_select"]:
+                table.clear_selection()
         Button("Select All", on_click=table.select_all).bind_enabled_from(selection_state, "multi_select")
         Button("Clear", color="secondary", on_click=table.clear_selection)
-        ui.checkbox("Multi-select").bind_value(selection_state, "multi_select")
+        ui.checkbox("Multi-select", on_change=handle_multi_select_change).bind_value(selection_state, "multi_select")
         ui.checkbox("Show checkboxes", on_change=table.build.refresh).bind_value(selection_state, "show_checkboxes")
 
     table = SelectionTable(
         state=selection_state,
         data_source=product_store,
-        config=TableConfig(
-            columns=product_cols,
-            show_add_button=False,
-            show_edit_button=False,
-            show_delete_button=False,
-        ),
+        config=TableConfig(columns=product_cols, show_add_button=False),
         show_checkboxes=True,
         multi_select=False,
         render_toolbar=render_toolbar,
     )
     await table.build_with_toolbars()
 
-    count_label = ui.label("").classes("demo-caption")
-    count_label.bind_text_from(
+    ui.label("").classes("demo-caption").bind_text_from(
         selection_state, "selected_ids",
         backward=lambda ids: f"{len(ids)} selected" if ids else "None selected",
     )
@@ -588,7 +582,7 @@ async def main(client: Client):
     def _section_card(anchor: str):
         return html.div().classes(f"catalog-section catalog-section-{anchor}").props(f'id={anchor}')
 
-    rdm_init(extra_css="examples.css")
+    rdm_init(extra_css="examples.css", show_refresh_transitions=True)
     set_language("en_gb")
     await client.connected()
 
@@ -606,8 +600,9 @@ async def main(client: Client):
 
     with Col(classes="demo-content-column"):
 
-        ui.label("ng_rdm components showcase").style("font-size: 2rem")
-        ui.label("No Quasar tables and dialogs, just lovely old html and css.").style("margin-bottom: 1rem")
+        ui.label("Taming Quasar: ng_rdm components showcase").style("font-size: 2rem")
+        ui.label("(1) Build composite widgets (like tables) with straight html & css")
+        ui.label("(2) For the rest: restyle the hell out of it").style("margin-bottom: 1rem")
 
         with _section_card("toc"):
             await section_toc_table()

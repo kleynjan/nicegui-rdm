@@ -72,7 +72,8 @@ customer_form_config = FormConfig(
 
 @ui.page("/")
 async def index(client: Client):
-    rdm_init(extra_css="examples.css")
+
+    rdm_init(extra_css="examples.css", show_refresh_transitions=True, show_store_event_log=True)
     await seed_store()
     await client.connected()
 
