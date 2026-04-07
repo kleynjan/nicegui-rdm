@@ -83,9 +83,10 @@ class Dialog:
 
         # Header section (if title provided)
         if self.title:
+            self.state.setdefault("title", self.title)
             self._header_div = html.div().classes('rdm-dialog-header')
             with self._header_div:
-                ui.label(self.title).classes('rdm-dialog-title')
+                ui.label().classes('rdm-dialog-title').bind_text_from(self.state, 'title')
                 IconButton("x-lg", on_click=self.close).classes("rdm-dialog-close")
 
         # Body section for content

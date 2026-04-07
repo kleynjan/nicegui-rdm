@@ -300,8 +300,8 @@ def section_dialog(dialog):
     ui.label("Dialog").classes("demo-section-heading")
     ui.markdown("**Use case:** Confirmations, focused interactions.")
 
-    with Dialog(state=dialog) as dlg:
-        ui.label("Confirm Action").classes("demo-subtitle")
+    with Dialog(state=dialog, title="Confirm Action") as dlg:
+        # ui.label("Confirm Action").classes("rdm-dialog-title")
         ui.label("Are you sure you want to proceed?")
         with dlg.actions():
             Button("Confirm", on_click=dlg.close)
@@ -514,17 +514,18 @@ class HighlightTable(ObservableRdmComponent):
     @ui.refreshable_method
     async def build(self):
         await self.load_data()
-        with html.table().classes("rdm-table"):
-            with html.thead():
-                with html.tr():
-                    for col in ["Title", "Priority"]:
-                        html.th(col)
-            with html.tbody():
-                for row in self.data:
-                    css = "rdm-selected" if row.get(self.highlight_field) in self.highlight_values else ""
-                    with html.tr().classes(css):
-                        html.td(row.get("title", ""))
-                        html.td(row.get("priority", ""))
+        with html.div().classes("rdm-component show-refresh rdm-table-card"):
+            with html.table().classes("rdm-table"):
+                with html.thead():
+                    with html.tr():
+                        for col in ["Title", "Priority"]:
+                            html.th(col)
+                with html.tbody():
+                    for row in self.data:
+                        css = "rdm-selected" if row.get(self.highlight_field) in self.highlight_values else ""
+                        with html.tr().classes(css):
+                            html.td(row.get("title", ""))
+                            html.td(row.get("priority", ""))
 
 async def section_custom_component(highlight):
     ui.label("Custom Component (ObservableRdmComponent)").classes("demo-section-heading")

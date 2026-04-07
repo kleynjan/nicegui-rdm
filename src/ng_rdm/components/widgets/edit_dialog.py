@@ -10,7 +10,7 @@ from nicegui import ui
 
 from ..i18n import _
 from ..base import RdmComponent, FormConfig
-from .button import Button, IconButton
+from .button import Button
 from .dialog import Dialog
 from ..fields import build_form_field
 from ..protocol import RdmDataSource
@@ -60,6 +60,12 @@ class EditDialog(RdmComponent):
         self.state["form"] = self._init_form_state(self.config.columns, item)
         self._show()
 
+    def _get_title(self) -> str:
+        fc = self.config
+        return (
+            fc.title_edit if not self.is_new else fc.title_add
+        ) or (_("Edit") if not self.is_new else _("Add"))
+
     def _show(self):
         """Show the dialog, creating it lazily on first use."""
         if self._dlg is None:
@@ -67,25 +73,15 @@ class EditDialog(RdmComponent):
         else:
             self._dialog_content.refresh()
         assert self._dlg is not None
+        self.state["dialog"]["title"] = self._get_title()
         self._dlg.open()
 
     def _build_dialog(self):
         """Build the dialog structure once."""
         fc = self.config
-        with Dialog(state=self.state["dialog"], dialog_class=fc.dialog_class or "") as self._dlg:
+        with Dialog(state=self.state["dialog"], title=self._get_title(), dialog_class=fc.dialog_class or "") as self._dlg:
             @ui.refreshable
             def _content():
-                title = (
-                    fc.title_edit if not self.is_new else fc.title_add
-                ) or (_("Edit") if not self.is_new else _("Add"))
-                assert self._dlg is not None
-
-                # Header
-                from nicegui import html
-                with html.div().classes("rdm-dialog-header"):
-                    ui.label(title).classes("rdm-dialog-title")
-                    IconButton("x-lg", on_click=self._dlg.close).classes("rdm-dialog-close")
-
                 # Form fields
                 for col in fc.columns:
                     build_form_field(col, self.state["form"])

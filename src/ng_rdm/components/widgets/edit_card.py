@@ -72,8 +72,8 @@ class EditCard(RdmComponent):
             self.on_cancel()
 
     async def build(self):
-        with html.div().classes("rdm-card rdm-edit-card rdm-component"):
-            with html.div().classes("rdm-card-body"):
+        with html.div().classes("rdm-edit-card rdm-component"):
+            with html.div().classes("rdm-edit-body"):
                 for col in self.config.columns:
                     build_form_field(col, self.state["form"])
 

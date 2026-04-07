@@ -73,6 +73,8 @@ def rdm_init(
     css_path = Path(__file__).parent / 'ng_rdm.css'
     ui.add_css(css_path)
 
+    ui.colors(primary="#3b82f6")  # sync with var(--rdm-primary) in css
+
     if custom_translations:
         set_translations(custom_translations)
 

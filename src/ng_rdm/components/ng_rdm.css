@@ -1,16 +1,11 @@
 /* =============================================================================
    nicecrud.css - Design System for NiceGUI CRUD Components
    
-   Inspired by Element UI and Bootstrap - clean, professional, light with subtle shadows.
-   Uses native HTML elements where possible.
-   ============================================================================= */
-
-/* =============================================================================
-   CSS Custom Properties (Design Tokens)
+   Inspired by Element UI and Bootstrap - clean, professional, low noise
    ============================================================================= */
 
 :root {
-    /* Primary Colors - matching edupersona blue */
+    /* Primary Colors */
     --rdm-primary: #3b82f6;
     --rdm-primary-hover: #60a5fa;
     --rdm-primary-active: #2563eb;
@@ -46,7 +41,7 @@
     --rdm-bg-selected: #ecf5ff;
     
     /* Typography */
-    --rdm-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --rdm-font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --rdm-font-size-xs: 12px;
     --rdm-font-size-sm: 14px;
     --rdm-font-size: 18px;
@@ -71,13 +66,13 @@
     --rdm-radius-xl: 8px;
     
     /* Shadows */
-    --rdm-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+    /* --rdm-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
     --rdm-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-    --rdm-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
+    --rdm-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12); */
     
     /* Transitions */
-    --rdm-transition: all 0.2s ease;
-    --rdm-transition-fast: all 0.1s ease;
+    /* --rdm-transition: all 0.2s ease;
+    --rdm-transition-fast: all 0.1s ease; */
     
     /* Component Sizes */
     --rdm-row-height: 52px;
@@ -105,160 +100,6 @@
     box-sizing: inherit;
 }
 
-
-/* =============================================================================
-   Buttons (native <button> elements)
-   Used by: tabs.py (rdm-tab), test_buttons.py (visual reference).
-   Production components use Button/IconButton (q-btn) — see @layer quasar_overrides.
-   ============================================================================= */
-
-.rdm-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--rdm-spacing-xs);
-    height: var(--rdm-btn-height);
-    padding: 0 var(--rdm-spacing-lg);
-    font-family: var(--rdm-font-family);
-    font-size: var(--rdm-font-size);
-    font-weight: var(--rdm-font-weight-medium);
-    line-height: 1;
-    text-decoration: none;
-    white-space: nowrap;
-    cursor: pointer;
-    border: 1px solid transparent;
-    border-radius: var(--rdm-radius);
-    transition: var(--rdm-transition);
-    outline: none;
-}
-
-.rdm-btn:focus-visible {
-    box-shadow: 0 0 0 2px var(--rdm-primary-light);
-}
-
-.rdm-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-}
-
-/* Icon colors */
-.rdm-icon-default {
-    color: var(--rdm-text);
-}
-
-.rdm-icon-primary {
-    color: var(--rdm-primary);
-}
-
-.rdm-icon-danger {
-    color: var(--rdm-danger);
-}
-
-.rdm-icon-secondary {
-    color: var(--rdm-text-secondary);
-}
-
-.rdm-icon-warning {
-    color: var(--rdm-warning);
-}
-
-.rdm-icon-success {
-    color: var(--rdm-success);
-}
-
-/* Primary Button */
-.rdm-btn-primary {
-    background-color: var(--rdm-primary);
-    border-color: var(--rdm-primary);
-    color: var(--rdm-text-white);
-}
-
-.rdm-btn-primary:hover:not(:disabled) {
-    background-color: var(--rdm-primary-hover);
-    border-color: var(--rdm-primary-hover);
-}
-
-.rdm-btn-primary:active:not(:disabled) {
-    background-color: var(--rdm-primary-active);
-    border-color: var(--rdm-primary-active);
-}
-
-/* Secondary Button (Default) */
-.rdm-btn-secondary,
-.rdm-btn-default {
-    background-color: var(--rdm-bg);
-    border-color: var(--rdm-border);
-    color: var(--rdm-text-regular);
-}
-
-.rdm-btn-secondary:hover:not(:disabled),
-.rdm-btn-default:hover:not(:disabled) {
-    background-color: var(--rdm-bg);
-    border-color: var(--rdm-primary);
-    color: var(--rdm-primary);
-}
-
-.rdm-btn-secondary:active:not(:disabled),
-.rdm-btn-default:active:not(:disabled) {
-    border-color: var(--rdm-primary-active);
-    color: var(--rdm-primary-active);
-}
-
-/* Success Button */
-.rdm-btn-success {
-    background-color: var(--rdm-success);
-    border-color: var(--rdm-success);
-    color: var(--rdm-text-white);
-}
-
-.rdm-btn-success:hover:not(:disabled) {
-    background-color: #85ce61;
-    border-color: #85ce61;
-}
-
-/* Danger Button */
-.rdm-btn-danger {
-    background-color: var(--rdm-danger);
-    border-color: var(--rdm-danger);
-    color: var(--rdm-text-white);
-}
-
-.rdm-btn-danger:hover:not(:disabled) {
-    background-color: #f78989;
-    border-color: #f78989;
-}
-
-/* Warning Button */
-.rdm-btn-warning {
-    background-color: var(--rdm-warning);
-    border-color: var(--rdm-warning);
-    color: var(--rdm-text-white);
-}
-
-.rdm-btn-warning:hover:not(:disabled) {
-    background-color: #ebb563;
-    border-color: #ebb563;
-}
-
-/* Text Button (no background) */
-.rdm-btn-text {
-    background-color: transparent;
-    border-color: transparent;
-    color: var(--rdm-primary);
-    padding: 0 var(--rdm-spacing-sm);
-}
-
-.rdm-btn-text:hover:not(:disabled) {
-    background-color: var(--rdm-primary-light);
-}
-
-/* Small Button */
-.rdm-btn-sm {
-    height: var(--rdm-btn-height-sm);
-    padding: 0 var(--rdm-spacing-md);
-    font-size: var(--rdm-font-size-sm);
-}
-
 /* Icon Button */
 .rdm-btn-icon {
     width: var(--rdm-btn-height);
@@ -277,222 +118,96 @@
     font-size: 24px;
 }
 
-/* =============================================================================
-   Tables
-   ============================================================================= */
-
-.rdm-table {
-    width: 100%;
-    border-collapse: collapse;
-    border: 1px solid var(--rdm-border-light);
-    background-color: var(--rdm-bg);
-    font-size: var(--rdm-font-size);
-}
-
-.rdm-table th,
-.rdm-table td {
-    padding: var(--rdm-spacing-md) var(--rdm-spacing-lg);
-    text-align: left;
-    border-bottom: 1px solid var(--rdm-border-light);
-}
-
-.rdm-table th {
-    background-color: var(--rdm-bg-page);
-    color: var(--rdm-text-secondary);
-    font-weight: var(--rdm-font-weight-medium);
-    font-size: var(--rdm-font-size);
-    text-transform: none;
-}
-
-.rdm-table tbody tr {
-    transition: var(--rdm-transition-fast);
-}
-
-.rdm-table tbody tr:hover {
-    background-color: var(--rdm-bg-hover);
-}
-
-.rdm-table tbody tr.rdm-selected {
-    background-color: var(--rdm-bg-selected);
-}
-
-/* Clickable rows */
-.rdm-table tbody tr.rdm-clickable {
-    cursor: pointer;
-}
-
-.rdm-table tbody tr.rdm-clickable:hover {
-    background-color: var(--rdm-bg-hover);
-}
-
-/* Table with card wrapper */
 .rdm-table-card {
     width: 100%;
     background-color: var(--rdm-bg);
     border: 1px solid var(--rdm-border-light);
     border-radius: var(--rdm-radius);
     overflow: hidden;
+
+    .rdm-table {
+        width: 100%;
+        margin: 0;
+        border-collapse: collapse;
+        border: 1px solid var(--rdm-border-light);
+        background-color: var(--rdm-bg);
+        font-size: var(--rdm-font-size);
+
+        th, td {
+            padding: var(--rdm-spacing-md) var(--rdm-spacing-lg);
+            text-align: left;
+            border-bottom: 1px solid var(--rdm-border-light);
+        }
+
+        th:first-child, td:first-child {
+           padding-left: var(--rdm-spacing-xl);
+        }
+
+        th:last-child, td:last-child {
+            padding-right: var(--rdm-spacing-xl);
+        }
+
+        th {
+            background-color: var(--rdm-bg-page);
+            color: var(--rdm-text-secondary);
+            font-weight: var(--rdm-font-weight-medium);
+            font-size: var(--rdm-font-size);
+            text-transform: none;
+        }
+
+        tbody {
+            tr:hover {
+                background-color: var(--rdm-bg-hover);
+            }
+            tr.rdm-selected {
+                background-color: var(--rdm-bg-selected);
+            }
+            tr.rdm-clickable {
+                cursor: pointer;
+            }
+            tr.rdm-clickable:hover {
+                background-color: var(--rdm-bg-hover);
+            }
+        }
+
+        .rdm-col-actions {
+            width: 1%;
+            white-space: nowrap;
+            text-align: right;
+        }
+        .rdm-actions {
+            display: flex;
+            gap: var(--rdm-spacing-md);
+            justify-content: flex-end;
+        }
+
+        .rdm-link {
+            color: var(--rdm-primary);
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .rdm-link:hover {
+            color: var(--rdm-primary-hover);
+            text-decoration: underline;
+        }
+    }
 }
 
-.rdm-table-card .rdm-table {
-    margin: 0;
-}
-
-.rdm-table-card .rdm-table th:first-child,
-.rdm-table-card .rdm-table td:first-child {
-    padding-left: var(--rdm-spacing-xl);
-}
-
-.rdm-table-card .rdm-table th:last-child,
-.rdm-table-card .rdm-table td:last-child {
-    padding-right: var(--rdm-spacing-xl);
-}
-
-/* Actions column */
-.rdm-table .rdm-col-actions {
-    width: 1%;
-    white-space: nowrap;
-    text-align: right;
-}
-
-.rdm-table .rdm-actions {
+/* this is a sibling to .rdm-table-card */
+.rdm-table-toolbar {
     display: flex;
-    gap: var(--rdm-spacing-md);
-    justify-content: flex-end;
+    gap: var(--rdm-spacing-sm);
+    padding: var(--rdm-spacing-lg) 0;
 }
 
-/* Empty state */
-.rdm-table-empty {
+/* this is a sibling/alternative to .rdm-table-card */
+.rdm-empty {
     padding: var(--rdm-spacing-xl);
     text-align: center;
     color: var(--rdm-text-secondary);
-}
-
-/* Link in table cell */
-.rdm-table .rdm-link {
-    color: var(--rdm-primary);
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.rdm-table .rdm-link:hover {
-    color: var(--rdm-primary-hover);
-    text-decoration: underline;
-}
-
-/* =============================================================================
-   Cards
-   ============================================================================= */
-
-.rdm-card {
-    width: 100%;
-    background-color: var(--rdm-bg);
-    border: 1px solid var(--rdm-border-light);
-    border-radius: var(--rdm-radius);
-    box-shadow: var(--rdm-shadow-sm);
-}
-
-.rdm-card-header {
-    padding: var(--rdm-spacing-lg) var(--rdm-spacing-xl);
-    border-bottom: 1px solid var(--rdm-border-light);
-}
-
-.rdm-card-title {
-    margin: 0;
-    font-size: var(--rdm-font-size-lg);
-    font-weight: var(--rdm-font-weight-bold);
-    color: var(--rdm-text);
-}
-
-/* .rdm-card-body {
-    padding: var(--rdm-spacing-xl);
-} */
-
-.rdm-card-footer {
-    padding: var(--rdm-spacing-lg) var(--rdm-spacing-xl);
-    border-top: 1px solid var(--rdm-border-light);
-    background-color: var(--rdm-bg-page);
-}
-
-/* =============================================================================
-   Form Inputs
-   ============================================================================= */
-
-.rdm-input {
-    width: 100%;
-    height: var(--rdm-input-height);
-    padding: 0 var(--rdm-spacing-md);
-    font-family: var(--rdm-font-family);
-    font-size: var(--rdm-font-size);
-    color: var(--rdm-text);
-    background-color: var(--rdm-bg);
-    border: 1px solid var(--rdm-border);
-    border-radius: var(--rdm-radius);
-    outline: none;
-    transition: var(--rdm-transition);
-}
-
-.rdm-input::placeholder {
-    color: var(--rdm-text-placeholder);
-}
-
-.rdm-input:hover:not(:disabled) {
-    border-color: var(--rdm-border);
-}
-
-.rdm-input:focus {
-    border-color: var(--rdm-primary);
-    box-shadow: 0 0 0 2px var(--rdm-primary-light);
-}
-
-.rdm-input:disabled {
-    background-color: var(--rdm-bg-page);
-    cursor: not-allowed;
-}
-
-.rdm-input.rdm-error {
-    border-color: var(--rdm-danger);
-}
-
-.rdm-input.rdm-error:focus {
-    box-shadow: 0 0 0 2px var(--rdm-danger-light);
-}
-
-/* Textarea */
-.rdm-textarea {
-    min-height: 80px;
-    padding: var(--rdm-spacing-sm) var(--rdm-spacing-md);
-    resize: vertical;
-}
-
-/* Form Group */
-.rdm-form-group {
-    margin-bottom: var(--rdm-spacing-lg);
-}
-
-.rdm-form-label {
-    display: block;
-    margin-bottom: var(--rdm-spacing-xs);
-    font-size: var(--rdm-font-size-sm);
-    font-weight: var(--rdm-font-weight-medium);
-    color: var(--rdm-text-regular);
-}
-
-.rdm-form-label.rdm-required::after {
-    content: " *";
-    color: var(--rdm-danger);
-}
-
-.rdm-form-hint {
-    margin-top: var(--rdm-spacing-xs);
-    font-size: var(--rdm-font-size-xs);
-    color: var(--rdm-text-secondary);
-}
-
-.rdm-form-error {
-    margin-top: var(--rdm-spacing-xs);
-    font-size: var(--rdm-font-size-xs);
-    color: var(--rdm-danger);
+    .rdm-empty-text {
+        font-size: var(--rdm-font-size);
+    }
 }
 
 /* =============================================================================
@@ -511,70 +226,58 @@
     align-items: flex-start;
     justify-content: center;
     padding-top: 10vh;
-}
 
-.rdm-dialog {
-    background-color: var(--rdm-bg);
-    border-radius: var(--rdm-radius-lg);
-    box-shadow: var(--rdm-shadow-lg);
-    width: 100%;
-    max-width: 500px;
-    max-height: calc(100vh - 20vh);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
+    .rdm-dialog {
+        background-color: var(--rdm-bg);
+        border-radius: var(--rdm-radius-lg);
+        width: 100%;
+        max-width: 500px;
+        max-height: calc(100vh - 20vh);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
 
-.rdm-dialog-lg {
-    max-width: 800px;
-}
+        .rdm-dialog-header {
+            border-bottom: 1px solid var(--rdm-border-light);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
 
-.rdm-dialog-header {
-    padding-bottom: var(--rdm-spacing-lg);
-    border-bottom: 1px solid var(--rdm-border-light);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.rdm-dialog-title {
-    margin: 0;
-    font-size: var(--rdm-font-size-lg);
-    font-weight: var(--rdm-font-weight-bold);
-    color: var(--rdm-text);
-}
-
-.rdm-dialog-close {
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    background: none;
-    border: none;
-    border-radius: var(--rdm-radius);
-    color: var(--rdm-text-secondary);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.rdm-dialog-close:hover {
-    background-color: var(--rdm-bg-hover);
-    color: var(--rdm-text);
-}
-
-.rdm-dialog-body {
-    padding: var(--rdm-spacing-xl);
-    overflow-y: auto;
-    flex: 1;
-}
-
-.rdm-dialog-footer {
-    padding: var(--rdm-spacing-lg) var(--rdm-spacing-xl);
-    border-top: 1px solid var(--rdm-border-light);
-    display: flex;
-    gap: var(--rdm-spacing-sm);
-    /* justify-content: flex-end; */
+            .rdm-dialog-title {
+                margin: 0;
+                padding: var(--rdm-spacing-lg);
+                font-size: var(--rdm-font-size-lg);
+                font-weight: var(--rdm-font-weight-bold);
+                color: var(--rdm-text);
+            }
+            .rdm-dialog-close {
+                width: 32px;
+                margin-right: var(--rdm-spacing-lg);
+                background: none;
+                border-radius: var(--rdm-radius);
+                color: var(--rdm-text-secondary);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .rdm-dialog-close:hover {
+                background-color: var(--rdm-bg-hover);
+                color: var(--rdm-text);
+            }
+        }
+        .rdm-dialog-body {
+            padding: var(--rdm-spacing-lg);
+            overflow-y: auto;
+            flex: 1;
+        }
+        .rdm-dialog-footer {
+            /* border-top: 1px solid var(--rdm-border-light); */
+            padding: var(--rdm-spacing-lg) var(--rdm-spacing-lg);
+            display: flex;
+            gap: var(--rdm-spacing-sm);
+        }
+    }
 }
 
 /* =============================================================================
@@ -585,29 +288,26 @@
     border-bottom: 2px solid var(--rdm-border-light);
     display: flex;
     gap: 0;
-}
 
-.rdm-tab {
-    padding: var(--rdm-spacing-md) var(--rdm-spacing-xl);
-    font-size: var(--rdm-font-size);
-    font-weight: var(--rdm-font-weight-normal);
-    color: var(--rdm-text-regular);
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-    cursor: pointer;
-    transition: var(--rdm-transition);
-}
-
-.rdm-tab:hover {
-    color: var(--rdm-primary);
-}
-
-.rdm-tab.rdm-active {
-    color: var(--rdm-primary);
-    font-weight: var(--rdm-font-weight-medium);
-    border-bottom-color: var(--rdm-primary);
+    .rdm-tab {
+        padding: var(--rdm-spacing-md) var(--rdm-spacing-xl);
+        font-size: var(--rdm-font-size);
+        font-weight: var(--rdm-font-weight-normal);
+        color: var(--rdm-text-regular);
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+        cursor: pointer;
+    }
+    .rdm-tab:hover {
+        color: var(--rdm-primary);
+    }
+    .rdm-tab.rdm-active {
+        color: var(--rdm-primary);
+        font-weight: var(--rdm-font-weight-medium);
+        border-bottom-color: var(--rdm-primary);
+    }
 }
 
 .rdm-tab-panel {
@@ -616,126 +316,65 @@
 }
 
 /* =============================================================================
-   Back Navigation (ViewStack)
+   View Stack
    ============================================================================= */
 
 .rdm-view-stack-panel {
     position: relative;
     display: flex;
     flex-direction: column;
-}
 
-.rdm-view-stack-content {
-    flex: 1;
-}
-
-.rdm-back-nav {
-    /* Blue circle with white arrow, flows above detail content by default */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: var(--rdm-primary);
-    color: white;
-    /* font-size: 2rem; */
-    cursor: pointer;
-    border: none;
-    margin-bottom: var(--rdm-spacing-sm);
-
-    i {
-        -webkit-text-stroke: 1px white;
+    .rdm-view-stack-content {
+        flex: 1;
     }
 
-    &:hover:not(:disabled) {
-        background-color: var(--rdm-primary-hover);
+    .rdm-back-nav {
+        /* Blue circle with white arrow, flows above detail content by default */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: var(--rdm-primary);
+        color: white;
+        /* font-size: 2rem; */
+        cursor: pointer;
+        border: none;
+        margin-bottom: var(--rdm-spacing-sm);
+        i {
+            -webkit-text-stroke: 1px white;
+        }
+        &:hover:not(:disabled) {
+            background-color: var(--rdm-primary-hover);
+        }
     }
 }
-
-
 
 /* =============================================================================
    Detail Card
    ============================================================================= */
 
-.rdm-detail-outer {
-    width: 100%;
-    padding: 1.5rem;
-}
-
 .rdm-detail {
     width: 100%;
-}
 
-.rdm-detail-summary {
-    width: 100%;
-    border: 1px solid var(--rdm-border);
-    border-radius: var(--rdm-radius);
-    padding: var(--rdm-spacing-md) var(--rdm-spacing-lg);
-}
+    .rdm-detail-summary {
+        width: 100%;
+        border: 1px solid var(--rdm-border);
+        border-radius: var(--rdm-radius);
+        padding: var(--rdm-spacing-md) var(--rdm-spacing-lg);
 
-.rdm-detail-icon {
-    color: var(--rdm-text-secondary);
-    font-size: 2rem;
-}
-
-.rdm-detail-image {
-    width: 80px;
-    height: 80px;
-    object-fit: contain;
-    border-radius: var(--rdm-radius);
-    background-color: var(--rdm-bg-page);
-}
-
-.rdm-detail-related {
-    width: 100%;
-    margin-top: var(--rdm-spacing-lg);
-}
-
-.rdm-detail-title {
-    margin: 0;
-    font-size: 20px;
-    font-weight: var(--rdm-font-weight-bold);
-    color: var(--rdm-text);
-}
-
-.rdm-detail-subtitle {
-    margin: 0;
-    font-size: 14px;
-    color: rgb(75, 85, 99);
-}
-
-.rdm-detail-columns {
-    width: 100%;
-    display: flex;
-    gap: 4rem;
-    flex-wrap: wrap;
-}
-
-.rdm-detail-column {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    font-size: var(--rdm-font-size);
-}
-
-.rdm-detail-section-label {
-    font-size: var(--rdm-font-size-sm);
-    font-weight: var(--rdm-font-weight-bold);
-    color: rgb(107, 114, 128);
-    margin-bottom: 0.5rem;
-}
-
-.rdm-detail-text-sm {
-    font-size: var(--rdm-font-size-sm);
-}
-
-.rdm-detail-actions {
-    display: flex;
-    gap: var(--rdm-spacing-sm);
-    align-items: flex-start;
-    flex-shrink: 0;
+        .rdm-detail-actions {
+            display: flex;
+            gap: var(--rdm-spacing-sm);
+            align-items: flex-start;
+            flex-shrink: 0;
+        }
+    }
+    .rdm-detail-related {
+        width: 100%;
+        margin-top: var(--rdm-spacing-lg);
+    }
 }
 
 /* =============================================================================
@@ -743,40 +382,25 @@
    ============================================================================= */
 
 .rdm-edit-card {
-    padding: var(--rdm-spacing-xl);
-}
-
-.rdm-edit-actions {
-    display: flex;
-    gap: var(--rdm-spacing-sm);
-    margin-top: var(--rdm-spacing-xl);
-    padding-top: var(--rdm-spacing-lg);
-    border-top: 1px solid var(--rdm-border-light);
-}
-
-/* =============================================================================
-   View Stack
-   ============================================================================= */
-
-.rdm-view-stack {
+    border: 1px solid var(--rdm-border-light);
     width: 100%;
-}
+    background-color: var(--rdm-bg);
+    border-radius: var(--rdm-radius);
+    padding: var(--rdm-spacing-lg);
 
-.rdm-table-toolbar,
-.rdm-view-stack-toolbar,
-.rdm-detail-actions {
-    display: flex;
-    gap: var(--rdm-spacing-sm);
-    padding: var(--rdm-spacing-lg) 0;
+    .rdm-edit-actions {
+        /* remove border if you don't want a separator above the action buttons */
+        /* border-top: 1px solid var(--rdm-border-light); */
+        display: flex;
+        gap: var(--rdm-spacing-sm);
+        margin-top: var(--rdm-spacing-xl);
+        padding-top: var(--rdm-spacing-lg);
+    }
 }
 
 /* =============================================================================
    Confirm Dialog
    ============================================================================= */
-
-.rdm-confirm-dialog .rdm-dialog {
-    max-width: 400px;
-}
 
 .rdm-confirm-question {
     font-size: var(--rdm-font-size-lg);
@@ -791,86 +415,11 @@
 }
 
 /* =============================================================================
-   Empty State
-   ============================================================================= */
-
-.rdm-empty {
-    padding: var(--rdm-spacing-xl);
-    text-align: center;
-    color: var(--rdm-text-secondary);
-}
-
-.rdm-empty-icon {
-    font-size: 48px;
-    color: var(--rdm-border);
-    margin-bottom: var(--rdm-spacing-md);
-}
-
-.rdm-empty-text {
-    font-size: var(--rdm-font-size);
-}
-
-/* =============================================================================
-   Badges
-   ============================================================================= */
-
-.rdm-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px var(--rdm-spacing-sm);
-    font-size: var(--rdm-font-size-xs);
-    font-weight: var(--rdm-font-weight-medium);
-    border-radius: var(--rdm-radius-sm);
-    white-space: nowrap;
-}
-
-.rdm-badge-primary {
-    background-color: var(--rdm-primary-light);
-    color: var(--rdm-primary);
-}
-
-.rdm-badge-success {
-    background-color: var(--rdm-success-light);
-    color: var(--rdm-success);
-}
-
-.rdm-badge-warning {
-    background-color: var(--rdm-warning-light);
-    color: var(--rdm-warning);
-}
-
-.rdm-badge-danger {
-    background-color: var(--rdm-danger-light);
-    color: var(--rdm-danger);
-}
-
-.rdm-badge-info {
-    background-color: var(--rdm-info-light);
-    color: var(--rdm-info);
-}
-
-/* =============================================================================
    Utilities
    ============================================================================= */
 
 .rdm-text-muted {
     color: var(--rdm-text-secondary);
-}
-
-.rdm-text-primary {
-    color: var(--rdm-primary);
-}
-
-.rdm-text-success {
-    color: var(--rdm-success);
-}
-
-.rdm-text-warning {
-    color: var(--rdm-warning);
-}
-
-.rdm-text-danger {
-    color: var(--rdm-danger);
 }
 
 .rdm-separator {
@@ -900,7 +449,7 @@
         font-weight: var(--rdm-font-weight-medium);
         line-height: 1 !important;
         border-radius: var(--rdm-radius);
-        transition: var(--rdm-transition);
+        transition: var(--);
         height: var(--rdm-btn-height) !important;
         min-height: var(--rdm-btn-height) !important;
         padding: 0 var(--rdm-spacing-lg) !important;
@@ -1072,3 +621,427 @@
         }
     }
 }
+
+
+/* UNUSED — text color utilities
+.rdm-text-primary {
+    color: var(--rdm-primary);
+}
+
+.rdm-text-success {
+    color: var(--rdm-success);
+}
+
+.rdm-text-warning {
+    color: var(--rdm-warning);
+}
+
+.rdm-text-danger {
+    color: var(--rdm-danger);
+}
+*/
+
+
+/* UNUSED — rdm-empty-icon
+.rdm-empty-icon {
+    font-size: 48px;
+    color: var(--rdm-border);
+    margin-bottom: var(--rdm-spacing-md);
+}
+*/
+
+
+/* UNUSED — Badges
+.rdm-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--rdm-spacing-sm);
+    font-size: var(--rdm-font-size-xs);
+    font-weight: var(--rdm-font-weight-medium);
+    border-radius: var(--rdm-radius-sm);
+    white-space: nowrap;
+}
+
+.rdm-badge-primary {
+    background-color: var(--rdm-primary-light);
+    color: var(--rdm-primary);
+}
+
+.rdm-badge-success {
+    background-color: var(--rdm-success-light);
+    color: var(--rdm-success);
+}
+
+.rdm-badge-warning {
+    background-color: var(--rdm-warning-light);
+    color: var(--rdm-warning);
+}
+
+.rdm-badge-danger {
+    background-color: var(--rdm-danger-light);
+    color: var(--rdm-danger);
+}
+
+.rdm-badge-info {
+    background-color: var(--rdm-info-light);
+    color: var(--rdm-info);
+}
+*/
+
+
+/* =============================================================================
+   Buttons (native <button> elements)
+   Used by: tabs.py (rdm-tab), test_buttons.py (visual reference).
+   Production components use Button/IconButton (q-btn) — see @layer quasar_overrides.
+   ============================================================================= */
+
+/* UNUSED — rdm-btn base (native <button>)
+.rdm-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--rdm-spacing-xs);
+    height: var(--rdm-btn-height);
+    padding: 0 var(--rdm-spacing-lg);
+    font-family: var(--rdm-font-family);
+    font-size: var(--rdm-font-size);
+    font-weight: var(--rdm-font-weight-medium);
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: var(--rdm-radius);
+    transition: var(--rdm-transition);
+    outline: none;
+}
+
+.rdm-btn:focus-visible {
+    box-shadow: 0 0 0 2px var(--rdm-primary-light);
+}
+
+.rdm-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+*/
+
+/* UNUSED — icon colors (NOTE: used by Icon widget via inline HTML — may be false positive)
+.rdm-icon-default {
+    color: var(--rdm-text);
+}
+
+.rdm-icon-primary {
+    color: var(--rdm-primary);
+}
+
+.rdm-icon-danger {
+    color: var(--rdm-danger);
+}
+
+.rdm-icon-secondary {
+    color: var(--rdm-text-secondary);
+}
+
+.rdm-icon-warning {
+    color: var(--rdm-warning);
+}
+
+.rdm-icon-success {
+    color: var(--rdm-success);
+}
+*/
+
+/* Primary Button */
+/* .rdm-btn-primary {
+    background-color: var(--rdm-primary);
+    border-color: var(--rdm-primary);
+    color: var(--rdm-text-white);
+}
+
+.rdm-btn-primary:hover:not(:disabled) {
+    background-color: var(--rdm-primary-hover);
+    border-color: var(--rdm-primary-hover);
+}
+
+.rdm-btn-primary:active:not(:disabled) {
+    background-color: var(--rdm-primary-active);
+    border-color: var(--rdm-primary-active);
+} */
+
+/* Secondary Button (Default) */
+/* .rdm-btn-secondary,
+.rdm-btn-default {
+    background-color: var(--rdm-bg);
+    border-color: var(--rdm-border);
+    color: var(--rdm-text-regular);
+}
+
+.rdm-btn-secondary:hover:not(:disabled),
+.rdm-btn-default:hover:not(:disabled) {
+    background-color: var(--rdm-bg);
+    border-color: var(--rdm-primary);
+    color: var(--rdm-primary);
+}
+
+.rdm-btn-secondary:active:not(:disabled),
+.rdm-btn-default:active:not(:disabled) {
+    border-color: var(--rdm-primary-active);
+    color: var(--rdm-primary-active);
+} */
+
+/* Success Button */
+/* .rdm-btn-success {
+    background-color: var(--rdm-success);
+    border-color: var(--rdm-success);
+    color: var(--rdm-text-white);
+}
+
+.rdm-btn-success:hover:not(:disabled) {
+    background-color: #85ce61;
+    border-color: #85ce61;
+} */
+
+/* Danger Button */
+/* .rdm-btn-danger {
+    background-color: var(--rdm-danger);
+    border-color: var(--rdm-danger);
+    color: var(--rdm-text-white);
+}
+
+.rdm-btn-danger:hover:not(:disabled) {
+    background-color: #f78989;
+    border-color: #f78989;
+} */
+
+/* Warning Button */
+/* .rdm-btn-warning {
+    background-color: var(--rdm-warning);
+    border-color: var(--rdm-warning);
+    color: var(--rdm-text-white);
+}
+
+.rdm-btn-warning:hover:not(:disabled) {
+    background-color: #ebb563;
+    border-color: #ebb563;
+} */
+
+/* Text Button (no background) */
+/* .rdm-btn-text {
+    background-color: transparent;
+    border-color: transparent;
+    color: var(--rdm-primary);
+    padding: 0 var(--rdm-spacing-sm);
+}
+
+.rdm-btn-text:hover:not(:disabled) {
+    background-color: var(--rdm-primary-light);
+}
+ */
+/* Small Button */
+/* .rdm-btn-sm {
+    height: var(--rdm-btn-height-sm);
+    padding: 0 var(--rdm-spacing-md);
+    font-size: var(--rdm-font-size-sm);
+} */
+
+/* UNUSED — rdm-detail-outer
+.rdm-detail-outer {
+    width: 100%;
+    padding: 1.5rem;
+}
+*/
+
+
+/* UNUSED — rdm-table-empty
+.rdm-table-empty {
+    padding: var(--rdm-spacing-xl);
+    text-align: center;
+    color: var(--rdm-text-secondary);
+}
+*/
+
+
+/* UNUSED — rdm-view-stack
+.rdm-view-stack {
+    width: 100%;
+}
+
+.rdm-view-stack-toolbar {
+    display: flex;
+    gap: var(--rdm-spacing-sm);
+    padding: var(--rdm-spacing-lg) 0;
+}
+*/
+
+/* UNUSED — rdm-confirm-dialog
+.rdm-confirm-dialog .rdm-dialog {
+    max-width: 400px;
+}
+*/
+
+
+
+/* =============================================================================
+   Cards
+   ============================================================================= */
+
+
+/* UNUSED — card header/title/footer
+.rdm-card-header {
+    padding: var(--rdm-spacing-lg) var(--rdm-spacing-xl);
+    border-bottom: 1px solid var(--rdm-border-light);
+}
+
+.rdm-card-title {
+    margin: 0;
+    font-size: var(--rdm-font-size-lg);
+    font-weight: var(--rdm-font-weight-bold);
+    color: var(--rdm-text);
+}
+
+.rdm-card-footer {
+    padding: var(--rdm-spacing-lg) var(--rdm-spacing-xl);
+    border-top: 1px solid var(--rdm-border-light);
+    background-color: var(--rdm-bg-page);
+}
+*/
+
+/* UNUSED — Form Inputs (native HTML inputs — Quasar inputs are used instead)
+.rdm-input {
+    width: 100%;
+    height: var(--rdm-input-height);
+    padding: 0 var(--rdm-spacing-md);
+    font-family: var(--rdm-font-family);
+    font-size: var(--rdm-font-size);
+    color: var(--rdm-text);
+    background-color: var(--rdm-bg);
+    border: 1px solid var(--rdm-border);
+    border-radius: var(--rdm-radius);
+    outline: none;
+    transition: var(--rdm-transition);
+}
+
+.rdm-input::placeholder {
+    color: var(--rdm-text-placeholder);
+}
+
+.rdm-input:hover:not(:disabled) {
+    border-color: var(--rdm-border);
+}
+
+.rdm-input:focus {
+    border-color: var(--rdm-primary);
+    box-shadow: 0 0 0 2px var(--rdm-primary-light);
+}
+
+.rdm-input:disabled {
+    background-color: var(--rdm-bg-page);
+    cursor: not-allowed;
+}
+
+.rdm-input.rdm-error {
+    border-color: var(--rdm-danger);
+}
+
+.rdm-input.rdm-error:focus {
+    box-shadow: 0 0 0 2px var(--rdm-danger-light);
+}
+
+.rdm-textarea {
+    min-height: 80px;
+    padding: var(--rdm-spacing-sm) var(--rdm-spacing-md);
+    resize: vertical;
+}
+
+.rdm-form-group {
+    margin-bottom: var(--rdm-spacing-lg);
+}
+
+.rdm-form-label {
+    display: block;
+    margin-bottom: var(--rdm-spacing-xs);
+    font-size: var(--rdm-font-size-sm);
+    font-weight: var(--rdm-font-weight-medium);
+    color: var(--rdm-text-regular);
+}
+
+.rdm-form-label.rdm-required::after {
+    content: " *";
+    color: var(--rdm-danger);
+}
+
+.rdm-form-hint {
+    margin-top: var(--rdm-spacing-xs);
+    font-size: var(--rdm-font-size-xs);
+    color: var(--rdm-text-secondary);
+}
+
+.rdm-form-error {
+    margin-top: var(--rdm-spacing-xs);
+    font-size: var(--rdm-font-size-xs);
+    color: var(--rdm-danger);
+}
+*/
+
+
+/* UNUSED — rdm-detail-icon, rdm-detail-image
+.rdm-detail-icon {
+    color: var(--rdm-text-secondary);
+    font-size: 2rem;
+}
+
+.rdm-detail-image {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    border-radius: var(--rdm-radius);
+    background-color: var(--rdm-bg-page);
+}
+*/
+
+/* UNUSED — rdm-detail-title through rdm-detail-text-sm
+.rdm-detail-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: var(--rdm-font-weight-bold);
+    color: var(--rdm-text);
+}
+
+.rdm-detail-subtitle {
+    margin: 0;
+    font-size: 14px;
+    color: rgb(75, 85, 99);
+}
+
+.rdm-detail-columns {
+    width: 100%;
+    display: flex;
+    gap: 4rem;
+    flex-wrap: wrap;
+}
+
+.rdm-detail-column {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: var(--rdm-font-size);
+}
+
+.rdm-detail-section-label {
+    font-size: var(--rdm-font-size-sm);
+    font-weight: var(--rdm-font-weight-bold);
+    color: rgb(107, 114, 128);
+    margin-bottom: 0.5rem;
+}
+
+.rdm-detail-text-sm {
+    font-size: var(--rdm-font-size-sm);
+}
+*/
+
+/* UNUSED — rdm-dialog-lg
+.rdm-dialog-lg {
+    max-width: 800px;
+}
+*/
