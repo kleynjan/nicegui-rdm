@@ -1,14 +1,6 @@
 """
 Topic Filtering — selective store event routing.
 
-Key concepts:
-1. Topic filtering: set_topic_fields() + observe(topics=...) so that editing a
-   UK customer notifies only UK-filtered tables, not USA ones.
-2. Dynamic resubscription: radio buttons change filter_by and reobserve() at runtime.
-3. UI state preservation: selections in a SelectionTable survive store-triggered
-   refreshes because state is owned externally in app.storage.user.
-4. Event log: a plain store observer records every notification in real time.
-
 Run:  python -m ng_rdm.examples.topic_filtering
 Open: http://localhost:8080  |  debug: http://localhost:8080/rdm-debug
 """
@@ -18,8 +10,7 @@ from ng_rdm import DictStore, store_registry
 from ng_rdm.store import StoreEvent
 from ng_rdm.components import (
     rdm_init, Column, TableConfig, FormConfig,
-    ActionButtonTable, SelectionTable, EditDialog,
-    Button,
+    ActionButtonTable, EditDialog,
     Row, Col, Separator,
 )
 
@@ -88,9 +79,12 @@ async def index(client: Client):
 
         ui.label("Topic Filtering").classes("demo-section-heading")
         ui.markdown(
-            "Each table subscribes to a single country topic. "
-            "Editing a UK customer fires a `country=UK` event — "
+            "1. Each table initially subscribes to a single country topic. "
+            "Editing a UK customer on the right fires a country=UK event — "
             "only the UK table refreshes, the USA table stays silent."
+            "\n"
+            "2. Set the right table to 'All' and then modify a USA customer - "
+            "now both tables receive the event and refresh."
         )
 
         # Shared EditDialog: one instance handles both tables
@@ -133,46 +127,46 @@ async def index(client: Client):
                     ui.radio(["USA", "UK", "All"], value=default_country,
                              on_change=on_filter_change).props("inline")
 
-        # ── section 2: UI state preservation ─────────────────────────────────
+        # # ── section 2: UI state preservation ─────────────────────────────────
 
-        Separator()
-        ui.label("UI State Preservation").classes("demo-section-heading")
-        ui.markdown(
-            "Select customers below, then edit a name in the tables above. "
-            "The table refreshes (store notification fires) but your selection "
-            "persists — because `state[\"selected_ids\"]` lives in "
-            "`app.storage.user`, outside the component."
-        )
+        # Separator()
+        # ui.label("UI State Preservation").classes("demo-section-heading")
+        # ui.markdown(
+        #     "Select customers below, then edit a name in the tables above. "
+        #     "The table refreshes (store notification fires) but your selection "
+        #     "persists — because `state[\"selected_ids\"]` lives in "
+        #     "`app.storage.user`, outside the component."
+        # )
 
-        selection_config = TableConfig(
-            columns=[
-                Column(name="name", label="Name", width_percent=50),
-                Column(name="country", label="Country", width_percent=35),
-            ],
-            show_add_button=False,
-            show_edit_button=False,
-            show_delete_button=False,
-        )
+        # selection_config = TableConfig(
+        #     columns=[
+        #         Column(name="name", label="Name", width_percent=50),
+        #         Column(name="country", label="Country", width_percent=35),
+        #     ],
+        #     show_add_button=False,
+        #     show_edit_button=False,
+        #     show_delete_button=False,
+        # )
 
-        sel_table = SelectionTable(
-            state=ui_state["selection"],
-            data_source=customer_store,
-            config=selection_config,
-        )
-        await sel_table.build()
+        # sel_table = SelectionTable(
+        #     state=ui_state["selection"],
+        #     data_source=customer_store,
+        #     config=selection_config,
+        # )
+        # await sel_table.build()
 
-        selection_label = ui.label("").classes("demo-caption")
-        selection_label.bind_text_from(
-            ui_state["selection"], "selected_ids",
-            backward=lambda ids: (
-                f"Selected: {len(ids)} customer(s) — IDs {sorted(ids)}"
-                if ids else "No selection"
-            ),
-        )
+        # selection_label = ui.label("").classes("demo-caption")
+        # selection_label.bind_text_from(
+        #     ui_state["selection"], "selected_ids",
+        #     backward=lambda ids: (
+        #         f"Selected: {len(ids)} customer(s) — IDs {sorted(ids)}"
+        #         if ids else "No selection"
+        #     ),
+        # )
 
-        with Row():
-            Button("Select All", on_click=sel_table.select_all)  # type: ignore[arg-type]
-            Button("Clear", color="secondary", on_click=sel_table.clear_selection)  # type: ignore[arg-type]
+        # with Row():
+        #     Button("Select All", on_click=sel_table.select_all)  # type: ignore[arg-type]
+        #     Button("Clear", color="secondary", on_click=sel_table.clear_selection)  # type: ignore[arg-type]
 
         # ── section 3: event log ──────────────────────────────────────────────
 
@@ -201,7 +195,7 @@ async def index(client: Client):
         # ── footer ────────────────────────────────────────────────────────────
 
         Separator()
-        ui.link("Open Debug Panel →", target="/rdm-debug", new_tab=True).classes("demo-caption")
-
+        ui.link("Open Debug Panel → (tip: open side by side)",
+                target="/rdm-debug", new_tab=True).classes("demo-caption")
 
 ui.run(title="Topic Filtering — ng_rdm", port=8080, storage_secret="topic_filter_1928")

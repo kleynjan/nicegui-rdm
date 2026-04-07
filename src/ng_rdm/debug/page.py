@@ -86,13 +86,14 @@ def _render_debug_page() -> None:
         if log_container is None:
             return
         with log_container:
-            _render_log_entry(entry)
+            el = _render_log_entry(entry)
+            el.move(log_container, 0)
         refresh_stats()
 
     def _render_log_entry(entry: EventLogEntry):
         """Render a single log entry."""
         color = VERB_COLORS.get(entry.event.verb, "#6b7280")
-        with ui.element("div").classes("border-b py-2 px-3"):
+        with ui.element("div").classes("border-b py-2 px-3") as el:
             with ui.element("div").classes("flex items-center gap-2"):
                 # Timestamp
                 ui.label(entry.time_str).classes("font-mono text-xs text-gray-500 w-24")
@@ -109,6 +110,7 @@ def _render_debug_page() -> None:
             # Topics line
             with ui.element("div").classes("ml-24 text-xs text-gray-500"):
                 ui.label(f"topics: {_format_topics(entry.topics)}")
+        return el
 
     # Page layout
     ui.label("RDM Event Stream").classes("text-2xl font-bold mb-4")
@@ -128,7 +130,7 @@ def _render_debug_page() -> None:
 
     # Event log section
     ui.label("Event Log").classes("text-lg font-semibold mt-4 mb-2")
-    ui.label("New events added at the bottom").classes("text-xs text-gray-500 mb-2")
+    ui.label("New events added at the top").classes("text-xs text-gray-500 mb-2")
     log_container = ui.element("div").classes("border rounded bg-white w-full")
 
     def refresh_log():
