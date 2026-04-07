@@ -63,24 +63,24 @@ def rdm_init(
         show_refresh_transitions: If True, adds a CSS animation to highlight refreshable components when they update.
         show_store_event_log: If True, enables a debug page at /rdm-debug to visualize store events.
     """
-    if custom_translations:
-        set_translations(custom_translations)
 
     # Bootstrap icons CDN
     ui.add_head_html(
         '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">'
     )
 
-    # Load ng_rdm.css (design system)
+    # add ng_rdm.css
     css_path = Path(__file__).parent / 'ng_rdm.css'
     ui.add_css(css_path)
 
-    if show_refresh_transitions:
-        ui.add_css(show_refresh_css)
+    if custom_translations:
+        set_translations(custom_translations)
 
-    # Extra CSS (after native styles)
     if extra_css:
         ui.add_css(extra_css)
+
+    if show_refresh_transitions:
+        ui.add_css(show_refresh_css)
 
     if show_store_event_log:
         from ..debug import enable_debug_page

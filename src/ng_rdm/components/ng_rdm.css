@@ -530,7 +530,6 @@
 }
 
 .rdm-dialog-header {
-    /* padding: var(--rdm-spacing-lg) var(--rdm-spacing-xl); */
     padding-bottom: var(--rdm-spacing-lg);
     border-bottom: 1px solid var(--rdm-border-light);
     display: flex;
@@ -1015,25 +1014,6 @@
         font-size: var(--rdm-font-size-sm);
         padding: 0 var(--rdm-spacing-md) !important;
     }
-    
-    /* Icon-only button */
-    /* .q-btn.rdm-btn-icon,
-    .q-icon.rdm-btn-icon {
-        width: var(--rdm-btn-height) !important;
-        height: var(--rdm-btn-height) !important;
-        min-height: var(--rdm-btn-height) !important;
-        padding: 0 !important;
-        background: transparent !important;
-        border-color: transparent !important;
-        color: var(--rdm-text-secondary) !important;
-        cursor: pointer;
-    }
-
-    .q-btn.rdm-btn-icon:hover:not(:disabled),
-    .q-icon.rdm-btn-icon:hover:not(:disabled) {
-        color: var(--rdm-primary) !important;
-        background-color: var(--rdm-bg-hover) !important;
-    } */
 
     .q-btn.rdm-btn-icon i,
     .q-icon.rdm-btn-icon i {
