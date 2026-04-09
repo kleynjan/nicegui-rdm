@@ -12,8 +12,13 @@ from .store import Store, StoreEvent, DictStore, StoreRegistry, store_registry
 from .store import TortoiseStore, MultitenantTortoiseStore, TenancyError, init_db
 from .models import FieldSpec, Validator, QModel
 from .debug import enable_debug_page
+from .utils import logger
 
-__version__ = "0.1.0"
+from importlib.metadata import PackageNotFoundError, version
+try:
+    __version__ = version("nicegui-rdm")
+except PackageNotFoundError:
+    __version__ = "0.0.0"
 
 __all__ = [
     # Store layer
@@ -34,4 +39,7 @@ __all__ = [
 
     # Debug
     'enable_debug_page',
+
+    # Logging
+    'logger',
 ]

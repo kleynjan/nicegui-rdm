@@ -583,7 +583,7 @@ async def main(client: Client):
     def _section_card(anchor: str):
         return html.div().classes(f"catalog-section catalog-section-{anchor}").props(f'id={anchor}')
 
-    rdm_init(extra_css="examples.css", show_refresh_transitions=True)
+    rdm_init(extra_css=Path(__file__).parent / "examples.css", show_refresh_transitions=True)
     set_language("en_gb")
     await client.connected()
 

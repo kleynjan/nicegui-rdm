@@ -4,6 +4,8 @@ Topic Filtering — selective store event routing.
 Run:  python -m ng_rdm.examples.topic_filtering
 Open: http://localhost:8080  |  debug: http://localhost:8080/rdm-debug
 """
+from pathlib import Path
+
 from nicegui import app, ui, Client
 
 from ng_rdm import DictStore, store_registry
@@ -64,7 +66,7 @@ customer_form_config = FormConfig(
 @ui.page("/")
 async def index(client: Client):
 
-    rdm_init(extra_css="examples.css", show_refresh_transitions=True, show_store_event_log=True)
+    rdm_init(extra_css=Path(__file__).parent / "examples.css", show_refresh_transitions=True, show_store_event_log=True)
     await seed_store()
     await client.connected()
 

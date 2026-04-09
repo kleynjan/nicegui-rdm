@@ -8,6 +8,7 @@ Run:  python -m ng_rdm.examples.custom_datasource
 Open: http://localhost:8080
 """
 import asyncio
+from pathlib import Path
 from typing import Any, Callable
 
 from nicegui import app, ui, Client
@@ -115,7 +116,7 @@ table_config = TableConfig(
 
 @ui.page("/")
 async def main(client: Client):
-    rdm_init(extra_css="examples.css")
+    rdm_init(extra_css=Path(__file__).parent / "examples.css")
     await client.connected()
 
     app.storage.user.setdefault("ui_state", {"table": {}, "dialog": {}})

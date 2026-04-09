@@ -47,10 +47,11 @@ show_refresh_css = """
 
 def rdm_init(
     custom_translations: dict[str, dict[str, str]] | None = None,
-    extra_css: str | None = None,
+    extra_css: str | Path | None = None,
     timezone: str | None = None,
     show_refresh_transitions: bool = False,
     show_store_event_log: bool = False,
+    log_file: str | Path | None = None,
 ):
     """Initialize RDM module - styles and optional customizations.
 
@@ -64,6 +65,7 @@ def rdm_init(
         timezone: Optional timezone string (e.g. 'Europe/Amsterdam'). Default: 'Europe/Amsterdam'.
         show_refresh_transitions: If True, adds a CSS animation to highlight refreshable components when they update.
         show_store_event_log: If True, enables a debug page at /rdm-debug to visualize store events.
+        log_file: Optional path. When set, routes ng_rdm, Tortoise ORM and uvicorn logs to this file.
     """
 
     # Bootstrap icons CDN
@@ -93,6 +95,10 @@ def rdm_init(
     if show_store_event_log:
         from ..debug import enable_debug_page
         enable_debug_page()  # Optional: enable debug page for event stream visualization
+
+    if log_file:
+        from ..utils.logging import _configure_file_logging
+        _configure_file_logging(log_file)
 
 
 __all__ = [

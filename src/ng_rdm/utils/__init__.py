@@ -2,6 +2,6 @@
 Utility functions/classes.
 """
 
-from .logging import logger, setup_logging
+from .logging import logger
 
-__all__ = ['logger', 'setup_logging']
+__all__ = ['logger']
