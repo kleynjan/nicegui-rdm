@@ -7,7 +7,14 @@ import pytz
 from ng_rdm.components.i18n import _
 
 TIMEZONE_STRING = 'Europe/Amsterdam'
-TIMEZONE_PYTZ = pytz.timezone(TIMEZONE_STRING)  # Replace with your desired timezone
+TIMEZONE_PYTZ = pytz.timezone(TIMEZONE_STRING)
+
+
+def configure_timezone(tz_string: str) -> None:
+    """Set the timezone used by all date/time helpers."""
+    global TIMEZONE_STRING, TIMEZONE_PYTZ
+    TIMEZONE_STRING = tz_string
+    TIMEZONE_PYTZ = pytz.timezone(tz_string)
 
 # naive_dt = datetime(2024,10,10,15,2) # "our time"
 # > 2024-10-10 15:02:00

@@ -127,6 +127,10 @@ Run any example with `python -m ng_rdm.examples.<name>` and open http://localhos
 | `vanilla_store` | Basic store usage without UI components |
 | `topic_filtering` | Topic-based observer filtering |
 
+## Some notes
+
+
+
 ## Requirements
 
 - Python 3.12+

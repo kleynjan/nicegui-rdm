@@ -48,6 +48,7 @@ show_refresh_css = """
 def rdm_init(
     custom_translations: dict[str, dict[str, str]] | None = None,
     extra_css: str | None = None,
+    timezone: str | None = None,
     show_refresh_transitions: bool = False,
     show_store_event_log: bool = False,
 ):
@@ -60,6 +61,7 @@ def rdm_init(
         custom_translations: Optional dict to update/extend built-in translations.
                              Structure: {'lang_code': {'key': 'translation', ...}, ...}
         extra_css: Optional CSS string | file to add (in addition to ng_rdm.css).
+        timezone: Optional timezone string (e.g. 'Europe/Amsterdam'). Default: 'Europe/Amsterdam'.
         show_refresh_transitions: If True, adds a CSS animation to highlight refreshable components when they update.
         show_store_event_log: If True, enables a debug page at /rdm-debug to visualize store events.
     """
@@ -74,6 +76,10 @@ def rdm_init(
     ui.add_css(css_path)
 
     ui.colors(primary="#3b82f6")  # sync with var(--rdm-primary) in css
+
+    if timezone:
+        from ..utils.helpers import configure_timezone
+        configure_timezone(timezone)
 
     if custom_translations:
         set_translations(custom_translations)
