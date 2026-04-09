@@ -198,4 +198,4 @@ async def index(client: Client):
         ui.link("Open Debug Panel → (tip: open side by side)",
                 target="/rdm-debug", new_tab=True).classes("demo-caption")
 
-ui.run(title="Topic Filtering — ng_rdm", port=8080, storage_secret="topic_filter_1928")
+ui.run(title="Topic Filtering — ng_rdm", storage_secret="topic_filter_1928")

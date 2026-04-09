@@ -642,4 +642,4 @@ async def main(client: Client):
         ui.label("Return to top").classes(
             "demo-caption").style("cursor: pointer;").on("click", lambda: ui.navigate.to("#toc"))
 
-ui.run(title="ng_rdm Component Catalog", port=8080, show=False, storage_secret="catalog_1928")
+ui.run(title="ng_rdm Component Catalog", storage_secret="catalog_1928")

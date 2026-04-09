@@ -149,4 +149,4 @@ async def main(client: Client):
         await table.build()
 
 
-ui.run(title="Custom DataSource — ng_rdm", port=8080, storage_secret="custom_ds_1928")
+ui.run(title="Custom DataSource — ng_rdm", storage_secret="custom_ds_1928")

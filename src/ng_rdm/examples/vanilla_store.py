@@ -163,4 +163,4 @@ async def main(client: Client):
     client.on_disconnect(cleanup)
 
 
-ui.run(title="Vanilla Store — ng_rdm", port=8080)
+ui.run(title="Vanilla Store — ng_rdm")

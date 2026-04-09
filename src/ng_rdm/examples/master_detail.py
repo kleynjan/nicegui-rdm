@@ -269,4 +269,4 @@ async def main(client: Client):
         await stack.build()
 
 
-ui.run(title="Master/Detail — ng_rdm", port=8081, show=False, storage_secret="md_1928")
+ui.run(title="Master/Detail — ng_rdm", storage_secret="md_1928")
