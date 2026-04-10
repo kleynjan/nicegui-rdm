@@ -23,7 +23,7 @@ from ng_rdm.components import (
     Button,
     Row, Col, Separator,
 )
-from ng_rdm.store import TortoiseStore, DictStore, init_db, close_db, store_registry
+from ng_rdm.store import TortoiseStore, DictStore, init_db, store_registry
 from ng_rdm.models import QModel, FieldSpec, Validator
 from ng_rdm.components.i18n import set_language
 
@@ -77,7 +77,6 @@ class Product(QModel):
 
 DB_PATH = Path(__file__).parent / "catalog.sqlite3"
 init_db(app, f"sqlite://{DB_PATH}", modules={"models": [__name__]}, generate_schemas=True)
-app.on_shutdown(close_db)
 
 task_store = DictStore()  # in-memory, for custom component section
 toc_store = DictStore()   # static component reference data

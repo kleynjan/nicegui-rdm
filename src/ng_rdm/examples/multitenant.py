@@ -23,7 +23,7 @@ from ng_rdm.components import (
     ActionButtonTable, EditDialog,
     Row, Col, Separator,
 )
-from ng_rdm.store import MultitenantTortoiseStore, init_db, close_db
+from ng_rdm.store import MultitenantTortoiseStore, init_db
 from ng_rdm import mt_store_registry as store_registry
 from ng_rdm.store.multitenancy import set_valid_tenants
 from ng_rdm.models import QModel, FieldSpec, Validator
@@ -55,7 +55,6 @@ class Product(QModel):
 
 DB_PATH = Path(__file__).parent / "multitenant.sqlite3"
 init_db(app, f"sqlite://{DB_PATH}", modules={"models": [__name__]}, generate_schemas=True)
-app.on_shutdown(close_db)
 
 
 async def seed_data():

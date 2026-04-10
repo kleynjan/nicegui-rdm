@@ -510,16 +510,15 @@ class Product(QModel):
 
 ### 2. Initialize DB + stores (module level)
 
-Call `init_db` at module level (before any page renders). Register `close_db` on shutdown.
+Call `init_db` at module level (before any page renders). Shutdown is handled automatically.
 
 ```python
 from pathlib import Path
 from nicegui import app
-from ng_rdm.store import TortoiseStore, init_db, close_db
+from ng_rdm.store import TortoiseStore, init_db
 
 DB_PATH = Path(__file__).parent / "app.sqlite3"
 init_db(app, f"sqlite://{DB_PATH}", modules={"models": [__name__]}, generate_schemas=True)
-app.on_shutdown(close_db)
 
 product_store = TortoiseStore(Product)
 ```

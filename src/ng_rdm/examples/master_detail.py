@@ -25,7 +25,7 @@ from ng_rdm.components import (
     ViewStack, DetailCard,
     Row, Col, Separator,
 )
-from ng_rdm.store import TortoiseStore, init_db, close_db, store_registry
+from ng_rdm.store import TortoiseStore, init_db, store_registry
 from ng_rdm.models import QModel, FieldSpec, Validator
 
 
@@ -78,7 +78,6 @@ class Component(QModel):
 
 DB_PATH = Path(__file__).parent / "master_detail.sqlite3"
 init_db(app, f"sqlite://{DB_PATH}", modules={"models": [__name__]}, generate_schemas=True)
-app.on_shutdown(close_db)
 
 
 async def seed_data():

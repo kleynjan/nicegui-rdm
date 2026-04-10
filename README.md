@@ -57,7 +57,7 @@ import ng_rdm   # import path differs from package name
 from nicegui import app, ui
 from tortoise import fields
 
-from ng_rdm import TortoiseStore, init_db, FieldSpec, Validator
+from ng_rdm import TortoiseStore, init_db, FieldSpec, Validator, store_registry
 from ng_rdm.models import QModel
 from ng_rdm.components import (
     rdm_init, Column, TableConfig, FormConfig,
@@ -75,24 +75,32 @@ class Task(QModel):
         ])
     }
 
-# 2. Initialize database and create a store (module level)
+# 2. Initialize database
 init_db(app, "sqlite://tasks.db", modules={"models": [__name__]}, generate_schemas=True)
 
-task_store = TortoiseStore(Task)
+# 3. Create a store and add it to the registry singleton
+store_registry.register_store("task", TortoiseStore(Task))
 
-# 3. Build a page
+# 4. Build a page
 @ui.page("/")
 async def index():
-    rdm_init()  # initialize ng_rdm - required for every page
 
+    # 4a. Initialize ng_dm - required for every page
+    rdm_init()
+
+    # 4b. Get the stores you need from the registry
+    task_store = store_registry.get_store("task")
+
+    # 4c. Configure the table and form
     columns = [Column("name", "Task name")]
     table_config = TableConfig(columns=columns)
     form_config = FormConfig(columns=columns, title_add="New Task", title_edit="Edit Task")
 
-    # EditDialog for add/edit; ActionButtonTable for display
-    dlg = EditDialog(data_source=task_store, config=form_config,
-                     on_saved=lambda _: table.build.refresh())
+    # 4d. Create the table & edit components
+    dlg = EditDialog(data_source=task_store, config=form_config)
+
     table = ActionButtonTable(
+        # note: the `auto_observe` is default, so the table is refreshed when store data updates
         data_source=task_store, config=table_config,
         on_add=dlg.open_for_new, on_edit=dlg.open_for_edit,
     )
@@ -101,19 +109,23 @@ async def index():
 ui.run()
 ```
 
+In practice you will often want subclass generic stores to enhance/override `_read_items` or `_update_item` methods. Eg, `class EnrichedTaskStore(TortoiseStore[Task]):...`
+
 ## What's Included
 
 **Tables** — `ActionButtonTable` (CRUD with per-row action buttons), `ListTable` (read-only clickable rows), `SelectionTable` (checkbox multi-select)
 
 **Forms** — `EditDialog` (modal create/edit), `EditCard` (inline form)
 
-**Navigation** — `ViewStack` (list/detail/edit flow), `Tabs` (tabbed content)
+**Navigation** — `ViewStack` (master/detail/edit flow), `Tabs` (tabbed content)
 
 **Display** — `DetailCard` (read-only detail view), `Dialog` (modal overlay), `StepWizard` (multi-step form)
 
 **Layout** — `Button`, `IconButton`, `Icon`, `Row`, `Col`, `Separator`
 
-**Store layer** — `DictStore` (in-memory), `TortoiseStore` (ORM-backed), `MultitenantTortoiseStore` (tenant-scoped)
+**Store layer** — `DictStore` (in-memory), `TortoiseStore` (ORM-backed), `store_registry`
+
+**Multitenancy** -  `MultitenantTortoiseStore` and `mt_store_registry`
 
 Tables and forms are defined through configuration (`TableConfig, Column, FormConfig`). See [`components/API.md`](components/API.md) for the full component API.
 
@@ -146,10 +158,10 @@ src/ng_rdm/
 │   └── qmodel.py            — QModel (extended Tortoise ORM Model)
 ├── components/              — UI components
 │   ├── __init__.py          — exports rdm_init(), all components
-│   ├── base.py              — RdmComponent, ObservableRdmComponent, ObservableRdmTable, Column, TableConfig, FormConfig
+│   ├── base.py              — ObservableRdmComponent and config helpers
 │   ├── protocol.py          — RdmDataSource protocol (structural typing)
 │   ├── fields.py            — build_form_field() shared utility
-│   ├── i18n.py              — localization (Dutch/English)
+│   ├── i18n.py              — localization (currently Dutch/English, easily expandable)
 │   ├── ng_rdm.css           — design system stylesheet
 │   └── widgets/             — concrete UI widget components
 │       ├── action_button_table.py — ActionButtonTable (table with per-row action buttons)
@@ -181,17 +193,6 @@ src/ng_rdm/
 
 ## Working with ng_rdm
 
-### Finding your way
-
-1. Define your data in Qmodel subclasses
-1. Add init_db to your app initalization, pointing it to your models 
-
-
-### Other restrictions
-
-The way we use Tortoise ORM assumes every table has an integer primary key called `id`. It's quite possible that things will work if you do it differently, but it's quite likely something will break.
-
-
 ### Helpers
 
 The library includes a few helpers:
@@ -202,8 +203,8 @@ The library includes a few helpers:
 
 ### Multitenancy
 
-ng_rdm includes 
-For multitenant apps, use `MultitenantTortoiseStore` together with `mt_store_registry` (a `MultitenantStoreRegistry` instance in `store/multitenancy.py`). The registry keys stores by `(tenant, name)`:
+For multitenant apps, use 
+use `MultitenantTortoiseStore` together with `mt_store_registry` (a `MultitenantStoreRegistry` instance in `store/multitenancy.py`). The registry keys stores by `(tenant, name)`:
 
 ```python
 from ng_rdm import mt_store_registry as store_registry  # alias keeps call-sites unchanged
@@ -215,6 +216,10 @@ store = store_registry.get_store("acme", "products")
 ### Show refresh via CSS
 
 If you want to see which tables/components are being refreshed, you can pass `show_refresh_transitions` = True to the `rdm_init` call. If enabled, it adds an animated green border whenever a component is rebuilt &ndash; as in the examples.
+
+### Other restrictions
+
+The way we use Tortoise ORM assumes every table has an integer primary key called `id`. It's quite possible that things will work if you do it differently, but it's quite likely something will break.
 
 ## Some notes on architecture
 
