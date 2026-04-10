@@ -197,7 +197,7 @@ src/ng_rdm/
 
 The library includes a few helpers:
 
-* `utils/logging.py`: pass `log_file="app.log"` to `rdm_init()` and all ng_rdm, Tortoise ORM, and uvicorn output goes to that file — nothing else to configure. Without a path, the library stays silent and lets the host app's logging config take over. You can also do `from ng_rdm import logger` to write to the same logger in your own app code.
+* `utils/logging.py`: call `configure_logging(log_file="app.log", console=True)` once in `main.py` before any other startup code, and all ng_rdm, Tortoise ORM, and uvicorn output goes to that file and/or the console. Without calling it, the library stays silent by default and lets the host app's own logging config take over. Import `from ng_rdm import logger` to write to the same logger in your own app code.
 
 * `components/i18n.py`: self-contained translations for the generic CRUD labels used in components (buttons, confirmations, validation messages). Ships with English (default) and Dutch. Pass `custom_translations` to `rdm_init()` to add a language or override strings; call `set_language('nl_nl')` to switch. Intentionally separate from any app-level i18n to keep the package portable.
 

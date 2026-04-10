@@ -370,12 +370,67 @@
             align-items: flex-start;
             flex-shrink: 0;
         }
-    }
-    .rdm-detail-related {
-        width: 100%;
-        margin-top: var(--rdm-spacing-lg);
-    }
+
+        .rdm-detail-related {
+            width: 100%;
+            margin-top: var(--rdm-spacing-lg);
+        }
+
+        .rdm-detail-icon {
+            color: var(--rdm-text-secondary);
+            font-size: 2rem;
+        }
+
+        .rdm-detail-image {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            border-radius: var(--rdm-radius);
+            background-color: var(--rdm-bg-page);
+        }
+
+        .rdm-detail-title {
+            margin: 0;
+            font-size: 20px;
+            font-weight: var(--rdm-font-weight-bold);
+            color: var(--rdm-text);
+        }
+
+        .rdm-detail-subtitle {
+            margin: 0;
+            font-size: 14px;
+            color: rgb(75, 85, 99);
+        }
+
+        .rdm-detail-columns {
+            width: 100%;
+            display: flex;
+            gap: 4rem;
+            flex-wrap: wrap;
+
+            .rdm-detail-column {
+                display: flex;
+                flex-direction: column;
+                gap: 0.25rem;
+                font-size: var(--rdm-font-size);
+            }
+        }
+    }    
 }
+
+
+
+.rdm-detail-section-label {
+    font-size: var(--rdm-font-size-sm);
+    font-weight: var(--rdm-font-weight-bold);
+    color: rgb(107, 114, 128);
+    margin-bottom: 0.5rem;
+}
+
+.rdm-detail-text-sm {
+    font-size: var(--rdm-font-size-sm);
+}
+
 
 /* =============================================================================
    Edit Card / Form
@@ -423,8 +478,7 @@
 }
 
 .rdm-separator {
-    height: 1px;
-    background-color: var(--rdm-border-light);
+    border-top: 1px solid var(--rdm-border-light);
     margin: var(--rdm-spacing-lg) 0;
 }
 
@@ -985,63 +1039,3 @@
 */
 
 
-/* UNUSED — rdm-detail-icon, rdm-detail-image
-.rdm-detail-icon {
-    color: var(--rdm-text-secondary);
-    font-size: 2rem;
-}
-
-.rdm-detail-image {
-    width: 80px;
-    height: 80px;
-    object-fit: contain;
-    border-radius: var(--rdm-radius);
-    background-color: var(--rdm-bg-page);
-}
-*/
-
-/* UNUSED — rdm-detail-title through rdm-detail-text-sm
-.rdm-detail-title {
-    margin: 0;
-    font-size: 20px;
-    font-weight: var(--rdm-font-weight-bold);
-    color: var(--rdm-text);
-}
-
-.rdm-detail-subtitle {
-    margin: 0;
-    font-size: 14px;
-    color: rgb(75, 85, 99);
-}
-
-.rdm-detail-columns {
-    width: 100%;
-    display: flex;
-    gap: 4rem;
-    flex-wrap: wrap;
-}
-
-.rdm-detail-column {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    font-size: var(--rdm-font-size);
-}
-
-.rdm-detail-section-label {
-    font-size: var(--rdm-font-size-sm);
-    font-weight: var(--rdm-font-weight-bold);
-    color: rgb(107, 114, 128);
-    margin-bottom: 0.5rem;
-}
-
-.rdm-detail-text-sm {
-    font-size: var(--rdm-font-size-sm);
-}
-*/
-
-/* UNUSED — rdm-dialog-lg
-.rdm-dialog-lg {
-    max-width: 800px;
-}
-*/

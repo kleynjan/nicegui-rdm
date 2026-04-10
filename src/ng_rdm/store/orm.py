@@ -17,13 +17,16 @@ from .base import Store
 T = TypeVar('T', bound=QModel)
 
 def init_db(app, db_url: str, modules: dict[str, list[str]], *, generate_schemas: bool = False):
-    """Initialize Tortoise ORM with FastAPI/NiceGUI app.
+    """Initialize Tortoise ORM with a FastAPI or NiceGUI app.
 
     Args:
-        app: FastAPI app or NiceGUI app object
+        app: FastAPI app (or NiceGUI app, which wraps FastAPI internally)
         db_url: Database connection URL (e.g., 'sqlite://demo.db')
         modules: Dict mapping module names to model module paths
         generate_schemas: If True, auto-create tables (useful for demos, not production)
+
+    Connection teardown is handled automatically via FastAPI's lifespan protocol
+    (wired by register_tortoise). Callers must not register close_db themselves.
     """
     register_tortoise(
         app,
@@ -31,7 +34,6 @@ def init_db(app, db_url: str, modules: dict[str, list[str]], *, generate_schemas
         modules=modules,  # type:ignore # eg, {"models": ["models"]}
         generate_schemas=generate_schemas,
     )
-    app.on_shutdown(close_db)
 
 async def close_db():
     """Close database connections"""

@@ -149,7 +149,7 @@ component_form_cols = [
 @ui.page("/")
 async def main(client: Client):
 
-    rdm_init(extra_css=Path(__file__).parent / "examples.css", show_refresh_transitions=True, log_file="master_detail.log")
+    rdm_init(extra_css=Path(__file__).parent / "examples.css", show_refresh_transitions=True)
     await client.connected()
 
     ui_state = app.storage.user['ui_state'] = {

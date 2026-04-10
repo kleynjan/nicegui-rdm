@@ -31,45 +31,6 @@ class TenancyError(Exception):
     pass
 
 
-class MultitenantStoreRegistry:
-    """Registry for tenant-scoped singleton store instances."""
-
-    def __init__(self):
-        self._stores: dict[str, dict[str, Store]] = {}
-        self._event_log: EventLog | None = None
-
-    def set_event_log(self, event_log: EventLog) -> None:
-        """Enable debug event logging for all stores."""
-        self._event_log = event_log
-        for tenant, name, store in self.get_all_stores():
-            store.set_event_log(event_log, name, tenant)
-
-    def register_store(self, tenant: str, name: str, store: Store) -> None:
-        """Register a store instance for a tenant."""
-        self._stores.setdefault(tenant, {})[name] = store
-        if self._event_log:
-            store.set_event_log(self._event_log, name, tenant)
-        logger.debug(f"Registered {name} store for tenant {tenant}")
-
-    def get_store(self, tenant: str, name: str) -> Store:
-        """Get the singleton store instance for a tenant.
-
-        Raises:
-            KeyError: If no store exists for this tenant/name combination
-        """
-        try:
-            return self._stores[tenant][name]
-        except KeyError:
-            raise KeyError(f"No store '{name}' found for tenant '{tenant}'")
-
-    def get_all_stores(self) -> list[tuple[str, str, Store]]:
-        """Get all registered stores as (tenant, name, store) tuples."""
-        return [(t, n, s) for t, stores in self._stores.items() for n, s in stores.items()]
-
-
-# Global multitenant registry instance
-mt_store_registry = MultitenantStoreRegistry()
-
 class MultitenantTortoiseStore(TortoiseStore, Generic[T]):
     """Extends TortoiseStore with tenant scoping"""
 
@@ -115,3 +76,42 @@ class MultitenantTortoiseStore(TortoiseStore, Generic[T]):
         if self.tenant:
             query &= Q(tenant=self.tenant)
         await self.model.filter(query).delete()
+
+class MultitenantStoreRegistry:
+    """Registry for tenant-scoped singleton store instances."""
+
+    def __init__(self):
+        self._stores: dict[str, dict[str, Store]] = {}
+        self._event_log: EventLog | None = None
+
+    def set_event_log(self, event_log: EventLog) -> None:
+        """Enable debug event logging for all stores."""
+        self._event_log = event_log
+        for tenant, name, store in self.get_all_stores():
+            store.set_event_log(event_log, name, tenant)
+
+    def register_store(self, tenant: str, name: str, store: Store) -> None:
+        """Register a store instance for a tenant."""
+        self._stores.setdefault(tenant, {})[name] = store
+        if self._event_log:
+            store.set_event_log(self._event_log, name, tenant)
+        logger.debug(f"Registered {name} store for tenant {tenant}")
+
+    def get_store(self, tenant: str, name: str) -> Store:
+        """Get the singleton store instance for a tenant.
+
+        Raises:
+            KeyError: If no store exists for this tenant/name combination
+        """
+        try:
+            return self._stores[tenant][name]
+        except KeyError:
+            raise KeyError(f"No store '{name}' found for tenant '{tenant}'")
+
+    def get_all_stores(self) -> list[tuple[str, str, Store]]:
+        """Get all registered stores as (tenant, name, store) tuples."""
+        return [(t, n, s) for t, stores in self._stores.items() for n, s in stores.items()]
+
+
+# Global multitenant registry instance
+mt_store_registry = MultitenantStoreRegistry()

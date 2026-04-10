@@ -1,7 +1,7 @@
 """
 Layout primitives — Row, Col, Separator.
 
-Thin wrappers around html.div / html.hr that apply flexbox layout
+Thin wrappers around html.div that apply flexbox layout
 without Quasar wrappers. All share RdmLayoutElement as base.
 """
 from nicegui import html
@@ -87,7 +87,7 @@ class Col(RdmLayoutElement):
 
 
 class Separator(RdmLayoutElement):
-    """Horizontal rule using rdm-separator styling.
+    """Thin horizontal divider using rdm-separator styling.
 
     Args:
         classes: Additional CSS classes
@@ -97,10 +97,9 @@ class Separator(RdmLayoutElement):
         Separator()
         Separator(style="margin: 2rem 0")
     """
-    _html_tag = html.hr
+    _html_tag = html.div
     _css_class = 'rdm-separator'
 
     def __init__(self, *, classes: str = '', style: str = ''):
-        base = 'border: none'
-        combined = f'{base}; {style}' if style else base
-        super().__init__(classes=classes, style=combined)
+        super().__init__(classes=classes, style=style)
+        self.element.props('role=separator')
