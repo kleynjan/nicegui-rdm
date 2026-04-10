@@ -2,7 +2,8 @@
 Models (helper) classes.
 """
 
-from .qmodel import QModel, required_validator
+from .rdm_model import RdmModel, required_validator
+from .mt_rdm_model import MultitenantRdmModel
 from .types import FieldSpec, Validator
 
-__all__ = ['QModel', 'FieldSpec', 'Validator', 'required_validator']
+__all__ = ['RdmModel', 'MultitenantRdmModel', 'FieldSpec', 'Validator', 'required_validator']

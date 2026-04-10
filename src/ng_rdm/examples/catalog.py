@@ -24,7 +24,7 @@ from ng_rdm.components import (
     Row, Col, Separator,
 )
 from ng_rdm.store import TortoiseStore, DictStore, init_db, store_registry
-from ng_rdm.models import QModel, FieldSpec, Validator
+from ng_rdm.models import RdmModel, FieldSpec, Validator
 from ng_rdm.components.i18n import set_language
 
 
@@ -32,7 +32,7 @@ from ng_rdm.components.i18n import set_language
 # Models
 # =============================================================================
 
-class Category(QModel):
+class Category(RdmModel):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=100)
     description = fields.TextField(null=True)
@@ -43,11 +43,11 @@ class Category(QModel):
         ])
     }
 
-    class Meta(QModel.Meta):
+    class Meta(RdmModel.Meta):
         table = "catalog_category"
 
 
-class Product(QModel):
+class Product(RdmModel):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=100)
     price = fields.DecimalField(max_digits=10, decimal_places=2)
@@ -67,7 +67,7 @@ class Product(QModel):
         ]),
     }
 
-    class Meta(QModel.Meta):
+    class Meta(RdmModel.Meta):
         table = "catalog_product"
 
 
@@ -600,9 +600,7 @@ async def main(client: Client):
 
     with Col(classes="demo-content-column"):
 
-        ui.label("Taming Quasar: ng_rdm components showcase").style("font-size: 2rem")
-        ui.label("(1) Build composite widgets (like tables) with straight html & css")
-        ui.label("(2) For the rest: restyle the hell out of it").style("margin-bottom: 1rem")
+        ui.label("ng_rdm components showcase").style("font-size: 2rem")
 
         with _section_card("toc"):
             await section_toc_table()

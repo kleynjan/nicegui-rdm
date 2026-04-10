@@ -8,8 +8,8 @@ required_validator = Validator(
     validator=lambda v, _: v is not None
 )
 
-class QModel(Model):
-    """Extends the standard Tortoise Model; define your own models as QModel subclasses to use with Stores."""
+class RdmModel(Model):
+    """Extends the standard Tortoise Model; define your own models as RdmModel subclasses to use with Stores."""
 
     field_specs: dict[str, FieldSpec] = {}
 

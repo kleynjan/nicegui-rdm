@@ -24,7 +24,6 @@ from nicegui import ui
 
 from .button import Button
 from .dialog import Dialog
-from .layout import Row
 from ..i18n import _
 
 
@@ -70,7 +69,8 @@ class StepWizard:
     _dialog_state: dict = field(default_factory=dict, init=False)
     _current_step: int = field(default=0, init=False)
     _dlg: Dialog | None = field(default=None, init=False)
-    _content: Any = field(default=None, init=False)
+    _body: Any = field(default=None, init=False)
+    _footer: Any = field(default=None, init=False)
 
     @property
     def state(self) -> dict:
@@ -105,13 +105,15 @@ class StepWizard:
             await self._handle_complete()
         else:
             self._current_step += 1
-            self._content.refresh()
+            self._body.refresh()
+            self._footer.refresh()
 
     def _handle_back(self):
         """Handle back button click."""
         if not self.is_first_step:
             self._current_step -= 1
-            self._content.refresh()
+            self._body.refresh()
+            self._footer.refresh()
 
     async def _handle_complete(self):
         """Handle wizard completion."""
@@ -128,29 +130,29 @@ class StepWizard:
         """Show the wizard dialog."""
         self._current_step = 0
 
-        with Dialog(state=self._dialog_state) as self._dlg:
+        with Dialog(state=self._dialog_state, title=self.current_step.title) as self._dlg:
             @ui.refreshable
-            async def _content():
-                step = self.current_step
-                ui.label(step.title).classes('dialog-header')
+            async def _body():
+                self._dialog_state['title'] = self.current_step.title
+                await self.current_step.render(self._state)
 
-                await step.render(self._state)
+            await _body()
 
-                with Row(classes='rdm-edit-actions'):
-                    # Next/Complete button
+            with self._dlg.actions():
+                @ui.refreshable
+                def _footer():
+                    step = self.current_step
                     if self.is_last_step:
                         Button(self.complete_label, on_click=self._handle_next)
                     else:
                         Button(step.next_label, on_click=self._handle_next)
-
-                    # Back button (not on first step)
                     if not self.is_first_step:
                         Button(step.back_label, on_click=self._handle_back)
-
-                    # Cancel button
                     Button(self.cancel_label, on_click=self._handle_cancel, color="secondary")
 
-            self._content = _content
-            await _content()
+                _footer()
+
+            self._body = _body
+            self._footer = _footer
 
         self._dlg.open()

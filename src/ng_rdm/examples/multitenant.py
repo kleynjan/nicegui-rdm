@@ -26,16 +26,15 @@ from ng_rdm.components import (
 from ng_rdm.store import MultitenantTortoiseStore, init_db
 from ng_rdm import mt_store_registry as store_registry
 from ng_rdm.store.multitenancy import set_valid_tenants
-from ng_rdm.models import QModel, FieldSpec, Validator
+from ng_rdm.models import RdmModel, MultitenantRdmModel, FieldSpec, Validator
 
 
 # =============================================================================
 # Model
 # =============================================================================
 
-class Product(QModel):
+class Product(MultitenantRdmModel):
     id = fields.IntField(pk=True)
-    tenant = fields.CharField(max_length=10)
     name = fields.CharField(max_length=100)
     stock = fields.IntField(default=0)
 
@@ -45,7 +44,7 @@ class Product(QModel):
         ])
     }
 
-    class Meta(QModel.Meta):
+    class Meta(RdmModel.Meta):
         table = "mt_product"
 
 

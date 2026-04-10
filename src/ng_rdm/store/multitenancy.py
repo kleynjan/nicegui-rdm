@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Generic, TypeVar
 
 from tortoise.expressions import Q
 
-from ..models import QModel
+from ..models import MultitenantRdmModel
 from ..utils.logging import logger
 from .base import Store
 from .orm import TortoiseStore
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 # set this to a list of tenant identifiers in your app
 valid_tenants: list[str] = []
 
-T = TypeVar('T', bound=QModel)
+T = TypeVar('T', bound=MultitenantRdmModel)
 
 
 def set_valid_tenants(tenants: list[str]):

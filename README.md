@@ -34,7 +34,7 @@ Note that you can use the main parts of the library independently of each other:
                ▼                                 │  5. return result
 ┌──────────────┴─────────────────────────────────┴─────────┐
 │  Data Layer                                              │
-│  Tortoise ORM · QModel                                   │
+│  Tortoise ORM · RdmModel / MultitenantRdmModel           │
 │  SQLite · PostgreSQL · MySQL                             │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -58,14 +58,14 @@ from nicegui import app, ui
 from tortoise import fields
 
 from ng_rdm import TortoiseStore, init_db, FieldSpec, Validator, store_registry
-from ng_rdm.models import QModel
+from ng_rdm.models import RdmModel
 from ng_rdm.components import (
     rdm_init, Column, TableConfig, FormConfig,
     ActionButtonTable, EditDialog,
 )
 
 # 1. Define a model with validation
-class Task(QModel):
+class Task(RdmModel):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=100)
 
@@ -125,7 +125,7 @@ In practice you will often want subclass generic stores to enhance/override `_re
 
 **Store layer** — `DictStore` (in-memory), `TortoiseStore` (ORM-backed), `store_registry`
 
-**Multitenancy** -  `MultitenantTortoiseStore` and `mt_store_registry`
+**Multitenancy** — `MultitenantTortoiseStore` and `mt_store_registry`. Models subclass `MultitenantRdmModel` for automatic tenant-field declaration.
 
 Tables and forms are defined through configuration (`TableConfig, Column, FormConfig`). See [`components/API.md`](components/API.md) for the full component API.
 
@@ -138,8 +138,8 @@ Run any example with `python -m ng_rdm.examples.<name>`.
 | `catalog` | Component catalog — showcases all widgets |
 | `master_detail` | ViewStack master-detail navigation |
 | `multitenant` | MultitenantTortoiseStore — tenant-isolated stores |
-| `custom_datasource` | Custom `RdmDataSource` implementation |
-| `vanilla_store` | Basic store usage without ng_rdm components |
+| `custom_datasource` | Build your own store backend |
+| `vanilla_store` | Use stores with vanilla NiceGUI components |
 | `topic_filtering` | Topic-based observer filtering |
 
 ## Project structure
@@ -155,7 +155,8 @@ src/ng_rdm/
 │   └── notifier.py          — EventNotifier (batching, debouncing, topic filtering), StoreEvent
 ├── models/                  — data model helpers
 │   ├── types.py             — Validator, FieldSpec NamedTuples
-│   └── qmodel.py            — QModel (extended Tortoise ORM Model)
+│   ├── rdm_model.py         — RdmModel (extended Tortoise ORM Model)
+│   └── mt_rdm_model.py      — MultitenantRdmModel (tenant-scoped abstract base)
 ├── components/              — UI components
 │   ├── __init__.py          — exports rdm_init(), all components
 │   ├── base.py              — ObservableRdmComponent and config helpers
@@ -203,11 +204,18 @@ The library includes a few helpers:
 
 ### Multitenancy
 
-For multitenant apps, use 
-use `MultitenantTortoiseStore` together with `mt_store_registry` (a `MultitenantStoreRegistry` instance in `store/multitenancy.py`). The registry keys stores by `(tenant, name)`:
+For multitenant apps, use `MultitenantTortoiseStore` together with `mt_store_registry` (a `MultitenantStoreRegistry` instance in `store/multitenancy.py`). The registry keys stores by `(tenant, name)`. Models must subclass `MultitenantRdmModel` (which declares the `tenant` field automatically):
 
 ```python
-from ng_rdm import mt_store_registry as store_registry  # alias keeps call-sites unchanged
+from ng_rdm.models import MultitenantRdmModel, RdmModel
+
+class Product(MultitenantRdmModel):
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=100)
+    # `tenant` is inherited — no need to declare it
+
+    class Meta(RdmModel.Meta):
+        table = "products"
 
 store_registry.register_store("acme", "products", MultitenantTortoiseStore(Product, tenant="acme"))
 store = store_registry.get_store("acme", "products")
@@ -235,14 +243,14 @@ See NiceGUI discussions going back to 2023 if you want more background, e.g. [#1
 
 ### What a store does and does not do
 
-While Tortoise is nominally an ORM, it is used here more as a basic data access layer. `Qmodel` in `models` adds extended field definitions, field level validators/normalizers and join_field logic to navigate foreign-key relationships. The `store` layer on top of Tortoise is the core of the library and performs some ORM-like functions.
+While Tortoise is nominally an ORM, it is used here more as a basic data access layer. `RdmModel` in `models` adds extended field definitions, field level validators/normalizers and join_field logic to navigate foreign-key relationships. The `store` layer on top of Tortoise is the core of the library and performs some ORM-like functions.
 
 What a store *does* do:
 * it maps a single database table (including related data) to a set of business objects
 * it provides a basic set of CRUD functions to read and write data...
 * ... using [lists of] dictionaries as the representation format
 * it notifies registered observers of changes to the store, eg create, update, delete
-* it performs validation and normalization (via Qmodel)
+* it performs validation and normalization (via RdmModel)
 * it offers (de-)hydration functions to translate database representation to business space and vice versa (e.g., dates, datetimes, NULL)
 
 What a store does *not* do:

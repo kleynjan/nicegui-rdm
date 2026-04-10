@@ -83,7 +83,7 @@ async def test_validation_rejects_empty_name():
 
 
 async def test_auto_required_validators():
-    """QModel auto-generates required validators for non-nullable CharFields"""
+    """RdmModel auto-generates required validators for non-nullable CharFields"""
     specs = Author.get_all_field_specs()
     assert "name" in specs  # explicit
     # email is nullable, so should NOT have an auto-required validator
@@ -184,14 +184,14 @@ async def test_join_fields():
 
 
 async def test_get_all_join_fields():
-    """QModel.get_all_join_fields returns all possible join fields"""
+    """RdmModel.get_all_join_fields returns all possible join fields"""
     join_fields = Book.get_all_join_fields()
     assert "author__name" in join_fields
     assert "author__email" in join_fields
 
 
 async def test_get_join_field_types():
-    """QModel.get_join_field_types returns types for join fields"""
+    """RdmModel.get_join_field_types returns types for join fields"""
     types = Book.get_join_field_types()
     assert "author__name" in types
     assert types["author__name"] == "CharField"
@@ -259,26 +259,26 @@ async def test_observer_on_orm_delete():
     assert events[0].verb == "delete"
 
 
-# --- QModel.values() ---
+# --- RdmModel.values() ---
 
-async def test_qmodel_values():
-    """QModel instance values() returns dict"""
+async def test_rdm_model_values():
+    """RdmModel instance values() returns dict"""
     author = await Author.create(name="Jane Austen", email="jane@books.com")
     d = author.values()
     assert d["name"] == "Jane Austen"
     assert d["email"] == "jane@books.com"
 
 
-async def test_qmodel_values_with_selection():
-    """QModel values() with field selection"""
+async def test_rdm_model_values_with_selection():
+    """RdmModel values() with field selection"""
     author = await Author.create(name="Jane Austen", email="jane@books.com")
     d = author.values("name")
     assert "name" in d
     assert "email" not in d
 
 
-async def test_qmodel_values_with_rename():
-    """QModel values() with field renaming"""
+async def test_rdm_model_values_with_rename():
+    """RdmModel values() with field renaming"""
     author = await Author.create(name="Jane Austen", email="jane@books.com")
     d = author.values(author_name="name")
     assert d["author_name"] == "Jane Austen"

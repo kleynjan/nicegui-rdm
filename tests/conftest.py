@@ -2,7 +2,7 @@
 """
 Shared pytest fixtures for ng_rdm tests.
 """
-from ng_rdm.models import QModel
+from ng_rdm.models import RdmModel, MultitenantRdmModel
 from tortoise import fields
 from ng_rdm.models import FieldSpec, Validator
 from ng_rdm.store import DictStore, StoreRegistry, MultitenantStoreRegistry
@@ -15,7 +15,7 @@ pytest_plugins = ['nicegui.testing.user_plugin']
 # --- Test models for ORM tests ---
 
 
-class Author(QModel):
+class Author(RdmModel):
     """Test model: Author"""
     name = fields.CharField(max_length=100)
     email = fields.CharField(max_length=200, null=True)
@@ -26,11 +26,11 @@ class Author(QModel):
         ]),
     }
 
-    class Meta(QModel.Meta):
+    class Meta(RdmModel.Meta):
         table = "author"
 
 
-class Book(QModel):
+class Book(RdmModel):
     """Test model: Book with FK to Author"""
     title = fields.CharField(max_length=200)
     year = fields.IntField(null=True)
@@ -44,17 +44,16 @@ class Book(QModel):
         ]),
     }
 
-    class Meta(QModel.Meta):
+    class Meta(RdmModel.Meta):
         table = "book"
 
 
-class TenantItem(QModel):
+class TenantItem(MultitenantRdmModel):
     """Test model with tenant field for multitenancy tests"""
-    tenant = fields.CharField(max_length=50)
     name = fields.CharField(max_length=100)
     description = fields.TextField(null=True)
 
-    class Meta(QModel.Meta):
+    class Meta(RdmModel.Meta):
         table = "tenant_item"
 
 

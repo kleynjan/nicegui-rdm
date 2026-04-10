@@ -26,14 +26,14 @@ from ng_rdm.components import (
     Row, Col, Separator,
 )
 from ng_rdm.store import TortoiseStore, init_db, store_registry
-from ng_rdm.models import QModel, FieldSpec, Validator
+from ng_rdm.models import RdmModel, FieldSpec, Validator
 
 
 # =============================================================================
 # Models
 # =============================================================================
 
-class Product(QModel):
+class Product(RdmModel):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=100)
     price = fields.DecimalField(max_digits=10, decimal_places=2)
@@ -49,11 +49,11 @@ class Product(QModel):
         ]),
     }
 
-    class Meta(QModel.Meta):
+    class Meta(RdmModel.Meta):
         table = "md_product"
 
 
-class Component(QModel):
+class Component(RdmModel):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=100)
     quantity = fields.IntField(default=1)
@@ -68,7 +68,7 @@ class Component(QModel):
         ]),
     }
 
-    class Meta(QModel.Meta):
+    class Meta(RdmModel.Meta):
         table = "md_component"
 
 

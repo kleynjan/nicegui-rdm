@@ -3,14 +3,14 @@ ng_rdm - Reactive state management for NiceGUI with Tortoise ORM
 
 Provides:
 - Store layer: DictStore, TortoiseStore, MultitenantTortoiseStore
-- Model helpers: QModel, FieldSpec, Validator
+- Model helpers: RdmModel, MultitenantRdmModel, FieldSpec, Validator
 - Utilities: Date/time conversion, validation helpers
 - Debug: Event stream visualization for debugging
 """
 
 from .store import Store, StoreEvent, DictStore, StoreRegistry, store_registry
 from .store import TortoiseStore, MultitenantTortoiseStore, MultitenantStoreRegistry, mt_store_registry, TenancyError, init_db
-from .models import FieldSpec, Validator, QModel
+from .models import FieldSpec, Validator, RdmModel, MultitenantRdmModel
 from .debug import enable_debug_page
 from .utils import logger, configure_logging
 
@@ -37,7 +37,8 @@ __all__ = [
     # Model helpers
     'FieldSpec',
     'Validator',
-    'QModel',
+    'RdmModel',
+    'MultitenantRdmModel',
 
     # Debug
     'enable_debug_page',

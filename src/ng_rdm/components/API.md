@@ -484,13 +484,13 @@ Minimal recipe for a new ng_rdm application: define a model, initialize the data
 
 ### 1. Define a Tortoise model
 
-Extend `QModel` (ng_rdm's Tortoise Model subclass). Add `field_specs` for validation.
+Extend `RdmModel` (ng_rdm's Tortoise Model subclass). Add `field_specs` for validation.
 
 ```python
 from tortoise import fields
-from ng_rdm.models import QModel, FieldSpec, Validator
+from ng_rdm.models import RdmModel, FieldSpec, Validator
 
-class Product(QModel):
+class Product(RdmModel):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=100)
     price = fields.DecimalField(max_digits=10, decimal_places=2)
@@ -504,8 +504,24 @@ class Product(QModel):
         ]),
     }
 
-    class Meta(QModel.Meta):
+    class Meta(RdmModel.Meta):
         table = "product"
+```
+
+#### Multitenant models
+
+Models used with `MultitenantTortoiseStore` must subclass `MultitenantRdmModel` instead of `RdmModel`. The `tenant` field (`CharField(max_length=64, index=True)`) is inherited automatically — no need to declare it per-class.
+
+```python
+from ng_rdm.models import MultitenantRdmModel, RdmModel
+
+class Product(MultitenantRdmModel):
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=100)
+    # no need to declare `tenant` — inherited from MultitenantRdmModel
+
+    class Meta(RdmModel.Meta):   # NOT MultitenantRdmModel.Meta — see MRO note in mt_rdm_model.py
+        table = "products"
 ```
 
 ### 2. Initialize DB + stores (module level)
@@ -523,7 +539,7 @@ init_db(app, f"sqlite://{DB_PATH}", modules={"models": [__name__]}, generate_sch
 product_store = TortoiseStore(Product)
 ```
 
-- `modules` maps a label to a list of Python module paths containing your QModel classes.
+- `modules` maps a label to a list of Python module paths containing your RdmModel classes.
 - `generate_schemas=True` auto-creates tables — handy for dev, skip in production.
 - For in-memory prototyping without a database, use `DictStore()` instead.
 
