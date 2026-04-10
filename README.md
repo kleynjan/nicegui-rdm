@@ -2,15 +2,15 @@
 
 ## Why: in a nutshell
 
-ng_rdm offers a clean and modern set of (non-Quasar) tables with all the plumbing you need to build database-backed NiceGUI applications. Moreover, these tables can automatically refresh when back-end data is added or modified. Hence: **reactive** data management. 
+ng_rdm offers a clean and modern set of configuration-driven tables with all the plumbing you need to build database-backed CRUD applications with NiceGUI. Moreover, these tables can automatically refresh when back-end data is added or modified. Hence: **reactive** data management. 
  
 ## Introduction
 
 ng_rdm is based on two ideas:
 
-1. To add **reactivity to database applications**, changes in data should be reflected in UI components, *without* the user having to refresh a page. Imagine a table showing items, counts, stock being updated in near real-time as data is changing. This is the core of the library, implemented in `models` and `store`. Note: this is similar to but *complementary* to the reactivity we can easily achieve &lsquo;client-side&rsquo; with  NiceGUI bindings etc. 
+1. To add **reactivity to database applications**, changes in data should be reflected in UI components, *without* the user having to refresh a page. Imagine a table showing items, counts, stock being updated in near real-time as data is changing. This is the core of the library, implemented in `models` and `store`. Note: this is similar to but *complementary* to standard NiceGUI reactivity (bindings etc; see notes on architecture below). 
 
-2. Secondly, NiceGUI's websocket architecture allows us to move the logic for larger **'composite' UI elements** (such as tables, dialogs, edit cards) from JavaScript/Vue (and Quasar!@&#*?!#)  over to the Python side. In `components/widgets` you'll find tables that create clean html with semantic CSS selectors. And 'as a bonus', because they are on the Python side, it's easy to register them as reactive observers with the stores mentioned above. 
+2. Secondly, we can move the logic for larger **'composite' UI elements** (such as tables, dialogs, edit cards) from JavaScript/Vue (and Quasar!@&#*?!#)  over to the Python side. In `components/widgets` you'll find tables that create clean html with semantic CSS selectors. And 'as a bonus', because they are on the Python side, it's easy to register them as reactive observers with the stores mentioned above. 
 
 Note that you can use the main parts of the library independently of each other: you can use the `components` to generate clean html/css widgets, with behavior entirely controlled in Python. And you can use `store` and `model` as an observer-based back-end for your own reactive user interface (see the vanilla_store example).
 
@@ -26,8 +26,8 @@ Note that you can use the main parts of the library independently of each other:
                ▼                                 │  6. notify_observers
 ┌──────────────┴─────────────────────────────────┴─────────┐
 │  Store Layer                                             │
-│  Store (base) · DictStore · TortoiseStore                │
-│  MultitenantTortoiseStore · StoreRegistry                │
+│  Store (base) · DictStore · (Multitenant)TortoiseStore   │
+│  (Multitenant)StoreRegistry                              │
 │  CRUD · validation · observer pattern                    │
 └──────────────┬─────────────────────────────────┬─────────┘
                │  2. validate & write            ▲
@@ -57,7 +57,7 @@ import ng_rdm   # import path differs from package name
 from nicegui import app, ui
 from tortoise import fields
 
-from ng_rdm import TortoiseStore, init_db, close_db, FieldSpec, Validator
+from ng_rdm import TortoiseStore, init_db, FieldSpec, Validator
 from ng_rdm.models import QModel
 from ng_rdm.components import (
     rdm_init, Column, TableConfig, FormConfig,
@@ -77,7 +77,6 @@ class Task(QModel):
 
 # 2. Initialize database and create a store (module level)
 init_db(app, "sqlite://tasks.db", modules={"models": [__name__]}, generate_schemas=True)
-app.on_shutdown(close_db)
 
 task_store = TortoiseStore(Task)
 
@@ -116,7 +115,7 @@ ui.run()
 
 **Store layer** — `DictStore` (in-memory), `TortoiseStore` (ORM-backed), `MultitenantTortoiseStore` (tenant-scoped)
 
-See [`components/API.md`](components/API.md) for the full component API reference.
+Tables and forms are defined through configuration (`TableConfig, Column, FormConfig`). See [`components/API.md`](components/API.md) for the full component API.
 
 ## Examples
 
@@ -131,14 +130,67 @@ Run any example with `python -m ng_rdm.examples.<name>`.
 | `vanilla_store` | Basic store usage without ng_rdm components |
 | `topic_filtering` | Topic-based observer filtering |
 
+## Project structure
+
+```
+src/ng_rdm/
+├── __init__.py              — package root (exports Store layer)
+├── store/                   — state management & data layer
+│   ├── base.py              — Store (add/remove_observer, set_topic_fields), StoreRegistry, store_registry
+│   ├── dict_store.py        — DictStore (in-memory store)
+│   ├── orm.py               — TortoiseStore (Tortoise ORM integration)
+│   ├── multitenancy.py      — MultitenantTortoiseStore, MultitenantStoreRegistry, mt_store_registry
+│   └── notifier.py          — EventNotifier (batching, debouncing, topic filtering), StoreEvent
+├── models/                  — data model helpers
+│   ├── types.py             — Validator, FieldSpec NamedTuples
+│   └── qmodel.py            — QModel (extended Tortoise ORM Model)
+├── components/              — UI components
+│   ├── __init__.py          — exports rdm_init(), all components
+│   ├── base.py              — RdmComponent, ObservableRdmComponent, ObservableRdmTable, Column, TableConfig, FormConfig
+│   ├── protocol.py          — RdmDataSource protocol (structural typing)
+│   ├── fields.py            — build_form_field() shared utility
+│   ├── i18n.py              — localization (Dutch/English)
+│   ├── ng_rdm.css           — design system stylesheet
+│   └── widgets/             — concrete UI widget components
+│       ├── action_button_table.py — ActionButtonTable (table with per-row action buttons)
+│       ├── list_table.py    — ListTable (read-only with clickable rows)
+│       ├── selection_table.py — SelectionTable (checkbox multi-select)
+│       ├── dialog.py        — Dialog (positioned card overlay)
+│       ├── detail_card.py   — DetailCard (read-only detail view)
+│       ├── edit_card.py     — EditCard (in-place editing form, takes FormConfig)
+│       ├── edit_dialog.py   — EditDialog (modal editing dialog, takes FormConfig)
+│       ├── tabs.py          — Tabs (div-based tab switcher)
+│       ├── view_stack.py    — ViewStack (navigation coordinator with render slots)
+│       ├── wizard.py        — StepWizard, WizardStep (multi-step form wizard)
+│       ├── button.py        — Button, IconButton, Icon
+│       └── layout.py        — RdmLayoutElement, Row, Col, Separator
+├── utils/                   — utilities
+│   ├── helpers.py           — date/time, validation, formatting
+│   └── logging.py           — logger setup & configuration
+├── debug/                   — developer tooling
+│   ├── event_log.py         — EventLog (rotating buffer), EventLogEntry, event_log singleton
+│   └── page.py              — enable_debug_page() registers /rdm-debug route
+└── examples/
+    ├── catalog.py           — component catalog / showcase
+    ├── custom_datasource.py — custom RdmDataSource implementation
+    ├── master_detail.py     — master-detail pattern with ViewStack
+    ├── vanilla_store.py     — basic store usage without components
+    ├── topic_filtering.py   — topic-based filtering demo
+    └── multitenant.py       — MultitenantTortoiseStore with two tenant stores, quadrant layout
+```
+
 ## Working with ng_rdm
 
-### App organization
+### Finding your way
 
-One pattern to consider is to create a `domain` or `app_logic` directory and to add your app-specific logic there. That's a good place to add an app-specific `models.py` and `stores.py`  
+1. Define your data in Qmodel subclasses
+1. Add init_db to your app initalization, pointing it to your models 
 
-You will often need or want to extend a generic `TortoiseStore` or `MultitenantTortoiseStore` for a specific model with more business logic, overriding methods like `read_items` or `_update_item`. A typical class definition in `domain/stores.py` might look like this: <br>`class EnrichedProductStore(MultitenantTortoiseStore[Product]):...`
-Along the same lines, `domain/models.py` would be a good place to put `Qmodel` subclasses: `class Product(QModel):...` (also see examples).
+
+### Other restrictions
+
+The way we use Tortoise ORM assumes every table has an integer primary key called `id`. It's quite possible that things will work if you do it differently, but it's quite likely something will break.
+
 
 ### Helpers
 
@@ -147,6 +199,18 @@ The library includes a few helpers:
 * `utils/logging.py`: pass `log_file="app.log"` to `rdm_init()` and all ng_rdm, Tortoise ORM, and uvicorn output goes to that file — nothing else to configure. Without a path, the library stays silent and lets the host app's logging config take over. You can also do `from ng_rdm import logger` to write to the same logger in your own app code.
 
 * `components/i18n.py`: self-contained translations for the generic CRUD labels used in components (buttons, confirmations, validation messages). Ships with English (default) and Dutch. Pass `custom_translations` to `rdm_init()` to add a language or override strings; call `set_language('nl_nl')` to switch. Intentionally separate from any app-level i18n to keep the package portable.
+
+### Multitenancy
+
+ng_rdm includes 
+For multitenant apps, use `MultitenantTortoiseStore` together with `mt_store_registry` (a `MultitenantStoreRegistry` instance in `store/multitenancy.py`). The registry keys stores by `(tenant, name)`:
+
+```python
+from ng_rdm import mt_store_registry as store_registry  # alias keeps call-sites unchanged
+
+store_registry.register_store("acme", "products", MultitenantTortoiseStore(Product, tenant="acme"))
+store = store_registry.get_store("acme", "products")
+```
 
 ### Show refresh via CSS
 
@@ -179,7 +243,8 @@ What a store *does* do:
 What a store does *not* do:
 * it does not do any caching: all read_items(...) etc. go straight to the database via Tortoise
 * it has limited understanding of relations in the data model: a store is centered on a single database table, with some options to query related tables ('join_fields')
-* it is not intended to scale: an app will usually have a *single instance* for every type of store (see `store_registry` in `store/base.py`) to allow the store to distribute incoming changes to the relevant observers; (but note: if you use the multitencancy pattern, there will be one instance per type, *per tenant*)
+* it is not intended to scale: an app will usually have a *single instance* for every type of store (see `store_registry` in `store/base.py`) to allow the store to distribute incoming changes to the relevant observers
+
 
 ### Directions / improvements
 

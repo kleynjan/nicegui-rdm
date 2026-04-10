@@ -105,8 +105,8 @@ async def seed_data():
 @app.on_startup
 async def startup():
     await seed_data()
-    store_registry.register_store("default", "product", TortoiseStore(Product))
-    store_registry.register_store("default", "component", TortoiseStore(Component))
+    store_registry.register_store("product", TortoiseStore(Product))
+    store_registry.register_store("component", TortoiseStore(Component))
 
 
 # =============================================================================
@@ -158,8 +158,8 @@ async def main(client: Client):
         "editcard": {}, "component_dialog": {}, "detail_card": {},
     }
 
-    product_store = store_registry.get_store("default", "product")
-    component_store = store_registry.get_store("default", "component")
+    product_store = store_registry.get_store("product")
+    component_store = store_registry.get_store("component")
 
     with Col(classes="demo-content-column"):
 

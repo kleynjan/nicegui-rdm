@@ -31,6 +31,7 @@ def init_db(app, db_url: str, modules: dict[str, list[str]], *, generate_schemas
         modules=modules,  # type:ignore # eg, {"models": ["models"]}
         generate_schemas=generate_schemas,
     )
+    app.on_shutdown(close_db)
 
 async def close_db():
     """Close database connections"""

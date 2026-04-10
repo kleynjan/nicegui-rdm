@@ -119,8 +119,8 @@ async def seed_data():
 @app.on_startup
 async def startup():
     await seed_data()
-    store_registry.register_store("default", "category", TortoiseStore(Category))
-    store_registry.register_store("default", "product", TortoiseStore(Product))
+    store_registry.register_store("category", TortoiseStore(Category))
+    store_registry.register_store("product", TortoiseStore(Product))
     if not await toc_store.read_items():
         for item in toc_data:
             await toc_store.create_item(item)
@@ -596,8 +596,8 @@ async def main(client: Client):
         "highlight": {},
     })
 
-    product_store = store_registry.get_store("default", "product")
-    category_store = store_registry.get_store("default", "category")
+    product_store = store_registry.get_store("product")
+    category_store = store_registry.get_store("category")
 
     with Col(classes="demo-content-column"):
 

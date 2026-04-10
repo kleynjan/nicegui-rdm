@@ -23,7 +23,8 @@ from ng_rdm.components import (
     ActionButtonTable, EditDialog,
     Row, Col, Separator,
 )
-from ng_rdm.store import MultitenantTortoiseStore, init_db, close_db, store_registry
+from ng_rdm.store import MultitenantTortoiseStore, init_db, close_db
+from ng_rdm import mt_store_registry as store_registry
 from ng_rdm.store.multitenancy import set_valid_tenants
 from ng_rdm.models import QModel, FieldSpec, Validator
 

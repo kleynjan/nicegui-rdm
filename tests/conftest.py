@@ -5,7 +5,7 @@ Shared pytest fixtures for ng_rdm tests.
 from ng_rdm.models import QModel
 from tortoise import fields
 from ng_rdm.models import FieldSpec, Validator
-from ng_rdm.store import DictStore, StoreRegistry
+from ng_rdm.store import DictStore, StoreRegistry, MultitenantStoreRegistry
 import pytest
 from tortoise import Tortoise
 
@@ -96,5 +96,11 @@ def validated_store():
 
 @pytest.fixture
 def registry():
-    """A fresh StoreRegistry"""
+    """A fresh StoreRegistry (flat)"""
     return StoreRegistry()
+
+
+@pytest.fixture
+def mt_registry():
+    """A fresh MultitenantStoreRegistry"""
+    return MultitenantStoreRegistry()

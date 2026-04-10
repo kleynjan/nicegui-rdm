@@ -9,6 +9,7 @@ import time
 from nicegui import ui
 
 from ..store.base import store_registry
+from ..store.multitenancy import mt_store_registry
 from .event_log import EventLogEntry, event_log
 
 VERB_COLORS = {
@@ -52,31 +53,37 @@ def _render_debug_page() -> None:
             return
         stats_container.clear()
         with stats_container:
-            # Query registry directly for all registered stores
-            all_stores = store_registry.get_all_stores()
+            # Merge both registries: flat stores get tenant=""
+            mt_stores = mt_store_registry.get_all_stores()  # [(tenant, name, store)]
+            flat_stores = [("", name, store) for name, store in store_registry.get_all_stores()]
+            all_stores: list[tuple[str, str, object]] = flat_stores + mt_stores
+            show_tenant_col = bool(mt_stores)
+
             if not all_stores:
                 ui.label("No stores registered yet").classes("text-gray-500 italic")
             else:
                 # Get event stats for enrichment (event counts, last event time)
                 event_stats = {(s.tenant, s.store_name): s for s in event_log.get_store_stats()}
 
+                headers = ["Store", "Tenant", "Observers", "Events", "Last Event"] if show_tenant_col \
+                    else ["Store", "Observers", "Events", "Last Event"]
                 with ui.element("table").classes("w-full text-sm"):
                     with ui.element("thead").classes("bg-gray-100"):
                         with ui.element("tr"):
-                            for header in ["Store", "Tenant", "Observers", "Events", "Last Event"]:
+                            for header in headers:
                                 ui.element("th").classes(
                                     "px-3 py-2 text-left font-medium").props(f'innerHTML="{header}"')
                     with ui.element("tbody"):
                         for tenant, name, store in all_stores:
-                            # Get event stats if available
                             stats = event_stats.get((tenant, name))
                             event_count = stats.event_count if stats else 0
                             last_event = stats.last_event_time if stats else 0
                             with ui.element("tr").classes("border-t"):
                                 ui.element("td").classes("px-3 py-2 font-mono").props(f'innerHTML="{name}"')
-                                ui.element("td").classes("px-3 py-2").props(f'innerHTML="{tenant}"')
+                                if show_tenant_col:
+                                    ui.element("td").classes("px-3 py-2").props(f'innerHTML="{tenant}"')
                                 ui.element("td").classes(
-                                    "px-3 py-2 text-center").props(f'innerHTML="{store.observer_count}"')
+                                    "px-3 py-2 text-center").props(f'innerHTML="{store.observer_count}"')  # type: ignore[union-attr]
                                 ui.element("td").classes("px-3 py-2 text-center").props(f'innerHTML="{event_count}"')
                                 ui.element("td").classes(
                                     "px-3 py-2 text-gray-500").props(f'innerHTML="{_time_ago(last_event)}"')
@@ -170,6 +177,7 @@ def enable_debug_page(path: str = "/rdm-debug") -> None:
     def debug_page():
         _render_debug_page()
 
-    # Enable event logging and wire up all stores
+    # Enable event logging and wire up all stores (both flat and multitenant)
     event_log.enable()
     store_registry.set_event_log(event_log)
+    mt_store_registry.set_event_log(event_log)

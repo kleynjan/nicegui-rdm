@@ -250,30 +250,42 @@ async def test_derived_fields(dict_store):
 # --- StoreRegistry ---
 
 def test_registry_register_and_get(registry):
-    """Register and retrieve a store"""
+    """Register and retrieve a store by name"""
     store = DictStore()
-    registry.register_store("tenant_a", "items", store)
+    registry.register_store("items", store)
 
-    retrieved = registry.get_store("tenant_a", "items")
-    assert retrieved is store
+    assert registry.get_store("items") is store
 
 
-def test_registry_missing_rdm(registry):
+def test_registry_missing_store(registry):
     """KeyError when store not found"""
     with pytest.raises(KeyError, match="No store"):
-        registry.get_store("tenant_a", "nonexistent")
+        registry.get_store("nonexistent")
 
 
-def test_registry_tenant_isolation(registry):
-    """Stores are isolated per tenant"""
+def test_registry_multiple_stores(registry):
+    """Multiple named stores are independent"""
     store_a = DictStore()
     store_b = DictStore()
-    registry.register_store("tenant_a", "items", store_a)
-    registry.register_store("tenant_b", "items", store_b)
+    registry.register_store("items", store_a)
+    registry.register_store("users", store_b)
 
-    assert registry.get_store("tenant_a", "items") is store_a
-    assert registry.get_store("tenant_b", "items") is store_b
-    assert registry.get_store("tenant_a", "items") is not store_b
+    assert registry.get_store("items") is store_a
+    assert registry.get_store("users") is store_b
+    assert registry.get_store("items") is not store_b
+
+
+def test_registry_get_all_stores(registry):
+    """get_all_stores returns (name, store) tuples"""
+    store_a = DictStore()
+    store_b = DictStore()
+    registry.register_store("items", store_a)
+    registry.register_store("users", store_b)
+
+    all_stores = registry.get_all_stores()
+    assert len(all_stores) == 2
+    names = {name for name, _ in all_stores}
+    assert names == {"items", "users"}
 
 
 # --- Observer Remove/Topics ---

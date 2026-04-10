@@ -9,7 +9,7 @@ Provides:
 """
 
 from .store import Store, StoreEvent, DictStore, StoreRegistry, store_registry
-from .store import TortoiseStore, MultitenantTortoiseStore, TenancyError, init_db
+from .store import TortoiseStore, MultitenantTortoiseStore, MultitenantStoreRegistry, mt_store_registry, TenancyError, init_db
 from .models import FieldSpec, Validator, QModel
 from .debug import enable_debug_page
 from .utils import logger
@@ -29,6 +29,8 @@ __all__ = [
     'store_registry',
     'TortoiseStore',
     'MultitenantTortoiseStore',
+    'MultitenantStoreRegistry',
+    'mt_store_registry',
     'TenancyError',
     'init_db',
 

@@ -1,8 +1,8 @@
 """
-Tests for MultitenantTortoiseStore: tenant scoping and isolation.
+Tests for MultitenantTortoiseStore and MultitenantStoreRegistry.
 """
 import pytest
-from ng_rdm.store import MultitenantTortoiseStore, TenancyError
+from ng_rdm.store import DictStore, MultitenantTortoiseStore, MultitenantStoreRegistry, TenancyError
 from ng_rdm.store.multitenancy import set_valid_tenants, valid_tenants
 from tests.conftest import TenantItem
 
@@ -107,3 +107,43 @@ async def test_set_valid_tenants_deduplicates():
     set_valid_tenants(["a", "b", "a"])
     assert len(mt.valid_tenants) == 2
     assert set(mt.valid_tenants) == {"a", "b"}
+
+
+# --- MultitenantStoreRegistry ---
+
+def test_mt_registry_register_and_get(mt_registry):
+    """Register and retrieve a store by tenant + name"""
+    store = DictStore()
+    mt_registry.register_store("tenant_a", "items", store)
+    assert mt_registry.get_store("tenant_a", "items") is store
+
+
+def test_mt_registry_missing_store(mt_registry):
+    """KeyError when store not found"""
+    with pytest.raises(KeyError, match="No store"):
+        mt_registry.get_store("tenant_a", "nonexistent")
+
+
+def test_mt_registry_tenant_isolation(mt_registry):
+    """Stores are isolated per tenant"""
+    store_a = DictStore()
+    store_b = DictStore()
+    mt_registry.register_store("tenant_a", "items", store_a)
+    mt_registry.register_store("tenant_b", "items", store_b)
+
+    assert mt_registry.get_store("tenant_a", "items") is store_a
+    assert mt_registry.get_store("tenant_b", "items") is store_b
+    assert mt_registry.get_store("tenant_a", "items") is not store_b
+
+
+def test_mt_registry_get_all_stores(mt_registry):
+    """get_all_stores returns (tenant, name, store) tuples"""
+    store_a = DictStore()
+    store_b = DictStore()
+    mt_registry.register_store("alpha", "items", store_a)
+    mt_registry.register_store("beta", "items", store_b)
+
+    all_stores = mt_registry.get_all_stores()
+    assert len(all_stores) == 2
+    keys = {(t, n) for t, n, _ in all_stores}
+    assert keys == {("alpha", "items"), ("beta", "items")}

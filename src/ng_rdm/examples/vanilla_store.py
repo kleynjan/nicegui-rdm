@@ -25,7 +25,7 @@ from ng_rdm.components import Row, Col, Separator, Button
 
 store = DictStore()
 store.set_topic_fields(["category"])
-store_registry.register_store("demo", "products", store)
+store_registry.register_store("products", store)
 
 SEED = [
     {"name": "Laptop Pro", "price": 1299.0, "category": "Electronics"},

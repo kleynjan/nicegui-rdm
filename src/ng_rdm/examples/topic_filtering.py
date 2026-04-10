@@ -22,7 +22,7 @@ from ng_rdm.components import (
 
 customer_store = DictStore()
 customer_store.set_topic_fields(["country"])
-store_registry.register_store("demo", "customers", customer_store)
+store_registry.register_store("customers", customer_store)
 
 SEED_DATA = [
     {"id": 1, "name": "Alice Johnson", "country": "USA"},

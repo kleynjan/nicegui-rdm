@@ -76,7 +76,7 @@ class EventNotifier:
         """Configure which item fields can be used for topic-based routing."""
         self._topic_fields = fields
 
-    def set_event_log(self, event_log: EventLog, store_name: str, tenant: str) -> None:
+    def set_event_log(self, event_log: EventLog, store_name: str, tenant: str = "") -> None:
         """Set the event log for debug tracking."""
         self._event_log = event_log
         self._store_name = store_name

@@ -76,7 +76,7 @@ class Store:
         """Get the number of observers"""
         return self._notifier.observer_count
 
-    def set_event_log(self, event_log: EventLog, name: str, tenant: str) -> None:
+    def set_event_log(self, event_log: EventLog, name: str, tenant: str = "") -> None:
         """Set the event log for debug tracking.
 
         Args:
@@ -206,10 +206,10 @@ class Store:
 
 
 class StoreRegistry:
-    """Registry for tenant-scoped singleton store instances"""
+    """Registry for singleton store instances keyed by name."""
 
     def __init__(self):
-        self._stores: dict[str, dict[str, Store]] = {}
+        self._stores: dict[str, Store] = {}
         self._event_log: EventLog | None = None
 
     def set_event_log(self, event_log: EventLog) -> None:
@@ -219,38 +219,30 @@ class StoreRegistry:
         and any stores registered in the future.
         """
         self._event_log = event_log
-        # Wire up existing stores
-        for tenant, name, store in self.get_all_stores():
-            store.set_event_log(event_log, name, tenant)
+        for name, store in self._stores.items():
+            store.set_event_log(event_log, name)
 
-    def register_store(self, tenant: str, name: str, store: Store) -> None:
-        """Register a store instance for a tenant."""
-        if tenant not in self._stores:
-            self._stores[tenant] = {}
-        self._stores[tenant][name] = store
-        # Auto-wire event logging if enabled
+    def register_store(self, name: str, store: Store) -> None:
+        """Register a store instance by name."""
+        self._stores[name] = store
         if self._event_log:
-            store.set_event_log(self._event_log, name, tenant)
-        logger.debug(f"Registered {name} store for tenant {tenant}")
+            store.set_event_log(self._event_log, name)
+        logger.debug(f"Registered {name} store")
 
-    def get_store(self, tenant: str, name: str) -> Store:
-        """Get the singleton store instance for a tenant.
+    def get_store(self, name: str) -> Store:
+        """Get the singleton store instance by name.
 
         Raises:
-            KeyError: If no store exists for this tenant/name combination
+            KeyError: If no store exists for this name
         """
         try:
-            return self._stores[tenant][name]
+            return self._stores[name]
         except KeyError:
-            raise KeyError(f"No store '{name}' found for tenant '{tenant}'")
+            raise KeyError(f"No store '{name}' registered")
 
-    def get_all_stores(self) -> list[tuple[str, str, Store]]:
-        """Get all registered stores as (tenant, name, store) tuples."""
-        result = []
-        for tenant, stores in self._stores.items():
-            for name, store in stores.items():
-                result.append((tenant, name, store))
-        return result
+    def get_all_stores(self) -> list[tuple[str, Store]]:
+        """Get all registered stores as (name, store) tuples."""
+        return list(self._stores.items())
 
 
 # Global registry instance
