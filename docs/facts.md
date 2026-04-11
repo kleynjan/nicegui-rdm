@@ -1,10 +1,8 @@
-# System Facts: ng_rdm
+# System Facts: ng_rdm Reactive Data Management
 
 ## Purpose
 
 ng_rdm (nicegui-rdm on pypi) is a reusable library providing Reactive Database Management for NiceGUI applications. It provides the state management layer, reactive UI components, and model helpers that bridge Tortoise ORM and NiceGUI.
-
-RDM = Reactive Data(base) Management
 
 ## Architecture
 
@@ -32,6 +30,8 @@ RDM = Reactive Data(base) Management
 │  SQLite · PostgreSQL · MySQL                             │
 └──────────────────────────────────────────────────────────┘
 ```
+
+The origins of this project go back to 2023: see for instance NiceGUI Discussions [#1042](https://github.com/zauberzeug/nicegui/discussions/1042) and [#4172](https://github.com/zauberzeug/nicegui/discussions/4172). More recently there have been [interesting discussions](https://github.com/zauberzeug/nicegui/discussions/4758) around reaktiv, Signals and proxying the native NiceGUI reactivity layer &ndash; but as of this moment it's primarily `@ui.refreshable` that's doing the heavy lifting. 
 
 ### Data Flow
 
@@ -369,14 +369,8 @@ Demo: `python -m ng_rdm.examples.catalog` (includes debug page)
 ## Technologies
 
 - **Python 3.12+**
-- **NiceGUI** (>= 1.4.0) — Python web UI framework
-- **Tortoise ORM** (>= 0.20.0) — async ORM
+- **NiceGUI** — Python web UI framework
+- **Tortoise ORM** — async ORM
 - **pytz** — timezone handling
 - **Build**: hatchling
 - **Testing**: pytest + pytest-asyncio
-
-## NiceGUI Documentation
-
-- **Load on-demand only** when working on UI implementation or need reference patterns
-- Source is at https://github.com/zauberzeug/nicegui
-- NiceGUI testing, especially the User fixture: https://nicegui.io/documentation/section_testing

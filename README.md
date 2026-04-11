@@ -14,7 +14,7 @@ You can use either half on its own: drive your own NiceGUI UI from a reactive st
 
 ## What it looks like
 
-Master/detail using a ListTable, DetailCard, ActionButtonTable and EditDialog - wired together with a ViewStack:
+[Master/detail](src/ng_rdm/examples/master_detail.py) using a ListTable, DetailCard, ActionButtonTable and EditDialog - wired together with a ViewStack:
 
 ![Master detail example](docs/screenshots/master-detail-demo.gif)
 
@@ -22,7 +22,7 @@ The reactive story in two browser windows — one edits, the other watches:
 
 ![Two-browser reactivity demo: Browser A edits, Browser B updates automatically](docs/screenshots/reactivity-demo.gif)
 
-## Library overview
+## How it works
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -134,11 +134,11 @@ In practice you will often want to subclass generic stores to enhance/override `
 
 **Layout** — `Button`, `IconButton`, `Icon`, `Row`, `Col`, `Separator`
 
-Try them out live in the [catalog example](src/ng_rdm/examples/catalog.py).
+They're all included in the [catalog example](src/ng_rdm/examples/catalog.py).
 
 ### Configuring tables and forms
 
-Tables and forms share one configuration unit: a list of `Column` objects. The same list drives an `ActionButtonTable` (via `TableConfig`) and the `EditDialog` that edits rows in it (via `FormConfig`) — so "customer has a name, an email, and a priority" is declared once, not twice:
+Tables and forms share one configuration unit: a list of `Column` objects. The same list drives an `ActionButtonTable` (via `TableConfig`) and the `EditDialog` that edits rows in it (via `FormConfig`) — so "customer has a name, an email, and a priority" is declared once:
 
 ```python
 columns = [
@@ -154,13 +154,13 @@ form_config  = FormConfig(columns=columns, title_edit="Edit customer")
 
 Configuration covers the common case — labels, widths, ui-types, validation, required fields, custom per-row buttons. When you need to step outside it, every column has rendering hooks that take over for that one concern without losing the rest of the config: `Column.formatter` for simple display transforms, `Column.render(row)` for fully custom cell HTML (see the [chips example](src/ng_rdm/examples/chips.py)), `Column.on_click` for per-cell interactions, and `RowAction` / `render_toolbar` for buttons around the table. The [in_row_editing example](src/ng_rdm/examples/in_row_editing.py) goes one step further and subclasses `ObservableRdmTable` for inline per-cell editing while keeping the `Column` definitions intact.
 
-See [`docs/api.md`](docs/api.md) for the full API reference.
+See [docs/api.md](docs/api.md) for the full API reference.
 
 ## FAQ
 
 ### OK, I get the idea behind the tables. But why a new `Row`/`Col`/`Dialog`/`Separator` when NiceGUI already has `ui.row`, `ui.dialog`, `ui.separator`?
 
-Like with tables, it's nice to have plain HTML with explicit semantic selectors *without* the spurious divs added by Quasar &ndash; enabling straightforward and predictable styling. But they're a convenience, not a crucial part of the library. 
+Like with tables, it's nice to have plain HTML with explicit semantic selectors *without* the spurious divs added by Quasar &ndash; enabling straightforward and predictable styling. But they're a convenience, not a crucial part of the library. And Buttons, Icons and IconButtons are still NiceGUI/Quasar native, though neutered via a subclass (as per [this comment](https://github.com/zauberzeug/nicegui/discussions/5882#discussioncomment-16152754)).
 
 ## Examples
 
@@ -316,10 +316,16 @@ Note that by default, all table classes register as observers to the stores they
 
 ## Requirements
 
-- Python 3.12+
+- Python >= 3.12
 - NiceGUI >= 3.0, < 4.0
 - Tortoise ORM >= 1.0.0, < 2.0.0
 - pytz
+
+For testing:
+- pytest>=8.0
+- pytest-asyncio>=0.23
+- pytest-cov>=5.0
+- httpx
 
 ## License
 
