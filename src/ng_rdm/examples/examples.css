@@ -37,6 +37,14 @@
     padding: 1rem;
 }
 
+/* ── Direct edit table ───────────────────────────────────────────────────── */
+
+.rdm-direct-table td.rdm-direct-cell {
+    padding: 2px var(--rdm-spacing-lg);
+    vertical-align: middle;
+}
+
+
 /* ── Catalog ─────────────────────────────────────────────────────────────── */
 
 .catalog-section {

@@ -113,7 +113,12 @@ RowAction(
 
 ## Table Components
 
-All table components extend `ObservableRdmTable` and share these features:
+All table components extend `ObservableRdmTable` and share these features.
+
+**Custom table subclasses** — subclass `ObservableRdmTable` directly to build bespoke table behaviour (e.g. inline per-cell editing). Implement `@ui.refreshable_method async def build(self)`, call `self.load_data()` and `self._build_toolbar("top"/"bottom")` at the appropriate positions, and use `self._render_cell(col, value, row)` for read-only cells. For editable cells, use `build_cell_field(col, row_dict)` (from `ng_rdm.components.fields`) — it produces a label-less, compact widget correctly styled for table cells. See `examples/direct_edit.py` for a full working example.
+
+---
+
 - Auto-observe data source (configurable via `auto_observe`)
 - `build()` renders the table (call with `await`)
 - `build_with_toolbars()` wraps `build()` with toolbar at configured position
@@ -453,6 +458,30 @@ Separator(classes="", style="")
 ---
 
 ## Utilities
+
+### `build_cell_field(col, state)` and `build_form_field(col, state)`
+
+Both functions are in `ng_rdm.components.fields` (imported directly, not from the top-level package).
+
+**`build_cell_field`** — builds a compact, label-less editable widget for use inside table cells. Applies `dense flat` Quasar props and the `rdm-cell-input` CSS class (which suppresses the hint-line gap). Returns `None` for display-only column types.
+
+```python
+from ng_rdm.components.fields import build_cell_field
+
+el = build_cell_field(col, row_dict)   # col: Column, row_dict bound to col.name
+if el:
+    el.on("blur", lambda _e: handle_save())
+```
+
+**`build_form_field`** — builds a labeled form field for use in dialog/card forms. Injects `label=` / `text=` from `col.label`, applies the `form-input` CSS class, no `dense flat` props.
+
+```python
+from ng_rdm.components.fields import build_form_field
+
+el = build_form_field(col, state_dict)  # used internally by EditDialog, EditCard
+```
+
+Use `build_cell_field` when building custom `ObservableRdmTable` subclasses with editable cells; use `build_form_field` in form/dialog contexts. Both bind the widget value to `state[col.name]` via NiceGUI's `bind_value`.
 
 ### `confirm_dialog()`
 

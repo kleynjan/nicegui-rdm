@@ -193,6 +193,16 @@
     }
 }
 
+/* Editable widgets inside table cells — built by build_cell_field() */
+.rdm-cell-input {
+    margin: 0;
+    width: 100%;
+
+    .q-field__bottom {
+        display: none;            /* hide hint line so row height stays consistent */
+    }
+}
+
 /* this is a sibling to .rdm-table-card */
 .rdm-table-toolbar {
     display: flex;

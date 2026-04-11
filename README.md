@@ -141,6 +141,7 @@ Run any example with `python -m ng_rdm.examples.<name>`.
 | `catalog` | Component catalog — showcases all widgets |
 | `master_detail` | ViewStack master-detail navigation |
 | `multitenant` | MultitenantTortoiseStore — tenant-isolated stores |
+| `direct_edit` | Custom `ObservableRdmTable` subclass with inline per-cell editing |
 | `custom_datasource` | Build your own store backend |
 | `vanilla_store` | Use stores with vanilla NiceGUI components |
 | `topic_filtering` | Topic-based observer filtering |
@@ -164,7 +165,7 @@ src/ng_rdm/
 │   ├── __init__.py          — exports rdm_init(), all components
 │   ├── base.py              — ObservableRdmComponent and config helpers
 │   ├── protocol.py          — RdmDataSource protocol (structural typing)
-│   ├── fields.py            — build_form_field() shared utility
+│   ├── fields.py            — build_form_field() for forms; build_cell_field() for table cells
 │   ├── i18n.py              — localization (currently Dutch/English, easily expandable)
 │   ├── ng_rdm.css           — design system stylesheet
 │   └── widgets/             — concrete UI widget components
@@ -192,7 +193,8 @@ src/ng_rdm/
     ├── master_detail.py     — master-detail pattern with ViewStack
     ├── vanilla_store.py     — basic store usage without components
     ├── topic_filtering.py   — topic-based filtering demo
-    └── multitenant.py       — MultitenantTortoiseStore with two tenant stores, quadrant layout
+    ├── multitenant.py       — MultitenantTortoiseStore with two tenant stores, quadrant layout
+    └── direct_edit.py       — custom ObservableRdmTable subclass with inline per-cell editing
 ```
 
 ## Working with ng_rdm

@@ -14,6 +14,27 @@ DISPLAY_ONLY_TYPES = {ui.badge, ui.label, ui.html, ui.markdown}
 DISPLAY_PARAMS = {"color_map"}
 
 
+def build_cell_field(col: Column, state: dict) -> ui.element | None:
+    """Build a compact, label-less editable widget bound to state[col.name].
+
+    For use inside table cells where Quasar's form-field chrome (floating label,
+    hint line) is not wanted. Applies `dense flat` props and the `rdm-cell-input`
+    class. Returns None for display-only column types.
+    """
+    ui_type = col.ui_type or ui.input
+    if ui_type in DISPLAY_ONLY_TYPES:
+        return None
+
+    filtered_parms = {k: v for k, v in col.parms.items() if k not in DISPLAY_PARAMS}
+    el = ui_type(**filtered_parms).bind_value(state, col.name)
+    el.classes("rdm-cell-input")
+    combined_props = f"dense flat {col.props or ''}".strip()
+    el.props(combined_props)
+    if ui_type == ui.select:
+        el.props('popup-content-style="z-index: 6100"')
+    return el
+
+
 def build_form_field(col: Column, state: dict) -> ui.element | None:
     """Build a single form field from a Column config, bound to state[col.name].
 
