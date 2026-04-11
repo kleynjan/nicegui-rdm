@@ -1,6 +1,8 @@
 # Components API Reference
 
-API reference for ng_rdm UI components. For architecture and design patterns, see `facts.md`.
+> **Note:** This file has been superseded by the full library API reference at [`docs/api.md`](../../../../docs/api.md) in the repo root. That document covers Store, Models, Utilities, and Debug in addition to the components documented here.
+
+API reference for ng_rdm UI components. For architecture and design patterns, see [`docs/facts.md`](../../../../docs/facts.md).
 
 All components are imported from `ng_rdm.components`:
 

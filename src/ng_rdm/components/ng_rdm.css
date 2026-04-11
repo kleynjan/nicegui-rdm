@@ -381,11 +381,6 @@
             flex-shrink: 0;
         }
 
-        .rdm-detail-related {
-            width: 100%;
-            margin-top: var(--rdm-spacing-lg);
-        }
-
         .rdm-detail-icon {
             color: var(--rdm-text-secondary);
             font-size: 2rem;
@@ -426,6 +421,10 @@
             }
         }
     }    
+    .rdm-detail-related {
+        width: 100%;
+        margin-top: var(--rdm-spacing-lg);
+    }
 }
 
 
