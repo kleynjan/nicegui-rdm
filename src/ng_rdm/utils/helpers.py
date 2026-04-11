@@ -46,16 +46,13 @@ def local_to_utc(dt: datetime) -> datetime:
     local_dt = TIMEZONE_PYTZ.localize(dt)
     return local_dt.astimezone(pytz.utc)
 
-
 def utc_to_local(dt: datetime) -> datetime:
     """Convert the UTC datetime to the local timezone."""
     return dt.astimezone(TIMEZONE_PYTZ)
 
-
 def utc_datetime_to_str(dt: datetime) -> str:
     """Hydration: format the datetime as a string."""
     return utc_to_local(dt).strftime('%Y-%m-%d / %H:%M:%S')
-
 
 def str_to_utc_datetime(dt_str: str) -> datetime:
     """Dehydration: parse the datetime string to a UTC datetime object."""
@@ -64,7 +61,6 @@ def str_to_utc_datetime(dt_str: str) -> datetime:
 
 # small helpers
 
-
 def now_utc() -> datetime:
     """A non-naive now() replacement to allow datetime comparisons."""
     return local_to_utc(datetime.now())
@@ -72,7 +68,6 @@ def now_utc() -> datetime:
 def date_to_str(dd: date) -> str:
     """Format the date as a string."""
     return dd.strftime('%Y-%m-%d')
-
 
 def str_to_date(dd_str: str) -> date:
     """Parse the date string to a date object."""
@@ -91,13 +86,15 @@ def vali_date_str(date_str: str) -> None | str:
         return _("enter a valid date")
 
 
-# -----
-
-
 def equal_dicts(d1, d2, ignore_keys=[]):
     d1_filtered = {k: v for k, v in d1.items() if k not in ignore_keys}
     d2_filtered = {k: v for k, v in d2.items() if k not in ignore_keys}
     return d1_filtered == d2_filtered
+
+
+def str_remove_chars(original_str, chars):
+    """Remove chars from original_str. Ex usage: rm_char("hello!", "e!") -> "hllo" """
+    return original_str.translate(str.maketrans('', '', chars))
 
 
 # Dictionary mapping type names to actual Python types
@@ -111,23 +108,6 @@ type_map = {
     "tuple": tuple,
     # Add other types as needed
 }
-
-
-def str_remove_chars(original_str, chars):
-    """Remove chars from original_str. Ex usage: rm_char("hello!", "e!") -> "hllo" """
-    return original_str.translate(str.maketrans('', '', chars))
-
-
-from nicegui import ui   # noqa
-
-
-def div_full():
-    return ui.element("div").classes("h-full w-full")
-
-
-def div():
-    return ui.element("div")
-
 
 def cast_variable(value, type_name):
     target_type = type_map.get(type_name)
@@ -195,7 +175,6 @@ def deltatime_string_to_string(t1, t2):
 
 
 class Config(dict):
-    # (replaced by dataclass)
     # make config dot.accessible, returns None if key not found
     # (note: None can be passed to chain() instead of a list)
     # init converts source dict & nested dicts to Config objects

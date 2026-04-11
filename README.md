@@ -12,7 +12,7 @@ ng_rdm is based on two ideas:
 
 2. Secondly, we can move the logic for larger **'composite' UI elements** (such as tables, dialogs, edit cards) from JavaScript/Vue (and Quasar!@&#*?!#)  over to the Python side. In `components/widgets` you'll find tables that create clean html with semantic CSS selectors. And 'as a bonus', because they are on the Python side, it's easy to register them as reactive observers with the stores mentioned above. 
 
-Note that you can use the main parts of the library independently of each other: you can use the `components` to generate clean html/css widgets, with behavior entirely controlled in Python. And you can use `store` and `model` as an observer-based back-end for your own reactive user interface (see the vanilla_store example).
+Note that you can use both main parts of the library independently of each other: use the `components` to generate clean html/css widgets, with behavior entirely controlled in Python. Or you can use `store` and `model` as an observer-based back-end for your own reactive user interface (see the vanilla_store example).
 
 ## Library overview
 
@@ -28,7 +28,7 @@ Note that you can use the main parts of the library independently of each other:
 │  Store Layer                                             │
 │  Store (base) · DictStore · (Multitenant)TortoiseStore   │
 │  (Multitenant)StoreRegistry                              │
-│  CRUD · validation · observer pattern                    │
+│  CRUD · validation · observer pattern - EventNotifier    │
 └──────────────┬─────────────────────────────────┬─────────┘
                │  2. validate & write            ▲
                ▼                                 │  5. return result
@@ -129,6 +129,9 @@ In practice you will often want subclass generic stores to enhance/override `_re
 
 Tables and forms are defined through configuration (`TableConfig, Column, FormConfig`). See [`components/API.md`](components/API.md) for the full component API.
 
+Q: Why the overlap with existing NiceGUI/Quasar classes, e.g., ui.row/column, ui.dialog, ui.separator? <br>
+A: Because Quasar kept sabotaging CSS styling: adding unstyled div layers, lacking dialog size & position control, etc.
+
 ## Examples
 
 Run any example with `python -m ng_rdm.examples.<name>`.
@@ -194,19 +197,38 @@ src/ng_rdm/
 
 ## Working with ng_rdm
 
-### Helpers
+### Batching store notifications
 
-The library includes a few helpers:
+By default, normal atomic store events on TortoiseStores are 'de-bounced' by waiting for 100ms before sending notifications to observer components. This is primarily to stabilize the UI if multiple updates are made, but of course it also reduces the load on server and database.
 
-* `utils/logging.py`: call `configure_logging(log_file="app.log", console=True)` once in `main.py` before any other startup code, and all ng_rdm, Tortoise ORM, and uvicorn output goes to that file and/or the console. Without calling it, the library stays silent by default and lets the host app's own logging config take over. Import `from ng_rdm import logger` to write to the same logger in your own app code.
+Client code that needs to perform a number of creates or updates should use the batch context manager provided by the store:
+```python
+    async with store.batch():
+        await store.create_item(item1)
+        await store.create_item(item2)
+    # Single batch event fires here -> batch notification to observers
+```
 
-* `components/i18n.py`: self-contained translations for the generic CRUD labels used in components (buttons, confirmations, validation messages). Ships with English (default) and Dutch. Pass `custom_translations` to `rdm_init()` to add a language or override strings; call `set_language('nl_nl')` to switch. Intentionally separate from any app-level i18n to keep the package portable.
+### Topic filtering
 
+By default every observer registered on a store receives every store event (and will typically refresh/rebuild). Topic filtering lets an observer subscribe only to events for items that match a specific field value — for example a UI panel that shows one tenant's data subscribes with `topics={"tenant_id": 42}` and is skipped for all other tenants' events. There is no entry/exit logic: we can't subscribe to 'field X changed'.
+
+Call `store.set_topic_fields(["name", "country"])` once to declare which item fields are eligible for topic filtering by the store. Call `store.add_observer(<callback>, topics={"country": "UK"})` from the page. Multiple keys are AND-ed.
+
+Note that when events are coalesced into a single `"batch"` event (either via debouncing or via context manager), topic matching is bypassed and **all** observers are notified conservatively. It is OK for topic filtering to be a little 'leaky', erroring on the side of the occasional redundant refresh.
+
+See the `topic_filtering.py` example for more details.
+ 
 ### Multitenancy
 
-For multitenant apps, use `MultitenantTortoiseStore` together with `mt_store_registry` (a `MultitenantStoreRegistry` instance in `store/multitenancy.py`). The registry keys stores by `(tenant, name)`. Models must subclass `MultitenantRdmModel` (which declares the `tenant` field automatically):
+For multitenant apps, use the specialized subclasses:
+* `MultitenantRdmModel`, which adds the mandatory `tenant` field to `RdmModel`
+* `MultitenantTortoiseStore` together with `mt_store_registry` separate and retrieves stores by tenant &ndash; which means each store now gets a registered singleton instance *per tenant*
+
+`tenant` is a varchar(64) so should be able to fit both regular strings (eg, subdomain) and UUIDs. 
 
 ```python
+## e.g., in your business logic, eg, domain.py
 from ng_rdm.models import MultitenantRdmModel, RdmModel
 
 class Product(MultitenantRdmModel):
@@ -217,33 +239,61 @@ class Product(MultitenantRdmModel):
     class Meta(RdmModel.Meta):
         table = "products"
 
-store_registry.register_store("acme", "products", MultitenantTortoiseStore(Product, tenant="acme"))
-store = store_registry.get_store("acme", "products")
+## in your global app init, define tenants and register the stores 
+from ng_rdm import set_valid_tenants, mt_store_registry
+...
+@app.on_startup
+async def startup():
+    tenants = ['acme', 'brutus']
+    set_valid_tenants(tenants)
+    for t in tenants:
+        mt_store_registry.register_store(t, "product", MultitenantTortoiseStore(Product, tenant=t))
+
+## in your page function, get the store and read_items
+from ng_rdm import mt_store_registry
+    ...
+    tenant = 'acme'
+    product_store = mt_store_registry.get_store(tenant, "product")
+    product_store.read_items(...)
+
 ```
+Note that the database table name has to be defined in a Meta subclass of `RdmModel.Meta`, not `MultitenantRdmModel`.
+
+See the `multitenant.py` working example, which also shows reactivity *within* tenants and isolation *across* tenants.
+
+### Helpers
+
+The library includes a few helpers:
+
+* `utils/logging.py`: call `configure_logging(log_file="app.log", console=True)` once in `main.py` before any other startup code, and all ng_rdm, Tortoise ORM, and uvicorn output goes to that file and/or the console. Without calling it, the library stays silent by default and lets the host app's own logging config take over. Import `from ng_rdm import logger` to write to the same logger in your own app code.
+
+* `components/i18n.py`: self-contained translations for the generic CRUD labels used in components (buttons, confirmations, validation messages). Ships with English (default) and Dutch. Pass `custom_translations` to `rdm_init()` to add a language or override strings; call `set_language('nl_nl')` to switch. Intentionally separate from any app-level i18n to keep the package portable.
+
 
 ### Show refresh via CSS
 
-If you want to see which tables/components are being refreshed, you can pass `show_refresh_transitions` = True to the `rdm_init` call. If enabled, it adds an animated green border whenever a component is rebuilt &ndash; as in the examples.
+If you want to see which tables/components are being refreshed, you can pass `show_refresh_transitions = True` to the `rdm_init` call. This adds an animated green border whenever a component is rebuilt &ndash; as in the examples.
 
 ### Other restrictions
 
-The way we use Tortoise ORM assumes every table has an integer primary key called `id`. It's quite possible that things will work if you do it differently, but it's quite likely something will break.
+The way we use Tortoise ORM assumes every table has an integer primary key called `id`. It's possible that things will work if you do it differently, but it's quite likely something will break.
 
 ## Some notes on architecture
 
 ### About "front-end" vs "back-end" reactivity
 
-A starting point for this library has been to provide reactivity for structurally persistent and shared ('back-end'?) data state, but to keep it separate from more transient and user-specific ('client?') state, where reactivity can be provided for instance by NiceGUI bindings. 
+This library has evolved from discussions on the NiceGUI repo going back to 2023, e.g. [#1042](https://github.com/zauberzeug/nicegui/discussions/1042), [#4172](https://github.com/zauberzeug/nicegui/discussions/4172). Recently an interesting discussion around [reaktiv](https://github.com/zauberzeug/nicegui/discussions/4758) gives some pointers where reactivity might be going.
 
-When data is changed, the component's `@ui.refresh` is called: it requests a fresh copy of the data from the store and rebuilds the UI. Meanwhile, the user state ('client state'?) is kept in a dict passed to the constructor, so *outside* of the component itself - and that state is re-applied when the component is rebuilt. Selected rows remain selected, checkboxes and radio buttons remain unchanged.
+In ng_rdm, the focus is on **adding reactivity to structurally persistent and shared data/state** - what was traditionally called the 'back-end'. It is kept separate from transient and user-specific state ('front-end?'), where reactivity can be provided by NiceGUI bindings and other Vue/Quasar mechanisms. 
+
+In ng_rdm, when data is changed, the component's `@ui.refresh` is called: this then requests a fresh copy of the data from the store and rebuilds the UI (eg, a table). For components with meaningful 'user' state, a dict is passed to the component's constructor. This dict is kept in the page context, *outside* of the component itself. That 'user' state is re-applied when the component is rebuilt. Selected rows remain selected, checkboxes and radio buttons remain unchanged.
 
 A useful pattern (see the examples) is to instantiate for every page an overall `ui_state` dict that represents the "user state" and can be persisted in `app.storage.user`.  A dict within `ui_state` is then passed on to ng_rdm components (or other `@ui.refreshables`) as their local 'user state'. 
 
-See NiceGUI discussions going back to 2023 if you want more background, e.g. [#1042](https://github.com/zauberzeug/nicegui/discussions/1042), [#4172](https://github.com/zauberzeug/nicegui/discussions/4172) and more recently an interesting discussion around [reaktiv](https://github.com/zauberzeug/nicegui/discussions/4758).
 
 ### What a store does and does not do
 
-While Tortoise is nominally an ORM, it is used here more as a basic data access layer. `RdmModel` in `models` adds extended field definitions, field level validators/normalizers and join_field logic to navigate foreign-key relationships. The `store` layer on top of Tortoise is the core of the library and performs some ORM-like functions.
+While Tortoise is nominally an ORM, it is used here more as a basic data access layer. `RdmModel` in `models` adds extended field definitions, field level validators/normalizers and join_field logic to navigate foreign-key relationships. The `store` layer on top of Tortoise is the core of the library and also performs some functions typically delegated to an ORM.
 
 What a store *does* do:
 * it maps a single database table (including related data) to a set of business objects
@@ -258,20 +308,21 @@ What a store does *not* do:
 * it has limited understanding of relations in the data model: a store is centered on a single database table, with some options to query related tables ('join_fields')
 * it is not intended to scale: an app will usually have a *single instance* for every type of store (see `store_registry` in `store/base.py`) to allow the store to distribute incoming changes to the relevant observers
 
-
 ### Directions / improvements
+
+* For tables specifically: (a) aadding search/filtering to tables, both the chrome and the query logic and (b) adding standard 'Load more...' logic, to extend the number of rows in scope for a table.
 
 * It would be very interesting to investigate if the observer/event mechanisms now exposed by `ng_rdm.store` can be based on the binding mechanisms and/or (perhaps more feasible) on reaktiv/Signals.
 
-* Currently we have some tools to influence *whether* or not to refresh a component (e.g., subscribing to `topics`), but when triggered, we always rebuild the entire component. That is due to the `StatefulRefreshable` pattern that we started out with. It would be wild to move 'closer to the DOM', as it were and to selectively patch the cells that needed patching. 
+* Currently with topic filtering we have a limited tool to influence *whether* or not to refresh a component. But when triggered, the *entire component* is always rebuilt. That is due to the `StatefulRefreshable` pattern that we started out with. It would be wild to move 'closer to the DOM', as it were and to selectively patch the cells that needed patching. 
 
-* Related to this, `@ui.refreshable` is doing a lot of heavy lifting and it would perhaps be better to isolate the actual DOM operations and tie them more closely to the event logic. Again, this is due to where we started with this library years ago. 
+* Related to this, `@ui.refreshable` is doing a lot of heavy lifting and at some point it may be better to isolate the actual DOM operations and tie them more closely to the event logic. 
 
 ### Caution: scalability
 
-This library is absolutely **not** intended or suitable for applications with thousands of concurrent users, at least not for fully reactive UI's: a single update of a database table will lead to multiple reads *per connected client* (refresh -> reread). The typical use case is for dashboard-type apps that have a handful of users; without actually testing it, I'd estimate the upper limit to be around 50-100 concurrent users. 
+This library is absolutely **not** intended or suitable for applications with thousands of concurrent users, at least not for fully reactive UI's: a single update of a database table will lead to multiple reads *per connected client* (refresh -> reread). The typical use case is for dashboard-type apps that have a handful of users; without actually testing it, I'd estimate a practical upper limit to be around ~50-100 concurrent users?
 
-Note that by default, all table classes register as observers to the stores they use. The first step to scalability is to set `auto_observe` to False when instantiating an `ObservableRdmTable` or descendant and you don't need the reactivity. 
+Note that by default, all table classes register as observers to the stores they depend on, for all events. The first step to improve scalability is to set `auto_observe=False` when instantiating the component &ndash; and then to either register your observer with topic filtering or even better, don't register it at all if you don't need reactivity.
 
 ## Requirements
 

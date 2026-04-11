@@ -10,22 +10,14 @@ from typing import Awaitable, Callable
 
 from nicegui import html
 
-from ..i18n import _
 from ..base import RdmComponent, confirm_dialog
+from ..i18n import _
 from ..protocol import RdmDataSource
 from .button import Button
 
 
 class DetailCard(RdmComponent):
     """Read-only detail card with summary / actions / related layout.
-
-    Layout:
-        div.rdm-detail.rdm-component
-          div.rdm-detail-summary         ← item attributes + action buttons
-            [render_summary(item)]       ← rendered directly (no inner wrapper)
-            div.rdm-detail-actions       ← Edit / Delete buttons
-          div.rdm-detail-related         ← optional extended content (sub-tables etc.)
-            [render_related(item)]
 
     Args:
         state: External state dict (from ui_state). Key: 'item'.
@@ -36,6 +28,14 @@ class DetailCard(RdmComponent):
         on_deleted: Called (no args) after successful delete (typically vs.show_list).
         show_edit: Whether to show the Edit button.
         show_delete: Whether to show the Delete button.
+
+    Layout:
+        div.rdm-detail.rdm-component
+          div.rdm-detail-summary         ← container for item attributes + detail action buttons
+            [render_summary(item)]       ← rendered directly (no inner wrapper)
+            div.rdm-detail-actions       ← Edit / Delete buttons
+          div.rdm-detail-related         ← optional extended content below the summary (sub-tables etc.)
+            [render_related(item)]
     """
 
     def __init__(

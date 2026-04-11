@@ -56,7 +56,7 @@ def _render_debug_page() -> None:
             # Merge both registries: flat stores get tenant=""
             mt_stores = mt_store_registry.get_all_stores()  # [(tenant, name, store)]
             flat_stores = [("", name, store) for name, store in store_registry.get_all_stores()]
-            all_stores: list[tuple[str, str, object]] = flat_stores + mt_stores
+            all_stores: list[tuple[str, str, object]] = flat_stores + mt_stores     # type: ignore
             show_tenant_col = bool(mt_stores)
 
             if not all_stores:

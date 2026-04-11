@@ -113,5 +113,5 @@ class MultitenantStoreRegistry:
         return [(t, n, s) for t, stores in self._stores.items() for n, s in stores.items()]
 
 
-# Global multitenant registry instance
+# global multitenant registry instance - indexed by tenant and store name
 mt_store_registry = MultitenantStoreRegistry()

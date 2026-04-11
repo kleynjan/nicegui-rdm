@@ -8,13 +8,26 @@ Provides:
 - Debug: Event stream visualization for debugging
 """
 
-from .store import Store, StoreEvent, DictStore, StoreRegistry, store_registry
-from .store import TortoiseStore, MultitenantTortoiseStore, MultitenantStoreRegistry, mt_store_registry, TenancyError, init_db
-from .models import FieldSpec, Validator, RdmModel, MultitenantRdmModel
-from .debug import enable_debug_page
-from .utils import logger, configure_logging
-
 from importlib.metadata import PackageNotFoundError, version
+
+from .debug import enable_debug_page
+from .models import FieldSpec, MultitenantRdmModel, RdmModel, Validator
+from .store import (
+    DictStore,
+    MultitenantStoreRegistry,
+    MultitenantTortoiseStore,
+    Store,
+    StoreEvent,
+    StoreRegistry,
+    TenancyError,
+    TortoiseStore,
+    init_db,
+    mt_store_registry,
+    set_valid_tenants,
+    store_registry,
+)
+from .utils import configure_logging, logger
+
 try:
     __version__ = version("nicegui-rdm")
 except PackageNotFoundError:
@@ -32,6 +45,7 @@ __all__ = [
     'MultitenantStoreRegistry',
     'mt_store_registry',
     'TenancyError',
+    'set_valid_tenants',
     'init_db',
 
     # Model helpers

@@ -11,20 +11,20 @@ Usage:
     )
     await wizard.show()
 
-Pattern preserves the original manual_invite_dialog logic:
+Pattern provides:
 - State machine with step tracking
 - Refreshable content per step
 - Back/Next navigation
 - Validation per step before proceeding
 """
 from dataclasses import dataclass, field
-from typing import Callable, Awaitable, Any
+from typing import Any, Awaitable, Callable
 
 from nicegui import ui
 
+from ..i18n import _
 from .button import Button
 from .dialog import Dialog
-from ..i18n import _
 
 
 @dataclass

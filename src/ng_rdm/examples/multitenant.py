@@ -15,19 +15,24 @@ Creates: multitenant.sqlite3
 """
 from pathlib import Path
 
+from nicegui import Client, app, ui
 from tortoise import fields
-from nicegui import app, ui, Client
 
+from ng_rdm import mt_store_registry
 from ng_rdm.components import (
-    rdm_init, Column, TableConfig, FormConfig,
-    ActionButtonTable, EditDialog,
-    Row, Col, Separator,
+    ActionButtonTable,
+    Col,
+    Column,
+    EditDialog,
+    FormConfig,
+    Row,
+    Separator,
+    TableConfig,
+    rdm_init,
 )
+from ng_rdm.models import FieldSpec, MultitenantRdmModel, RdmModel, Validator
 from ng_rdm.store import MultitenantTortoiseStore, init_db
-from ng_rdm import mt_store_registry as store_registry
 from ng_rdm.store.multitenancy import set_valid_tenants
-from ng_rdm.models import RdmModel, MultitenantRdmModel, FieldSpec, Validator
-
 
 # =============================================================================
 # Model
@@ -69,8 +74,8 @@ async def seed_data():
 async def startup():
     set_valid_tenants(["A", "B"])
     await seed_data()
-    store_registry.register_store("A", "product", MultitenantTortoiseStore(Product, tenant="A"))
-    store_registry.register_store("B", "product", MultitenantTortoiseStore(Product, tenant="B"))
+    mt_store_registry.register_store("A", "product", MultitenantTortoiseStore(Product, tenant="A"))
+    mt_store_registry.register_store("B", "product", MultitenantTortoiseStore(Product, tenant="B"))
 
 
 # =============================================================================
@@ -97,8 +102,8 @@ async def main(client: Client):
     rdm_init(extra_css=Path(__file__).parent / "examples.css", show_refresh_transitions=True)
     await client.connected()
 
-    store_a = store_registry.get_store("A", "product")
-    store_b = store_registry.get_store("B", "product")
+    store_a = mt_store_registry.get_store("A", "product")
+    store_b = mt_store_registry.get_store("B", "product")
 
     with Col(classes="demo-content-column"):
         ui.label("Multitenant Example").style("font-size: 2rem")
@@ -128,7 +133,7 @@ async def main(client: Client):
                         data_source=store,
                         config=TableConfig(
                             columns=table_cols,
-                            add_button=f"+ Add Product",
+                            add_button="+ Add Product",
                         ),
                         on_add=dialog.open_for_new,
                         on_edit=dialog.open_for_edit,

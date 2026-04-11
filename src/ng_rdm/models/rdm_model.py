@@ -97,13 +97,6 @@ class RdmModel(Model):
 
     # the missing instance-to-dict function (cf get(). or first().values(*args, **kwargs))
     def values(self, *args, **kwargs) -> dict[str, str | int | bool]:
-        # if fields:
-        #     return {k: getattr(self, k) for k in fields if not k.startswith("_") and k in fields }
-        # return {k: getattr(self, k) for k in self.__dict__ if not k.startswith("_")}
-
-        # copied over from queryset.values()
-        # API is instance.values('id', 'name', 'mail', mail='mail_address', tenant='tenant')
-        # so allows for selection, renaming and ordering
         if args or kwargs:
             fields_for_select = {}
             for field in args:

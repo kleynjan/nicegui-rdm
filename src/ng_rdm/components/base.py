@@ -12,7 +12,7 @@ from nicegui import html, ui
 
 from .i18n import _
 from .protocol import RdmDataSource
-from ..store import StoreEvent
+from ..store.notifier import StoreEvent
 
 
 @dataclass

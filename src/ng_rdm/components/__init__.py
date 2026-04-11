@@ -19,7 +19,7 @@ from nicegui import ui
 from .base import RdmComponent, ObservableRdmComponent, ObservableRdmTable, Column, TableConfig, FormConfig, RowAction, confirm_dialog
 from .i18n import _, none_as_text, set_language, set_translations
 from .protocol import RdmDataSource
-from ..store import StoreEvent
+from ..store.notifier import StoreEvent
 
 # Concrete widget components
 from .widgets import (

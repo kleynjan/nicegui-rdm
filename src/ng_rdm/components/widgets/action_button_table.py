@@ -8,8 +8,8 @@ from typing import Any, Awaitable, Callable
 
 from nicegui import html, ui
 
-from ..i18n import _
 from ..base import ObservableRdmTable, RowAction, TableConfig
+from ..i18n import _
 from ..protocol import RdmDataSource
 
 
