@@ -45,8 +45,8 @@ store = DictStore()
 store_registry.register_store("people", store)
 
 SEED = [
-    {"name": "Alice Banner",  "role": "Admin",  "statuses": ["active", "invited"]},
-    {"name": "Bob Carter",    "role": "Editor", "statuses": ["pending"]},
+    {"name": "Alice Banner", "role": "Admin", "statuses": ["active", "invited"]},
+    {"name": "Bob Carter", "role": "Editor", "statuses": ["pending"]},
     {"name": "Carol Donovan", "role": "Viewer", "statuses": ["expired"]},
 ]
 
@@ -74,7 +74,7 @@ def render_statuses(row: dict) -> None:
         f'<span class="status-chip status-chip-{s}">{s}</span>'
         for s in statuses
     )
-    ui.html(chips)
+    ui.html(chips, sanitize=False)
 
 
 # =============================================================================
@@ -83,8 +83,8 @@ def render_statuses(row: dict) -> None:
 
 config = TableConfig(
     columns=[
-        Column(name="name",     label="Name",   width_percent=30),
-        Column(name="role",     label="Role",   width_percent=20),
+        Column(name="name", label="Name", width_percent=30),
+        Column(name="role", label="Role", width_percent=20),
         # Custom renderer: pass a callable that receives the full row dict
         Column(name="statuses", label="Status", width_percent=50, render=render_statuses),
     ],

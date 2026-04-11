@@ -14,7 +14,9 @@ You can use either half on its own: drive your own NiceGUI UI from a reactive st
 
 ## What it looks like
 
-![ActionButtonTable with per-row edit/delete/custom buttons](docs/screenshots/action-buttons-table.png)
+Master/detail using a ListTable, DetailCard, ActionButtonTable and EditDialog - wired together with a ViewStack:
+
+![Master detail example](docs/screenshots/master-detail-demo.gif)
 
 The reactive story in two browser windows — one edits, the other watches:
 

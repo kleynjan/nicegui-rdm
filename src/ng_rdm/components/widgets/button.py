@@ -48,7 +48,7 @@ class IconButton(ui.button, default_props='flat unelevated no-caps'):
         if tooltip:
             self.props(f'title="{tooltip}"')
         with self:
-            ui.html(f'<i class="bi bi-{icon} rdm-btn-icon-{color}"></i>')
+            ui.html(f'<i class="bi bi-{icon} rdm-btn-icon-{color}"></i>', sanitize=False)
 
 
 class Icon(ui.icon):
@@ -69,4 +69,4 @@ class Icon(ui.icon):
         if on_click:
             self.on('click', on_click)
         with self:
-            ui.html(f'<i class="bi bi-{icon} rdm-icon-{color}"></i>')
+            ui.html(f'<i class="bi bi-{icon} rdm-icon-{color}"></i>', sanitize=False)

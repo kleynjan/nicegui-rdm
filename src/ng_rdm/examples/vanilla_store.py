@@ -6,26 +6,40 @@ Uses plain ui.table, ui.input, ui.button, and @ui.refreshable.
 
 Two side-by-side product tables are each subscribed to a single category topic:
 editing Electronics doesn't refresh the Clothing table, and vice versa.
-An event log makes the selective notification visible in real-time.
 
 Run:  python -m ng_rdm.examples.vanilla_store
 Open: http://localhost:8080
 No rdm_init() call — the store layer is entirely independent of RDM components.
 """
+from pathlib import Path
+
 from nicegui import app, ui, Client
+from tortoise import fields
 
-from ng_rdm import DictStore, store_registry
-from ng_rdm.store import StoreEvent
-from ng_rdm.components import Row, Col, Separator, Button
+from ng_rdm.store import TortoiseStore, init_db, store_registry
+from ng_rdm.models import RdmModel
 
 
 # =============================================================================
-# Store setup  (module-level singleton)
+# Model
 # =============================================================================
 
-store = DictStore()
-store.set_topic_fields(["category"])
-store_registry.register_store("products", store)
+class Product(RdmModel):
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=100)
+    price = fields.FloatField()
+    category = fields.CharField(max_length=50)
+
+    class Meta(RdmModel.Meta):
+        table = "vanilla_product"
+
+
+# =============================================================================
+# Database + store setup  (module-level)
+# =============================================================================
+
+DB_PATH = Path(__file__).parent / "vanilla_store.sqlite3"
+init_db(app, f"sqlite://{DB_PATH}", modules={"models": [__name__]}, generate_schemas=True)
 
 SEED = [
     {"name": "Laptop Pro", "price": 1299.0, "category": "Electronics"},
@@ -37,11 +51,19 @@ SEED = [
 CATEGORIES = ["Electronics", "Clothing"]
 
 
+async def seed_data():
+    if await Product.all().count() > 0:
+        return
+    for item in SEED:
+        await Product.create(**item)
+
+
 @app.on_startup
 async def startup():
-    if not await store.read_items():
-        for item in SEED:
-            await store.create_item(item)
+    await seed_data()
+    store = TortoiseStore(Product)
+    store.set_topic_fields(["category"])
+    store_registry.register_store("products", store)
 
 
 # =============================================================================
@@ -59,7 +81,9 @@ TABLE_COLUMNS = [
 async def main(client: Client):
     await client.connected()
 
-    with Col(gap="1rem", style="width: 100%; max-width: 64rem; margin: 0 auto; padding: 1rem"):
+    store = store_registry.get_store("products")
+
+    with ui.column().style("gap: 1rem; width: 100%; max-width: 64rem; margin: 0 auto; padding: 1rem"):
         ui.label("Store + Vanilla NiceGUI").classes("demo-section-heading")
         ui.markdown(
             "No RDM components — `@ui.refreshable` sections are triggered by store observers. "
@@ -67,8 +91,6 @@ async def main(client: Client):
         )
 
         # ── two side-by-side category panels ──────────────────────────────────
-
-        observers: list = []  # track for cleanup on disconnect
 
         async def build_category_panel(category: str):
             ui.label(category).style("font-size: 1rem; font-weight: 600")
@@ -84,23 +106,26 @@ async def main(client: Client):
 
             await panel()
 
-            async def on_category_change(event: StoreEvent):
+            async def on_category_change(_event):  # StoreEvent
+                panel.prune()
+                if not panel.targets:
+                    store.remove_observer(on_category_change)
+                    return
                 await panel.refresh()
 
             store.add_observer(on_category_change, topics={"category": category})
-            observers.append(on_category_change)
 
-        with Row(gap="2rem", style="width: 100%"):
+        with ui.row().style("gap: 2rem; width: 100%"):
             for cat in CATEGORIES:
-                with Col(style="flex: 1"):
+                with ui.column().style("flex: 1"):
                     await build_category_panel(cat)
 
         # ── edit form ─────────────────────────────────────────────────────────
 
-        Separator()
+        ui.separator()
         ui.label("Edit a product").classes("demo-subtitle")
 
-        with Row(align="flex-end", style="flex-wrap: wrap"):
+        with ui.row().style("align-items: flex-end; flex-wrap: wrap"):
             items_now = await store.read_items()
             options = {i["id"]: f"{i['name']} ({i['category']})" for i in items_now}
             item_select = ui.select(options, label="Product", value=next(iter(options), None))
@@ -113,14 +138,14 @@ async def main(client: Client):
                 await store.update_item(item_select.value, {"name": name_input.value.strip()})
                 name_input.set_value("")
 
-            Button("Save", on_click=save_edit)
+            ui.button("Save", on_click=save_edit)
 
         # ── add form ──────────────────────────────────────────────────────────
 
-        Separator()
+        ui.separator()
         ui.label("Add a product").classes("demo-subtitle")
 
-        with Row(align="flex-end", style="flex-wrap: wrap"):
+        with ui.row().style("align-items: flex-end; flex-wrap: wrap"):
             new_name = ui.input("Name")
             new_price = ui.number("Price", min=0, value=0)
             new_cat = ui.select(CATEGORIES, label="Category", value=CATEGORIES[0])
@@ -137,30 +162,7 @@ async def main(client: Client):
                 new_name.set_value("")
                 new_price.set_value(0)
 
-            Button("Add", on_click=add_product)
-
-        # ── event log ─────────────────────────────────────────────────────────
-
-        Separator()
-        ui.label("Store event log").classes("demo-subtitle")
-        ui.label("Every observer receives events scoped to its topic.").classes("demo-caption")
-
-        log = ui.log(max_lines=25).style("width: 100%; height: 160px; font-size: 0.85rem;")
-
-        async def on_any_event(event: StoreEvent):
-            cat = event.item.get("category", "?")
-            name = event.item.get("name", "?")
-            log.push(f"[{event.verb.upper()}] {name!r}  category={cat!r}")
-
-        store.add_observer(on_any_event)
-        observers.append(on_any_event)
-
-    # cleanup observers when client disconnects (store is a singleton)
-    async def cleanup():
-        for obs in observers:
-            store.remove_observer(obs)
-
-    client.on_disconnect(cleanup)
+            ui.button("Add", on_click=add_product)
 
 
 ui.run(title="Vanilla Store — ng_rdm")
