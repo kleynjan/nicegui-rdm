@@ -51,7 +51,7 @@ pip install nicegui-rdm
 import ng_rdm   # import path differs from package name
 ```
 
-### My first app
+### My first CRUD database app with ng_rdm
 
 ```python
 from nicegui import app, ui
@@ -127,7 +127,9 @@ In practice you will often want subclass generic stores to enhance/override `_re
 
 **Multitenancy** — `MultitenantTortoiseStore` and `mt_store_registry`. Models subclass `MultitenantRdmModel` for automatic tenant-field declaration.
 
-Tables and forms are defined through configuration (`TableConfig, Column, FormConfig`). See [`components/API.md`](components/API.md) for the full component API.
+Tables and forms are defined through configuration (`TableConfig, Column, FormConfig`). 
+
+See [`components/API.md`](components/API.md) for the full component API.
 
 Q: Why the overlap with existing NiceGUI/Quasar classes, e.g., ui.row/column, ui.dialog, ui.separator? <br>
 A: Because Quasar kept sabotaging CSS styling: adding unstyled div layers, lacking dialog size & position control, etc.
@@ -141,7 +143,8 @@ Run any example with `python -m ng_rdm.examples.<name>`.
 | `catalog` | Component catalog — showcases all widgets |
 | `master_detail` | ViewStack master-detail navigation |
 | `multitenant` | MultitenantTortoiseStore — tenant-isolated stores |
-| `direct_edit` | Custom `ObservableRdmTable` subclass with inline per-cell editing |
+| `chips` | Custom cell rendering via `Column.render` — colored status chips |
+| `in_row_editing` | Custom `ObservableRdmTable` subclass with inline per-cell editing |
 | `custom_datasource` | Build your own store backend |
 | `vanilla_store` | Use stores with vanilla NiceGUI components |
 | `topic_filtering` | Topic-based observer filtering |
@@ -189,43 +192,22 @@ src/ng_rdm/
 │   └── page.py              — enable_debug_page() registers /rdm-debug route
 └── examples/
     ├── catalog.py           — component catalog / showcase
-    ├── custom_datasource.py — custom RdmDataSource implementation
     ├── master_detail.py     — master-detail pattern with ViewStack
-    ├── vanilla_store.py     — basic store usage without components
-    ├── topic_filtering.py   — topic-based filtering demo
     ├── multitenant.py       — MultitenantTortoiseStore with two tenant stores, quadrant layout
-    └── direct_edit.py       — custom ObservableRdmTable subclass with inline per-cell editing
+    ├── in_row_editing.py    — custom ObservableRdmTable subclass with inline per-cell editing
+    ├── chips.py             — custom cell rendering via Column.render (colored status chips)
+    ├── custom_datasource.py — custom RdmDataSource implementation
+    ├── vanilla_store.py     — using a store with standard NiceGUI components
+    └── topic_filtering.py   — topic-based filtering demo (advanced)
 ```
 
-## Working with ng_rdm
+## Details
 
-### Batching store notifications
-
-By default, normal atomic store events on TortoiseStores are 'de-bounced' by waiting for 100ms before sending notifications to observer components. This is primarily to stabilize the UI if multiple updates are made, but of course it also reduces the load on server and database.
-
-Client code that needs to perform a number of creates or updates should use the batch context manager provided by the store:
-```python
-    async with store.batch():
-        await store.create_item(item1)
-        await store.create_item(item2)
-    # Single batch event fires here -> batch notification to observers
-```
-
-### Topic filtering
-
-By default every observer registered on a store receives every store event (and will typically refresh/rebuild). Topic filtering lets an observer subscribe only to events for items that match a specific field value — for example a UI panel that shows one tenant's data subscribes with `topics={"tenant_id": 42}` and is skipped for all other tenants' events. There is no entry/exit logic: we can't subscribe to 'field X changed'.
-
-Call `store.set_topic_fields(["name", "country"])` once to declare which item fields are eligible for topic filtering by the store. Call `store.add_observer(<callback>, topics={"country": "UK"})` from the page. Multiple keys are AND-ed.
-
-Note that when events are coalesced into a single `"batch"` event (either via debouncing or via context manager), topic matching is bypassed and **all** observers are notified conservatively. It is OK for topic filtering to be a little 'leaky', erroring on the side of the occasional redundant refresh.
-
-See the `topic_filtering.py` example for more details.
- 
 ### Multitenancy
 
 For multitenant apps, use the specialized subclasses:
 * `MultitenantRdmModel`, which adds the mandatory `tenant` field to `RdmModel`
-* `MultitenantTortoiseStore` together with `mt_store_registry` separate and retrieves stores by tenant &ndash; which means each store now gets a registered singleton instance *per tenant*
+* `MultitenantTortoiseStore` and `mt_store_registry`, which manage a singleton store instance *per tenant* as well as per type
 
 `tenant` is a varchar(64) so should be able to fit both regular strings (eg, subdomain) and UUIDs. 
 
@@ -263,6 +245,28 @@ Note that the database table name has to be defined in a Meta subclass of `RdmMo
 
 See the `multitenant.py` working example, which also shows reactivity *within* tenants and isolation *across* tenants.
 
+### Batching store notifications
+
+By default, atomic store mutations on TortoiseStores are 'de-bounced' by waiting for 100ms before sending notifications to observer components. This is primarily to stabilize the UI if multiple updates are made, but of course it also reduces the load on server and database.
+
+Client code that needs to perform a number of creates or updates in one go should use the batch context manager provided by the store:
+```python
+    async with store.batch():
+        await store.create_item(item1)
+        await store.create_item(item2)
+    # Single batch event fires here -> batch notification to observers
+```
+
+### Topic filtering
+
+By default every observer registered on a store receives every store event (and will typically refresh/rebuild). Topic filtering lets an observer subscribe only to events for items that match a specific field value — for example a UI panel that shows one tenant's data subscribes with `topics={"tenant_id": 42}` and is skipped for all other tenants' events. There is no entry/exit logic: we can't subscribe to 'field X changed'.
+
+Call `store.set_topic_fields(["name", "country"])` once to declare which item fields are eligible for topic filtering by the store. Call `store.add_observer(<callback>, topics={"country": "UK"})` from the page. Multiple keys are AND-ed.
+
+Note that when events are coalesced into a single `"batch"` event (either via debouncing or via context manager), topic matching is bypassed and **all** observers are notified conservatively. It is OK for topic filtering to be a little 'leaky', erroring on the side of the occasional redundant refresh.
+
+See the `topic_filtering.py` example for more details.
+ 
 ### Helpers
 
 The library includes a few helpers:
@@ -288,7 +292,7 @@ This library has evolved from discussions on the NiceGUI repo going back to 2023
 
 In ng_rdm, the focus is on **adding reactivity to structurally persistent and shared data/state** - what was traditionally called the 'back-end'. It is kept separate from transient and user-specific state ('front-end?'), where reactivity can be provided by NiceGUI bindings and other Vue/Quasar mechanisms. 
 
-In ng_rdm, when data is changed, the component's `@ui.refresh` is called: this then requests a fresh copy of the data from the store and rebuilds the UI (eg, a table). For components with meaningful 'user' state, a dict is passed to the component's constructor. This dict is kept in the page context, *outside* of the component itself. That 'user' state is re-applied when the component is rebuilt. Selected rows remain selected, checkboxes and radio buttons remain unchanged.
+In ng_rdm, when data is changed, the component's `@ui.refresh` is called: this then requests a fresh copy of the data from the store and rebuilds the UI (eg, a table). For components with meaningful 'user' state, a `state` dict is passed to the component's constructor. This dict is kept in the page context, *outside* of the component itself. That 'user' state is re-applied when the component is rebuilt. Selected rows remain selected, checkboxes and radio buttons remain unchanged.
 
 A useful pattern (see the examples) is to instantiate for every page an overall `ui_state` dict that represents the "user state" and can be persisted in `app.storage.user`.  A dict within `ui_state` is then passed on to ng_rdm components (or other `@ui.refreshables`) as their local 'user state'. 
 
@@ -312,13 +316,13 @@ What a store does *not* do:
 
 ### Directions / improvements
 
-* For tables specifically: (a) aadding search/filtering to tables, both the chrome and the query logic and (b) adding standard 'Load more...' logic, to extend the number of rows in scope for a table.
+* For tables specifically: (a) adding search/filtering to tables, both the chrome and the query logic and (b) adding standard 'Load more...' logic, to extend the number of rows in scope for a table.
 
 * It would be very interesting to investigate if the observer/event mechanisms now exposed by `ng_rdm.store` can be based on the binding mechanisms and/or (perhaps more feasible) on reaktiv/Signals.
 
 * Currently with topic filtering we have a limited tool to influence *whether* or not to refresh a component. But when triggered, the *entire component* is always rebuilt. That is due to the `StatefulRefreshable` pattern that we started out with. It would be wild to move 'closer to the DOM', as it were and to selectively patch the cells that needed patching. 
 
-* Related to this, `@ui.refreshable` is doing a lot of heavy lifting and at some point it may be better to isolate the actual DOM operations and tie them more closely to the event logic. 
+* Related to this: currently `@ui.refreshable` is doing all the heavy lifting. At some point it may be better to isolate the actual DOM operations and tie them more closely to the event logic (and perhaps, a generic Signals type architecture). 
 
 ### Caution: scalability
 
