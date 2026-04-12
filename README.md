@@ -8,10 +8,6 @@ ng_rdm (`nicegui-rdm` on PyPI) is a Python library for building database-backed 
 
 2. **A set of composite UI widgets.** Tables, dialogs, edit cards, detail cards, view stacks, wizards, tabs, and layout primitives — all written in Python, emitting clean HTML with semantic CSS selectors. Any widget can subclass `ObservableRdmComponent` to hook into the store layer; the built-in tables do this via `auto_observe=True` by default.
 
-You can use either half on its own: drive your own NiceGUI UI from a reactive store (see the [vanilla_store example](src/ng_rdm/examples/vanilla_store.py)), or use the widgets as plain configuration-driven components without the observer wiring.
-
-> **Not the right fit for:** apps with thousands of concurrent users — every store update fans out to a re-read per connected client. See [Caution: scalability](#caution-scalability) for the full story. Typical sweet spot is dashboard-style apps with a handful to ~50 users.
-
 ## What it looks like
 
 [Master/detail](src/ng_rdm/examples/master_detail.py) using a ListTable, DetailCard, ActionButtonTable and EditDialog - wired together with a ViewStack:
@@ -136,35 +132,9 @@ In practice you will often want to subclass generic stores to enhance/override `
 
 They're all included in the [catalog example](src/ng_rdm/examples/catalog.py).
 
-### Configuring tables and forms
-
-Tables and forms share one configuration unit: a list of `Column` objects. The same list drives an `ActionButtonTable` (via `TableConfig`) and the `EditDialog` that edits rows in it (via `FormConfig`) — so "customer has a name, an email, and a priority" is declared once:
-
-```python
-columns = [
-    Column("name",     "Name",     required=True),
-    Column("email",    "Email",    ui_type=ui.input),
-    Column("priority", "Priority", ui_type=ui.select, parms={"options": ["low", "high"]}),
-]
-
-table_config = TableConfig(columns=columns, custom_actions=[RowAction(icon="send", callback=...)])
-
-form_config  = FormConfig(columns=columns, title_edit="Edit customer")
-```
-
-Configuration covers the common case — labels, widths, ui-types, validation, required fields, custom per-row buttons. When you need to step outside it, every column has rendering hooks that take over for that one concern without losing the rest of the config: `Column.formatter` for simple display transforms, `Column.render(row)` for fully custom cell HTML (see the [chips example](src/ng_rdm/examples/chips.py)), `Column.on_click` for per-cell interactions, and `RowAction` / `render_toolbar` for buttons around the table. The [in_row_editing example](src/ng_rdm/examples/in_row_editing.py) goes one step further and subclasses `ObservableRdmTable` for inline per-cell editing while keeping the `Column` definitions intact.
-
-See [docs/api.md](docs/api.md) for the full API reference.
-
-## FAQ
-
-### OK, I get the idea behind the tables. But why a new `Row`/`Col`/`Dialog`/`Separator` when NiceGUI already has `ui.row`, `ui.dialog`, `ui.separator`?
-
-Like with tables, it's nice to have plain HTML with explicit semantic selectors *without* the spurious divs added by Quasar &ndash; enabling straightforward and predictable styling. But they're a convenience, not a crucial part of the library. And Buttons, Icons and IconButtons are still NiceGUI/Quasar native, though neutered via a subclass (as per [this comment](https://github.com/zauberzeug/nicegui/discussions/5882#discussioncomment-16152754)).
-
 ## Examples
 
-Run any example with `python -m ng_rdm.examples.<name>`.
+After `pip install nicegui-rdm`, run any example with `python -m ng_rdm.examples.<name>`.
 
 | Example | Description |
 |---------|-------------|
@@ -176,6 +146,18 @@ Run any example with `python -m ng_rdm.examples.<name>`.
 | `custom_datasource` | Build your own store backend |
 | `vanilla_store` | Use stores with vanilla NiceGUI components |
 | `topic_filtering` | Topic-based observer filtering |
+
+## FAQ
+
+### Why not simply use ui.table or ui.aggrid?
+
+NiceGUI wraps them in Python, but components like ui.table and ui.aggrid remain complicated beasts that live primarily in JavaScript-space. Quasar components in particular add a lot of divs and obnoxious styles that get in the way of our sanity. More generally, bridging complex Vue/JavaScript components to Python is riddled with limitations and ambiguities. Vue.js slots, anyone? 
+
+Much better (at least for 'composite' components such as tables!) to bring them entirely into Python-space. That is what NiceGUI and websockets are there for, right? `RdmComponent` subclasses build clean html/css scaffolding for atomic-level controls, and *these* can be either native html (eg, date picker) or NiceGUI/Quasar controls (ui.label, ui.input, etc).
+
+### OK, I get the idea behind the tables. But why a new `Row`/`Col`/`Dialog`/`Separator` when NiceGUI already has `ui.row`, `ui.dialog`, `ui.separator`?
+
+Like with tables, it's nice to have plain HTML with explicit semantic selectors *without* the spurious divs added by Quasar &ndash; enabling straightforward and predictable styling. But they're a convenience, not a crucial part of the library. And Buttons, Icons and IconButtons are still NiceGUI/Quasar native, though neutered via a subclass (as per [this comment](https://github.com/zauberzeug/nicegui/discussions/5882#discussioncomment-16152754)).
 
 ## Project structure
 
@@ -230,6 +212,26 @@ src/ng_rdm/
 ```
 
 ## Details
+
+### Configuring tables and forms
+
+Tables and forms share one configuration unit: a list of `Column` objects. The same list drives an `ActionButtonTable` (via `TableConfig`) and the `EditDialog` that edits rows in it (via `FormConfig`) — so "customer has a name, an email, and a priority" is declared once:
+
+```python
+columns = [
+    Column("name",     "Name",     required=True),
+    Column("email",    "Email",    ui_type=ui.input),
+    Column("priority", "Priority", ui_type=ui.select, parms={"options": ["low", "high"]}),
+]
+
+table_config = TableConfig(columns=columns, custom_actions=[RowAction(icon="send", callback=...)])
+
+form_config  = FormConfig(columns=columns, title_edit="Edit customer")
+```
+
+Configuration covers the common case — labels, widths, ui-types, validation, required fields, custom per-row buttons. When you need to step outside it, every column has rendering hooks that take over for that one concern without losing the rest of the config: `Column.formatter` for simple display transforms, `Column.render(row)` for fully custom cell HTML (see the [chips example](src/ng_rdm/examples/chips.py)), `Column.on_click` for per-cell interactions, and `RowAction` / `render_toolbar` for buttons around the table. The [in_row_editing example](src/ng_rdm/examples/in_row_editing.py) goes one step further and subclasses `ObservableRdmTable` for inline per-cell editing while keeping the `Column` definitions intact.
+
+See [docs/api.md](docs/api.md) for the full API reference.
 
 ### Multitenancy
 
