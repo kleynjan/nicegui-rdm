@@ -114,7 +114,7 @@ class SelectionTable(ObservableRdmTable):
         if not self.data:
             if self.config.empty_message:
                 with html.div().classes("rdm-empty"):
-                    html.span(self.config.empty_message).classes("rdm-empty-text")
+                    ui.label(self.config.empty_message).classes("rdm-empty-text")
             return
 
         with html.div().classes("rdm-table-card rdm-component"):

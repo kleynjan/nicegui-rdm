@@ -68,7 +68,7 @@ class ListTable(ObservableRdmTable):
         if not self.data:
             if self.config.empty_message:
                 with html.div().classes("rdm-empty"):
-                    html.span(self.config.empty_message).classes("rdm-empty-text")
+                    ui.label(self.config.empty_message).classes("rdm-empty-text")
             self._build_toolbar("bottom")
             return
 

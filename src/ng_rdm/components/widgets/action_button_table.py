@@ -81,7 +81,7 @@ class ActionButtonTable(ObservableRdmTable):
                             if self._all_actions:
                                 colspan += 1
                             with html.td().props(f"colspan={colspan}"):
-                                html.span(
+                                ui.label(
                                     self.config.empty_message or _("No data")
                                 ).classes("rdm-text-muted")
                     else:
