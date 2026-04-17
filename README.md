@@ -46,7 +46,7 @@ The reactive story in two browser windows — one edits, the other watches:
 User actions flow **down** through the Store layer (which validates and normalizes) to the database. On success, the Store broadcasts a `StoreEvent` **up** to all subscribed UI components, which automatically rebuild via `@ui.refreshable_method`. This is the reactive loop that keeps tables and detail views in sync with the database without manual refresh.
 
 
-## Quick start
+## Quick start 
 
 ### Installation
 
