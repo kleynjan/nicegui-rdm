@@ -69,7 +69,6 @@ class ListTable(ObservableRdmTable):
             if self.config.empty_message:
                 with html.div().classes("rdm-empty"):
                     ui.label(self.config.empty_message).classes("rdm-empty-text")
-            self._build_toolbar("bottom")
             return
 
         with html.div().classes("rdm-table-card rdm-component show-refresh"):

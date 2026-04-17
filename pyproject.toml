@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "nicegui-rdm"
-version = "0.1.61"
+version = "0.1.62"
 description = "Reactive Data Management for NiceGUI with Tortoise ORM"
 readme = "README.md"
 requires-python = ">=3.12"
