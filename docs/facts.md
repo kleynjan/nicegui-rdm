@@ -374,3 +374,10 @@ Demo: `python -m ng_rdm.examples.catalog` (includes debug page)
 - **pytz** — timezone handling
 - **Build**: hatchling
 - **Testing**: pytest + pytest-asyncio
+
+## Technical debt / to revisit
+
+- table.build vs table.build_with_toolbar - table.build should include the latter?
+- detail_card.on_delete and .on_deleted - are the complicated semantics justified?
+- IconButton with label, currently icon-only for no reason
+- add Card that doesn't produce the usual Quasar junk

@@ -43,7 +43,7 @@ class Row(RdmLayoutElement):
 
     Args:
         gap: Spacing between children (default: "1rem")
-        align: align-items value (default: "center")
+        align: align-items value (default: "start")
         classes: Additional CSS classes
         style: Additional inline styles (appended after flex base styles)
 
@@ -56,7 +56,7 @@ class Row(RdmLayoutElement):
     """
     _css_class = 'rdm-row'
 
-    def __init__(self, *, gap: str = '1rem', align: str = 'center', classes: str = '', style: str = ''):
+    def __init__(self, *, gap: str = '1rem', align: str = 'start', classes: str = '', style: str = ''):
         base = f'display:flex; align-items:{align}; gap:{gap}'
         combined = f'{base}; {style}' if style else base
         super().__init__(classes=classes, style=combined)

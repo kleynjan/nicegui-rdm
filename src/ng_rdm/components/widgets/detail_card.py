@@ -25,6 +25,10 @@ class DetailCard(RdmComponent):
         render_summary: Async callback rendering item attributes (title, key fields).
         render_related: Optional async callback for extended content (sub-tables etc.).
         on_edit: Called with item when Edit is clicked (typically vs.show_edit_existing).
+        on_delete: Optional async callback(item). When provided, replaces the default
+            `data_source.delete_item(item)` call — DetailCard still runs the
+            confirmation dialog and success notification, but the caller handles
+            the actual persistence (e.g. a cross-store cascade helper).
         on_deleted: Called (no args) after successful delete (typically vs.show_list).
         show_edit: Whether to show the Edit button.
         show_delete: Whether to show the Delete button.
@@ -46,6 +50,7 @@ class DetailCard(RdmComponent):
         *,
         render_related: Callable[[dict], Awaitable[None]] | None = None,
         on_edit: Callable[[dict], None] | None = None,
+        on_delete: Callable[[dict], Awaitable[None]] | None = None,
         on_deleted: Callable[[], None] | None = None,
         show_edit: bool = True,
         show_delete: bool = True,
@@ -56,6 +61,7 @@ class DetailCard(RdmComponent):
         self._render_summary = render_summary
         self._render_related = render_related
         self.on_edit = on_edit
+        self.on_delete = on_delete
         self.on_deleted = on_deleted
         self.show_edit = show_edit
         self.show_delete = show_delete
@@ -66,16 +72,30 @@ class DetailCard(RdmComponent):
 
     async def _handle_delete(self):
         item = self.state["item"]
-        if item and await self._delete(item):
+        if item is None:
+            return
+        if self.on_delete is not None:
+            if not await confirm_dialog(item):
+                return
+            try:
+                await self.on_delete(item)
+            except Exception as e:
+                self._notify(str(e), type="negative")
+                return
+            self._notify(_("Item deleted"), type="info")
             if self.on_deleted:
                 self.on_deleted()
+            return
+        if await self._delete(item) and self.on_deleted:
+            self.on_deleted()
 
     async def build(self):
         item = self.state["item"]
         if item is None:
             return
 
-        show_actions = (self.show_edit and self.on_edit) or (self.show_delete and self.on_deleted)
+        can_delete = self.show_delete and (self.on_delete is not None or self.on_deleted is not None)
+        show_actions = (self.show_edit and self.on_edit) or can_delete
 
         with html.div().classes("rdm-detail rdm-component"):
             with html.div().classes("rdm-detail-summary"):
@@ -84,7 +104,7 @@ class DetailCard(RdmComponent):
                     with html.div().classes("rdm-detail-actions"):
                         if self.show_edit and self.on_edit:
                             Button(_("Edit"), on_click=lambda _, i=item: self.on_edit(i))  # type: ignore[misc]
-                        if self.show_delete and self.on_deleted:
+                        if can_delete:
                             Button(_("Delete"), color="danger", on_click=self._handle_delete)
             if self._render_related:
                 with html.div().classes("rdm-detail-related"):
