@@ -16,7 +16,7 @@ class MultitenantRdmModel(RdmModel):
     and Tortoise will not generate a table for the subclass.
     """
 
-    tenant = fields.CharField(max_length=64, index=True)
+    tenant = fields.CharField(max_length=64, db_index=True)
 
     class Meta(RdmModel.Meta):
         abstract = True
