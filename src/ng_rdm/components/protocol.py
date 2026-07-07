@@ -27,9 +27,24 @@ class RdmDataSource(Protocol):
         self,
         filter_by: dict | None = None,
         q: Any | None = None,
-        join_fields: list[str] = []
+        join_fields: list[str] = [],
+        limit: int | None = None,
+        offset: int = 0,
+        order_by: list[str] | None = None,
     ) -> list[dict]:
-        """Read items with optional filtering and joins."""
+        """Read items with optional filtering, joins, DB-side ordering and pagination."""
+        ...
+
+    async def read_counts(
+        self,
+        filter_by: dict | None = None,
+        q: Any | None = None,
+        group_by: str | None = None,
+    ) -> int | dict:
+        """Count matching items without fetching rows.
+
+        Returns an int total when group_by is None, else a dict {group_value: count}.
+        """
         ...
 
     async def update_item(self, id: int, partial_item: dict) -> dict | None:

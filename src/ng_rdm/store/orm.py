@@ -7,6 +7,7 @@ from typing import Generic, Type, TypeVar
 from tortoise import Tortoise
 from tortoise.contrib.fastapi import register_tortoise
 from tortoise.expressions import Q
+from tortoise.functions import Count
 
 from ..models import RdmModel
 from ..utils.helpers import (
@@ -58,9 +59,9 @@ class TortoiseStore(Store, Generic[T]):
         },
     }
 
-    def __init__(self, model: Type[T], debounce_ms: int = 100) -> None:
+    def __init__(self, model: Type[T], throttle_ms: int = 100) -> None:
         self.model = model
-        super().__init__(model.get_all_field_specs(), debounce_ms)
+        super().__init__(model.get_all_field_specs(), throttle_ms)
         logger.debug(f"Creating store for {model.__name__}")
 
     # metamodel methods
@@ -130,13 +131,29 @@ class TortoiseStore(Store, Generic[T]):
         db_item = await self.model.create(**item)
         return self._hydrate(db_item.values())
 
-    async def _read_items(self, filter_by: dict | None = None, q: Q | None = None, join_fields: list[str] = []) -> list[dict]:
-        """Read items from database with optional filtering"""
+    async def _read_items(self, filter_by: dict | None = None, q: Q | None = None, join_fields: list[str] = [],
+                          limit: int | None = None, offset: int = 0, order_by: list[str] | None = None) -> list[dict]:
+        """Read items from database with optional filtering, DB-side ordering and pagination"""
         fields = self._get_field_names(join_fields=join_fields)
         query = self._build_query(filter_by, q)
-        items = await self.model.filter(query).values(*fields)
+        qs = self.model.filter(query)
+        if order_by:
+            qs = qs.order_by(*order_by)
+        if offset:
+            qs = qs.offset(offset)
+        if limit is not None:
+            qs = qs.limit(limit)
+        items = await qs.values(*fields)
         items = [self._hydrate(item, join_fields) for item in items]
         return items
+
+    async def _read_counts(self, filter_by: dict | None = None, q: Q | None = None, group_by: str | None = None) -> int | dict:
+        """Count matching rows DB-side; grouped when group_by is given."""
+        query = self._build_query(filter_by, q)
+        if group_by is None:
+            return await self.model.filter(query).count()
+        rows = await self.model.filter(query).annotate(n=Count("id")).group_by(group_by).values(group_by, "n")
+        return {row[group_by]: row["n"] for row in rows}
 
     async def _update_item(self, id: int, partial_item: dict) -> dict | None:
         """Update item in database"""

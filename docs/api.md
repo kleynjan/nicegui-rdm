@@ -49,11 +49,18 @@ Abstract base class. Do not instantiate directly; use `DictStore` or `TortoiseSt
 
 ```python
 await store.create_item(item: dict) -> dict | None
-await store.read_items(filter_by=None, q=None, join_fields=[]) -> list[dict]
+await store.read_items(filter_by=None, q=None, join_fields=[],
+                       limit=None, offset=0, order_by=None) -> list[dict]
+await store.read_counts(filter_by=None, q=None, group_by=None) -> int | dict
 await store.read_item_by_id(id: int, join_fields=[]) -> dict | None
 await store.update_item(id: int, partial_item: dict) -> dict | None
 await store.delete_item(item: dict) -> None
 ```
+
+**Bounded reads & counts (for large / fast-changing entities):**
+
+- `read_items(..., limit, offset, order_by)` — `limit`/`offset` page the result; `order_by` (e.g. `["name", "-created_at"]`) sorts DB-side and bypasses the Python `set_sort_key` path. A fully-unbounded read (`limit is None`, no filter) past `store.unbounded_warn_threshold` (default 1000) rows logs a rate-limited warning.
+- `read_counts(filter_by, q, group_by)` — counts without fetching rows: an `int` total, or `dict[value, int]` when `group_by` is given. Pairs with `ReactiveCounts` for throttled, binding-driven progress headers.
 
 **Observer management:**
 
@@ -100,10 +107,10 @@ store = DictStore()
 ORM-backed store using Tortoise ORM. Generic: `TortoiseStore[T]` where `T` is a `RdmModel` subclass.
 
 ```python
-store = TortoiseStore(ModelClass, debounce_ms=100)
+store = TortoiseStore(ModelClass, throttle_ms=100)
 ```
 
-- Default `debounce_ms=100`: rapid mutations are coalesced into a single notification after 100ms quiet.
+- Default `throttle_ms=100`: leading + trailing throttle — the first event fires immediately, then at most one flush per 100 ms while events keep arriving, with a guaranteed trailing flush. A sustained sub-interval stream never starves (unlike a debounce). Bump it (e.g. `1000`) for busy live views.
 - Handles hydration/dehydration for `DatetimeField` and `DateField`.
 - Supports `join_fields` for FK navigation (e.g. `"category__name"` → joins related model).
 - Supports Tortoise Q-objects via the `q=` parameter on `read_items`.
@@ -112,8 +119,9 @@ store = TortoiseStore(ModelClass, debounce_ms=100)
 
 ```python
 class EnrichedProductStore(TortoiseStore[Product]):
-    async def _read_items(self, filter_by=None, q=None, join_fields=[]):
-        items = await super()._read_items(filter_by, q, join_fields)
+    async def _read_items(self, filter_by=None, q=None, join_fields=[],
+                          limit=None, offset=0, order_by=None):
+        items = await super()._read_items(filter_by, q, join_fields, limit, offset, order_by)
         # add computed fields, enrich with related data, etc.
         return items
 ```
@@ -123,10 +131,10 @@ class EnrichedProductStore(TortoiseStore[Product]):
 Extends `TortoiseStore` with automatic tenant scoping on all queries. Model must subclass `MultitenantRdmModel`.
 
 ```python
-store = MultitenantTortoiseStore(ModelClass, tenant="acme")
+store = MultitenantTortoiseStore(ModelClass, tenant="acme", throttle_ms=100)
 ```
 
-All CRUD operations automatically filter/set the `tenant` field. Raises `TenancyError` for unknown tenants.
+All CRUD operations — including `read_counts` — automatically filter/set the `tenant` field (both route through `_build_query`). Raises `TenancyError` for unknown tenants.
 
 ### `StoreRegistry` / `store_registry` (`store/base.py`)
 
@@ -707,4 +715,27 @@ store.set_topic_fields(["tenant_id", "country"])        # declare eligible field
 store.add_observer(callback, topics={"country": "UK"})  # observer only notified for UK events
 ```
 
-Multiple keys are AND-ed. When events are coalesced (debounce or `batch()`), topic matching is bypassed and all observers are notified conservatively.
+Multiple keys are AND-ed. When events are coalesced (throttle or `batch()`), topic matching is bypassed and all observers are notified conservatively.
+
+---
+
+## ReactiveCounts (`components/reactive.py`)
+
+A throttled, binding-friendly count-view for progress/summary headers over large or fast-changing data. Recomputes `read_counts()` on a throttled store cadence into `self.values` (a plain dict, mutated in place) and surfaces it via NiceGUI `bind_text_from` — no table rebuild, no `@ui.refreshable`.
+
+```python
+ReactiveCounts(
+    data_source,          # RdmDataSource (store)
+    filter_by=None,       # scope the count
+    q=None,               # optional Q predicate (TortoiseStore)
+    group_by=None,        # None → single total; else dict[value, count]
+    key="total",          # dict key for the ungrouped total
+    keys=None,            # pre-seed grouped keys to 0 so bindings always resolve
+)
+
+counts = ReactiveCounts(messages, group_by="status", keys=["delivered", "pending"])
+await counts.start()      # registers the observer, does an initial recompute
+ui.label().bind_text_from(counts.values, "delivered", backward=lambda v: str(v or 0))
+```
+
+`start()` captures `ui.context.client` and unobserves automatically on `client.on_disconnect`; call `stop()` to unobserve early.

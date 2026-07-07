@@ -12,6 +12,13 @@ from tortoise import Tortoise
 pytest_plugins = ['nicegui.testing.user_plugin']
 
 
+def pytest_addoption(parser):
+    # nicegui's user_plugin reads the `main_file` ini value but does not register it,
+    # so pytest core emits "Unknown config option: main_file". Register it here (same
+    # empty default as pyproject) to silence that warning without changing behavior.
+    parser.addini("main_file", "NiceGUI app entry module for the testing User fixture", default="")
+
+
 # --- Test models for ORM tests ---
 
 

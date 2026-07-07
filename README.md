@@ -12,11 +12,11 @@ ng_rdm (`nicegui-rdm` on PyPI) is a Python library for building database-backed 
 
 [Master/detail](src/ng_rdm/examples/master_detail.py) using a ListTable, DetailCard, ActionButtonTable and EditDialog - wired together with a ViewStack:
 
-![Master detail example](docs/screenshots/master-detail-demo.gif)
+![Master detail example](https://raw.githubusercontent.com/kleynjan/nicegui-rdm/main/docs/screenshots/master-detail-demo.gif)
 
 The reactive story in two browser windows — one edits, the other watches:
 
-![Two-browser reactivity demo: Browser A edits, Browser B updates automatically](docs/screenshots/reactivity-demo.gif)
+![Two-browser reactivity demo: Browser A edits, Browser B updates automatically](https://github.com/kleynjan/nicegui-rdm/raw/main/docs/screenshots/reactivity-demo.gif)
 
 ## How it works
 
@@ -146,6 +146,7 @@ After `pip install nicegui-rdm`, run any example with `python -m ng_rdm.examples
 | `custom_datasource` | Build your own store backend |
 | `vanilla_store` | Use stores with vanilla NiceGUI components |
 | `topic_filtering` | Topic-based observer filtering |
+| `large_dataset` | Bounded views at scale — query-view, count-view (`ReactiveCounts`), scoped-live-view |
 
 ## FAQ
 
@@ -241,7 +242,7 @@ In your app, call `set_valid_tenants(["A", "B"])` at startup, then register one 
 
 ### Batching store notifications
 
-Store mutations are debounced by 100 ms by default so that rapid sequences of writes produce a single UI refresh. For explicit multi-step batches use the batch context manager:
+Store mutations are **throttled** by 100 ms by default (`TortoiseStore(Model, throttle_ms=100)`). The throttle is leading + trailing: the first event flushes immediately, then at most one flush per interval while events keep arriving, with a guaranteed trailing flush after the last one. Unlike a pure debounce, a sustained sub-interval stream (e.g. a live bulk send) never starves — it refreshes on a steady cadence. Bump `throttle_ms` (e.g. `1000`) for busy live views. For explicit multi-step batches use the batch context manager:
 
 ```python
 async with store.batch():
@@ -315,6 +316,25 @@ For the full architecture, observer pattern, component hierarchy, and data flow,
 This library is absolutely **not** intended or suitable for applications with thousands of concurrent users, at least not for fully reactive UI's: a single update of a database table will lead to multiple reads *per connected client* (refresh -> reread). The typical use case is for dashboard-type apps that have a handful of users; without actually testing it, I'd estimate a practical upper limit to be around ~50-100 concurrent users?
 
 Note that by default, all table classes register as observers to the stores they depend on, for all events. The first step to improve scalability is to set `auto_observe=False` when instantiating the component – and then to either register your observer with topic filtering or even better, don't register it at all if you don't need reactivity.
+
+#### Bounded views: working with large or fast-changing entities
+
+The store is a **CRUD-by-id gateway** (it re-reads from the DB on every call and is not a cache). The "whole set" assumption lives only on the **read/view** side. When an entity is too big to render whole, or updates arrive several times per second, don't make a view over the entire set — make an explicitly **bounded** one. Reactivity then means *re-reading a small view on a throttled cadence*, so its cost stays low. Three archetypes:
+
+- **Query-view** — a searched/filtered table with a hard `limit` and DB-side `order_by`, `auto_observe=False`. Show "N of M" with `read_counts()`.
+  ```python
+  ListTable(data_source=users, config=cfg, order_by=["name"], limit=50, auto_observe=False)
+  total = await users.read_counts(filter_by={"team": "Sales"})
+  ```
+- **Count-view** — for progress/summary headers, read *counts* (not rows) with `read_counts(group_by=...)`, throttled, and bind them to the UI without rebuilding any table. `ReactiveCounts` does this; counts bypass `@ui.refreshable` entirely:
+  ```python
+  counts = ReactiveCounts(messages, group_by="status", keys=["delivered", "pending"])
+  await counts.start()
+  ui.label().bind_text_from(counts.values, "delivered", backward=lambda v: str(v or 0))
+  ```
+- **Scoped-live-view** — `filter_by` down to a handful of rows (e.g. one user's messages); a full re-read on throttle is cheap, so keep `auto_observe=True`.
+
+`read_items()` accepts `limit` / `offset` / `order_by`; a fully-unbounded read that returns more than `unbounded_warn_threshold` (default 1000) rows logs a warning. See the [large_dataset example](src/ng_rdm/examples/large_dataset.py) for all three archetypes driven by a live update stream.
 
 ## Requirements
 

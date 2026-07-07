@@ -259,11 +259,17 @@ class ObservableRdmComponent(RdmComponent):
         join_fields: list[str] | None = None,
         filter_by: dict[str, Any] | None = None,
         transform: Callable[[list[dict]], list[dict]] | None = None,
+        limit: int | None = None,
+        offset: int = 0,
+        order_by: list[str] | None = None,
     ):
-        """Load data from data source with optional filter and transform."""
+        """Load data from data source with optional filter, transform and bounded window."""
         self.data = await self.data_source.read_items(
             join_fields=join_fields or [],
             filter_by=filter_by,
+            limit=limit,
+            offset=offset,
+            order_by=order_by,
         )
         if transform:
             self.data = transform(self.data)
@@ -318,7 +324,11 @@ class ObservableRdmTable(ObservableRdmComponent):
     Adds shared table concerns on top of ObservableRdmComponent:
     - TableConfig, filter_by, transform, extra join fields
     - load_data() with join field merging
+    - Bounded window (limit/offset/order_by) held in state for query-view paging
     - Toolbar rendering (add button; filtering/pagination in future)
+
+    For large entities, pass limit=/order_by= and auto_observe=False to make this a
+    bounded "query-view"; the offset in state supports paging on the render_toolbar hook.
     """
 
     def __init__(
@@ -333,6 +343,8 @@ class ObservableRdmTable(ObservableRdmComponent):
         on_add: Callable[[], Awaitable[None] | None] | None = None,
         render_toolbar: Callable[[], None] | None = None,
         auto_observe: bool = True,
+        limit: int | None = None,
+        order_by: list[str] | None = None,
     ):
         super().__init__(data_source=data_source, state=state)
         self.config = config
@@ -341,6 +353,9 @@ class ObservableRdmTable(ObservableRdmComponent):
         self._extra_join_fields = join_fields or []
         self.on_add = on_add
         self.render_toolbar = render_toolbar
+        self.order_by = order_by
+        self.state.setdefault("limit", limit)
+        self.state.setdefault("offset", 0)
         if auto_observe:
             self.observe(topics=filter_by)
 
@@ -349,12 +364,18 @@ class ObservableRdmTable(ObservableRdmComponent):
         join_fields: list[str] | None = None,
         filter_by: dict[str, Any] | None = None,
         transform: Callable[[list[dict]], list[dict]] | None = None,
+        limit: int | None = None,
+        offset: int = 0,
+        order_by: list[str] | None = None,
     ):
         all_joins = list(set(self.config.join_fields + self._extra_join_fields))
         await super().load_data(
             join_fields=join_fields or all_joins,
             filter_by=filter_by if filter_by is not None else self.filter_by,
             transform=transform if transform is not None else self.transform,
+            limit=limit if limit is not None else self.state.get("limit"),
+            offset=offset or self.state.get("offset", 0),
+            order_by=order_by if order_by is not None else self.order_by,
         )
 
     def _build_toolbar(self, at: Literal["top", "bottom"] = "top"):

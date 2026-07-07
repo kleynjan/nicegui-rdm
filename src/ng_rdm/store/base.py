@@ -12,6 +12,7 @@ A Store...
 
 from __future__ import annotations
 
+import time
 from typing import TYPE_CHECKING, Any, Callable
 
 from ..models import FieldSpec
@@ -26,13 +27,18 @@ class Store:
     """Base store providing core CRUD operations and validation.
     (includes Q and join_fields interface for ORM subclasses)"""
 
-    def __init__(self, field_specs: dict[str, FieldSpec] | None = None, debounce_ms: int = 0) -> None:
-        self._notifier = EventNotifier(debounce_ms)
+    # Reactive views should be bounded; an unbounded read above this many rows
+    # logs a (rate-limited) warning. Override per store instance/subclass to tune.
+    unbounded_warn_threshold: int = 1000
+
+    def __init__(self, field_specs: dict[str, FieldSpec] | None = None, throttle_ms: int = 0) -> None:
+        self._notifier = EventNotifier(throttle_ms)
         self._field_specs: dict[str, FieldSpec] = field_specs or {}
         self._sort_key: Callable[[dict], Any] | None = None
         self._sort_reverse: bool = False
         self._derived_fields: dict[str, Callable[[dict], Any]] = {}
         self._derived_field_dependencies: list[str] = []
+        self._last_unbounded_warn: float = 0.0
 
     def set_sort_key(self, key_func: Callable[[dict], Any], reverse: bool = False) -> None:
         """Set function to generate sort key from item"""
@@ -143,7 +149,11 @@ class Store:
     async def _create_item(self, item: dict) -> dict:
         raise NotImplementedError()
 
-    async def _read_items(self, filter_by: dict | None = None, q: Any | None = None, join_fields: list[str] = []) -> list[dict]:
+    async def _read_items(self, filter_by: dict | None = None, q: Any | None = None, join_fields: list[str] = [],
+                          limit: int | None = None, offset: int = 0, order_by: list[str] | None = None) -> list[dict]:
+        raise NotImplementedError()
+
+    async def _read_counts(self, filter_by: dict | None = None, q: Any | None = None, group_by: str | None = None) -> int | dict:
         raise NotImplementedError()
 
     async def _update_item(self, id: int, partial_item: dict) -> dict | None:
@@ -163,20 +173,49 @@ class Store:
         await self.notify_observers(StoreEvent(verb="create", item=created_item))
         return created_item
 
-    async def read_items(self, filter_by: dict | None = None, q: Any | None = None, join_fields: list[str] = []) -> list[dict]:
+    async def read_items(self, filter_by: dict | None = None, q: Any | None = None, join_fields: list[str] = [],
+                         limit: int | None = None, offset: int = 0, order_by: list[str] | None = None) -> list[dict]:
         """Read items with optional filtering; applies derived fields and sorts.
 
         Args:
             filter_by: dict of field=value pairs for equality filtering (AND)
             q: Q object for complex queries (for advanced use cases) (to implement in ORM subclass)
             join_fields: list of fields to join (to implement in ORM subclass)
+            limit: max rows to return (None = unbounded); bound reactive views to keep re-reads cheap
+            offset: number of rows to skip (for paging; use with order_by for stable pages)
+            order_by: DB-side ordering (e.g. ["name", "-created_at"]); bypasses the Python sort key
         """
         # Merge requested join_fields with derived field dependencies
         all_join_fields = list(set(join_fields + self._derived_field_dependencies))
 
-        items = await self._read_items(filter_by, q, all_join_fields)
+        items = await self._read_items(filter_by, q, all_join_fields, limit, offset, order_by)
         items = self._apply_derived_fields(items)
-        return self._sort_results(items)
+        self._warn_if_unbounded(limit, filter_by, q, len(items))
+        # DB-side ordering (order_by) already sorted; else fall back to the Python sort key
+        return items if order_by else self._sort_results(items)
+
+    async def read_counts(self, filter_by: dict | None = None, q: Any | None = None, group_by: str | None = None) -> int | dict:
+        """Count matching items without fetching rows.
+
+        Returns an int total when group_by is None, else a dict {group_value: count}.
+        Ideal for reactive progress/summary views — see ReactiveCounts.
+        """
+        return await self._read_counts(filter_by, q, group_by)
+
+    def _warn_if_unbounded(self, limit: int | None, filter_by: dict | None, q: Any | None, count: int) -> None:
+        """Warn (rate-limited) when a fully-unbounded read returns a large result set."""
+        if limit is not None or filter_by or q or count <= self.unbounded_warn_threshold:
+            return
+        now = time.monotonic()
+        if now - self._last_unbounded_warn < 60:
+            return
+        self._last_unbounded_warn = now
+        model = getattr(self, "model", None)
+        name = model.__name__ if model is not None else type(self).__name__
+        logger.warning(
+            f"ng_rdm: unbounded read returned {count} rows from '{name}'. "
+            f"Reactive views should be bounded — pass limit=/filter_by=, or use read_counts()."
+        )
 
     async def read_item_by_id(self, id: int, join_fields: list[str] = []) -> dict | None:
         """Read a single item by ID, with optional join fields."""

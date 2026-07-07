@@ -13,7 +13,8 @@ examples/
 ├── multitenant.py       # MultitenantTortoiseStore, models subclass MultitenantRdmModel
 ├── vanilla_store.py     # Basic store usage without UI components
 ├── topic_filtering.py   # Topic-based observer filtering
-└── chips.py             # Custom cell rendering via Column.render (colored status chips)
+├── chips.py             # Custom cell rendering via Column.render (colored status chips)
+└── large_dataset.py     # Bounded views at scale — query/count/scoped-live archetypes
 ```
 
 ## Running
@@ -30,6 +31,7 @@ python -m ng_rdm.examples.custom_datasource
 python -m ng_rdm.examples.vanilla_store
 python -m ng_rdm.examples.topic_filtering
 python -m ng_rdm.examples.chips
+python -m ng_rdm.examples.large_dataset
 ```
 
 ## What Each Example Demonstrates
@@ -42,3 +44,4 @@ python -m ng_rdm.examples.chips
 - **vanilla_store** — DictStore/TortoiseStore CRUD, observers, validation without UI components
 - **topic_filtering** — Observer topic subscriptions for selective UI refresh
 - **chips** — Custom cell rendering via Column.render: a dict-based table with colored status chips and a button that mutates the store out-of-band
+- **large_dataset** — Bounded views for entities too big to render whole: a capped/filtered query-view (`limit`/`order_by`, `auto_observe=False`), a `ReactiveCounts` count-view bound to a live bulk-send progress header, and a scoped-live-view of one user's messages — all driven by a background update stream on a throttled cadence

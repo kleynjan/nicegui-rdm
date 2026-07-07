@@ -1,9 +1,9 @@
 """
-Event notification with batching and debouncing support.
+Event notification with batching and throttling support.
 
 EventNotifier manages observer notifications for Store, providing:
-- Immediate notifications (debounce_ms=0)
-- Time-based debouncing to coalesce rapid events
+- Immediate notifications (throttle_ms=0)
+- Leading+trailing throttling to bound flush frequency under sustained load
 - Explicit batching via context manager
 """
 
@@ -50,23 +50,26 @@ def _infer_observer_name(callback: Callable) -> str:
 
 
 class EventNotifier:
-    """Manages observer notifications with optional batching and debouncing.
+    """Manages observer notifications with optional batching and throttling.
 
     Supports topic-based filtering: observers can subscribe to specific
     field values (e.g., topics={"role_id": 5}) to receive only relevant events.
 
     Args:
-        debounce_ms: Milliseconds to wait for quiet period before flushing.
-                     0 = disabled (immediate notifications)
+        throttle_ms: Minimum interval between flushes. Events flush immediately on
+                     the leading edge, then at most once per interval while events
+                     keep arriving, with a guaranteed trailing flush after the last
+                     event. 0 = disabled (immediate notifications). Unlike a pure
+                     trailing timer, a sustained sub-interval stream never starves.
     """
 
-    def __init__(self, debounce_ms: int = 0):
+    def __init__(self, throttle_ms: int = 0):
         self._observers: list[ObserverEntry] = []
         self._topic_fields: list[str] = []
-        self._debounce_ms = debounce_ms
+        self._throttle_ms = throttle_ms
         self._batch_depth = 0
         self._pending_events: list[StoreEvent] = []
-        self._last_event_time = 0.0
+        self._last_flush_time = 0.0
         self._flush_task: asyncio.Task | None = None
         self._event_log: EventLog | None = None
         self._store_name: str = ""
@@ -97,41 +100,44 @@ class EventNotifier:
         return len(self._observers)
 
     async def notify(self, event: StoreEvent) -> None:
-        """Queue event and fire to observers (with batching/debouncing if configured)."""
+        """Queue event and fire to observers (with batching/throttling if configured)."""
         self._pending_events.append(event)
-        self._last_event_time = time.monotonic()
 
         if self._batch_depth > 0:
             return  # Inside batch context - wait for exit
 
-        if self._debounce_ms > 0:
-            await self._schedule_debounced_flush()
+        if self._throttle_ms > 0:
+            await self._schedule_throttled_flush()
         else:
             await self._flush_events()
 
-    async def _schedule_debounced_flush(self) -> None:
-        """Start debounce loop if not already running."""
-        if self._flush_task is None or self._flush_task.done():
-            self._flush_task = asyncio.create_task(self._debounce_loop())
+    async def _schedule_throttled_flush(self) -> None:
+        """Flush on the leading edge, else coalesce into one trailing flush per interval."""
+        interval = self._throttle_ms / 1000
+        elapsed = time.monotonic() - self._last_flush_time
+        if elapsed >= interval:
+            # Leading edge - been quiet at least one interval, flush now
+            await self._flush_and_stamp()
+        elif self._flush_task is None or self._flush_task.done():
+            # Within the interval - schedule a single trailing flush at the boundary
+            self._flush_task = asyncio.create_task(self._trailing_flush(interval - elapsed))
 
-    async def _debounce_loop(self) -> None:
-        """Wait until no new events arrive within the debounce window."""
-        delay = self._debounce_ms / 1000
-        while True:
-            await asyncio.sleep(delay)
-            elapsed = time.monotonic() - self._last_event_time
-            if elapsed >= delay:
-                # Quiet period reached - flush and exit
-                await self._flush_events()
-                return
-            # New events arrived during sleep - loop again
+    async def _trailing_flush(self, wait: float) -> None:
+        """Wait out the remainder of the interval, then flush coalesced events."""
+        await asyncio.sleep(wait)
+        await self._flush_and_stamp()
+
+    async def _flush_and_stamp(self) -> None:
+        """Record the flush time (throttle boundary) and fire pending events."""
+        self._last_flush_time = time.monotonic()
+        await self._flush_events()
 
     @asynccontextmanager
     async def batch(self):
         """Context manager for explicit batching.
 
         All events within the context are collected and fired as a single
-        batch event on exit. Bypasses debouncing for immediate flush.
+        batch event on exit. Bypasses throttling for immediate flush.
 
         Usage:
             async with notifier.batch():
@@ -145,7 +151,7 @@ class EventNotifier:
         finally:
             self._batch_depth -= 1
             if self._batch_depth == 0:
-                # Cancel any pending debounce - batch exit is immediate
+                # Cancel any pending trailing flush - batch exit is immediate
                 if self._flush_task and not self._flush_task.done():
                     self._flush_task.cancel()
                     try:
@@ -153,7 +159,7 @@ class EventNotifier:
                     except asyncio.CancelledError:
                         pass
                     self._flush_task = None
-                await self._flush_events()
+                await self._flush_and_stamp()
 
     def _should_notify(self, event: StoreEvent, topics: dict[str, Any] | None) -> bool:
         """Determine if observer should receive this event."""

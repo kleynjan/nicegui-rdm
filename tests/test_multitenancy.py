@@ -87,6 +87,24 @@ async def test_delete_scoped_to_tenant():
     assert len(await store_beta.read_items()) == 1  # beta untouched
 
 
+async def test_read_counts_scoped_to_tenant():
+    """read_counts inherits tenant scoping via _build_query (total and grouped)"""
+    store_alpha = MultitenantTortoiseStore(TenantItem, tenant="alpha")
+    store_beta = MultitenantTortoiseStore(TenantItem, tenant="beta")
+
+    await store_alpha.create_item({"name": "A1"})
+    await store_alpha.create_item({"name": "A2"})
+    await store_beta.create_item({"name": "B1"})
+
+    # Totals are tenant-scoped
+    assert await store_alpha.read_counts() == 2
+    assert await store_beta.read_counts() == 1
+
+    # Grouped counts are tenant-scoped too (only this tenant's rows appear)
+    grouped_alpha = await store_alpha.read_counts(group_by="tenant")
+    assert grouped_alpha == {"alpha": 2}
+
+
 async def test_store_without_tenant():
     """Store without tenant sees all items (no scoping)"""
     scoped = MultitenantTortoiseStore(TenantItem, tenant="alpha")

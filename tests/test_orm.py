@@ -222,7 +222,7 @@ async def test_derived_fields_with_join():
 
 async def test_observer_on_orm_create():
     """Observer fires on TortoiseStore create"""
-    store = TortoiseStore(Author, debounce_ms=0)
+    store = TortoiseStore(Author, throttle_ms=0)
     events = []
     store.add_observer(lambda e: events.append(e))
 
@@ -233,7 +233,7 @@ async def test_observer_on_orm_create():
 
 async def test_observer_on_orm_update():
     """Observer fires on TortoiseStore update"""
-    store = TortoiseStore(Author, debounce_ms=0)
+    store = TortoiseStore(Author, throttle_ms=0)
     created = await store.create_item({"name": "Test"})
     assert created
 
@@ -247,7 +247,7 @@ async def test_observer_on_orm_update():
 
 async def test_observer_on_orm_delete():
     """Observer fires on TortoiseStore delete"""
-    store = TortoiseStore(Author, debounce_ms=0)
+    store = TortoiseStore(Author, throttle_ms=0)
     created = await store.create_item({"name": "Test"})
     assert created
 
@@ -282,6 +282,62 @@ async def test_rdm_model_values_with_rename():
     author = await Author.create(name="Jane Austen", email="jane@books.com")
     d = author.values(author_name="name")
     assert d["author_name"] == "Jane Austen"
+
+
+# --- Bounded reads: limit / offset / order_by (DB-side) ---
+
+async def test_read_items_order_by_ascending_and_descending():
+    """order_by sorts DB-side, ascending and (via '-') descending"""
+    store = TortoiseStore(Author)
+    for name in ["Charlie", "Alice", "Bob"]:
+        await store.create_item({"name": name})
+
+    asc = await store.read_items(order_by=["name"])
+    assert [a["name"] for a in asc] == ["Alice", "Bob", "Charlie"]
+
+    desc = await store.read_items(order_by=["-name"])
+    assert [a["name"] for a in desc] == ["Charlie", "Bob", "Alice"]
+
+
+async def test_read_items_limit_offset_returns_correct_ordered_slice():
+    """limit/offset page a stable, DB-ordered result"""
+    store = TortoiseStore(Author)
+    for name in ["a", "b", "c", "d", "e"]:
+        await store.create_item({"name": name})
+
+    page = await store.read_items(order_by=["name"], limit=2, offset=1)
+    assert [a["name"] for a in page] == ["b", "c"]
+
+
+async def test_read_items_limit_caps_after_ordering():
+    """Ordering is applied before the cap, so limit returns the correct top rows"""
+    store = TortoiseStore(Author)
+    for name in ["z", "y", "x", "w"]:
+        await store.create_item({"name": name})
+
+    top = await store.read_items(order_by=["name"], limit=2)
+    assert [a["name"] for a in top] == ["w", "x"]
+
+
+# --- read_counts (DB-side) ---
+
+async def test_read_counts_total_and_filtered():
+    store = TortoiseStore(Author)
+    await store.create_item({"name": "A", "email": "a@x.com"})
+    await store.create_item({"name": "B", "email": "b@x.com"})
+
+    assert await store.read_counts() == 2
+    assert await store.read_counts(filter_by={"name": "A"}) == 1
+
+
+async def test_read_counts_grouped():
+    store = TortoiseStore(Author)
+    await store.create_item({"name": "A", "email": "shared@x.com"})
+    await store.create_item({"name": "B", "email": "shared@x.com"})
+    await store.create_item({"name": "C", "email": "solo@x.com"})
+
+    grouped = await store.read_counts(group_by="email")
+    assert grouped == {"shared@x.com": 2, "solo@x.com": 1}
 
 
 # import needed for type reference in test_auto_required_validators

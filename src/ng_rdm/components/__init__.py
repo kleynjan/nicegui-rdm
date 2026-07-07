@@ -19,6 +19,7 @@ from nicegui import ui
 from .base import RdmComponent, ObservableRdmComponent, ObservableRdmTable, Column, TableConfig, FormConfig, RowAction, confirm_dialog
 from .i18n import _, none_as_text, set_language, set_translations
 from .protocol import RdmDataSource
+from .reactive import ReactiveCounts
 from ..store.notifier import StoreEvent
 
 # Concrete widget components
@@ -110,6 +111,7 @@ __all__ = [
     'RowAction',
     'confirm_dialog',
     'none_as_text',
+    'ReactiveCounts',
 
     # Core components
     'Button',

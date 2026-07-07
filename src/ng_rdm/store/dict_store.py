@@ -31,23 +31,37 @@ class DictStore(Store):
         self._items.append(item)
         return item
 
-    async def _read_items(self, filter_by: dict | None = None, q: Any | None = None, join_fields: list[str] = []) -> list[dict]:
+    async def _read_items(self, filter_by: dict | None = None, q: Any | None = None, join_fields: list[str] = [],
+                          limit: int | None = None, offset: int = 0, order_by: list[str] | None = None) -> list[dict]:
         if q or join_fields:
             raise NotImplementedError("ORM arguments q and join_fields not supported")
 
         items = copy.deepcopy(self._items)
         if filter_by:
-            filtered_items = []
-            for item in items:
-                matches = True
-                for key, value in filter_by.items():
-                    if key not in item or item[key] != value:
-                        matches = False
-                        break
-                if matches:
-                    filtered_items.append(item)
-            items = filtered_items
+            items = [it for it in items
+                     if all(key in it and it[key] == value for key, value in filter_by.items())]
+        if order_by:
+            # apply keys right-to-left for a stable multi-key sort; None sorts first
+            for key in reversed(order_by):
+                reverse = key.startswith("-")
+                field = key[1:] if reverse else key
+                items.sort(key=lambda it, f=field: (it.get(f) is None, it.get(f)), reverse=reverse)
+        if offset:
+            items = items[offset:]
+        if limit is not None:
+            items = items[:limit]
         return items
+
+    async def _read_counts(self, filter_by: dict | None = None, q: Any | None = None, group_by: str | None = None) -> int | dict:
+        if q:
+            raise NotImplementedError("ORM argument q not supported")
+        items = await self._read_items(filter_by=filter_by)
+        if group_by is None:
+            return len(items)
+        counts: dict = {}
+        for it in items:
+            counts[it.get(group_by)] = counts.get(it.get(group_by), 0) + 1
+        return counts
 
     async def _update_item(self, id: int, new_partial_item: dict) -> dict | None:
         new_partial_item.pop("id", None)

@@ -1,5 +1,5 @@
 """
-Tests for EventNotifier: notification, debouncing, batching.
+Tests for EventNotifier: notification, throttling, batching.
 """
 import asyncio
 import pytest
@@ -8,14 +8,14 @@ from ng_rdm.store import EventNotifier, StoreEvent
 
 @pytest.fixture
 def notifier():
-    """A fresh EventNotifier with no debouncing"""
-    return EventNotifier(debounce_ms=0)
+    """A fresh EventNotifier with no throttling"""
+    return EventNotifier(throttle_ms=0)
 
 
 @pytest.fixture
-def debounced_notifier():
-    """EventNotifier with 50ms debounce"""
-    return EventNotifier(debounce_ms=50)
+def throttled_notifier():
+    """EventNotifier with a 50ms throttle interval"""
+    return EventNotifier(throttle_ms=50)
 
 
 # --- Basic Notification ---
@@ -129,100 +129,117 @@ async def test_nested_batch(notifier):
     assert events[0].item["count"] == 3
 
 
-# --- Debouncing ---
+# --- Throttling (leading + trailing) ---
 
 
-async def test_debounce_coalesces_rapid_events(debounced_notifier):
-    """Rapid events are coalesced after quiet period"""
+async def test_throttle_leading_flush_is_immediate(throttled_notifier):
+    """After a quiet period, the first event flushes immediately (leading edge)."""
     events = []
-    debounced_notifier.add_observer(lambda e: events.append(e))
+    throttled_notifier.add_observer(lambda e: events.append(e))
 
-    # Fire events rapidly
+    await throttled_notifier.notify(StoreEvent(verb="create", item={"id": 1}))
+
+    # No wait needed - leading edge fires right away (unlike a trailing debounce)
+    assert len(events) == 1
+    assert events[0].verb == "create"
+
+
+async def test_throttle_coalesces_after_leading(throttled_notifier):
+    """Leading event fires immediately; the rest coalesce into one trailing flush."""
+    events = []
+    throttled_notifier.add_observer(lambda e: events.append(e))
+
     for i in range(5):
-        await debounced_notifier.notify(StoreEvent(verb="create", item={"id": i}))
+        await throttled_notifier.notify(StoreEvent(verb="create", item={"id": i}))
 
-    # Events not delivered yet (debouncing)
-    assert len(events) == 0
-
-    # Wait for debounce to complete
-    await asyncio.sleep(0.1)  # 100ms > 50ms debounce
-
-    # Should receive single batch event
+    # Leading event delivered; events 2..5 are still pending
     assert len(events) == 1
-    assert events[0].verb == "batch"
-    assert events[0].item["count"] == 5
+    assert events[0].verb == "create"
+
+    # Trailing flush at the interval boundary coalesces the remaining 4
+    await asyncio.sleep(0.1)
+    assert len(events) == 2
+    assert events[1].verb == "batch"
+    assert events[1].item["count"] == 4
 
 
-async def test_debounce_resets_on_new_event(debounced_notifier):
-    """Debounce timer resets when new events arrive"""
+async def test_throttle_trailing_flush_after_last_event(throttled_notifier):
+    """A guaranteed trailing flush delivers the final coalesced events."""
     events = []
-    debounced_notifier.add_observer(lambda e: events.append(e))
+    throttled_notifier.add_observer(lambda e: events.append(e))
 
-    # Fire first event
-    await debounced_notifier.notify(StoreEvent(verb="create", item={"id": 1}))
-    await asyncio.sleep(0.03)  # 30ms - not enough for 50ms debounce
-
-    # Fire second event - should reset timer
-    await debounced_notifier.notify(StoreEvent(verb="create", item={"id": 2}))
-    await asyncio.sleep(0.03)  # Another 30ms
-
-    # Still no events (timer reset)
-    assert len(events) == 0
-
-    # Wait for full debounce from last event
-    await asyncio.sleep(0.05)  # 50ms more
-
-    # Now should have batch event
+    await throttled_notifier.notify(StoreEvent(verb="create", item={"id": 1}))  # leading
+    await throttled_notifier.notify(StoreEvent(verb="create", item={"id": 2}))  # coalesced
     assert len(events) == 1
-    assert events[0].item["count"] == 2
+
+    await asyncio.sleep(0.08)
+    assert len(events) == 2  # trailing flush delivered event 2
 
 
-async def test_debounce_no_delay_when_disabled():
-    """With debounce_ms=0, events are immediate"""
-    notifier = EventNotifier(debounce_ms=0)
+async def test_throttle_does_not_starve_under_sustained_load(throttled_notifier):
+    """A sustained sub-interval stream flushes on a steady cadence (never starves)."""
+    flushes = []
+    throttled_notifier.add_observer(lambda e: flushes.append(e))
+
+    # Fire every ~10ms for ~130ms; throttle interval is 50ms.
+    total = 13
+    for i in range(total):
+        await throttled_notifier.notify(StoreEvent(verb="create", item={"id": i}))
+        await asyncio.sleep(0.01)
+
+    # A pure trailing debounce would still be at 0 here; throttle has flushed
+    # the leading edge plus at least one mid-stream boundary.
+    assert len(flushes) >= 2
+
+    # After quiescence the trailing flush settles; every event was delivered exactly once.
+    await asyncio.sleep(0.08)
+    delivered = sum(f.item.get("count", 1) for f in flushes)
+    assert delivered == total
+    # Steady cadence: at most ~one flush per interval over the window (+ leading/trailing slack)
+    assert len(flushes) <= 6
+
+
+async def test_throttle_no_delay_when_disabled():
+    """With throttle_ms=0, events are immediate and separate"""
+    notifier = EventNotifier(throttle_ms=0)
     events = []
     notifier.add_observer(lambda e: events.append(e))
 
     await notifier.notify(StoreEvent(verb="create", item={"id": 1}))
     await notifier.notify(StoreEvent(verb="create", item={"id": 2}))
 
-    # Both events delivered immediately (separate)
     assert len(events) == 2
 
 
-async def test_batch_bypasses_debounce(debounced_notifier):
-    """Batch context flushes immediately, bypassing debounce"""
+async def test_batch_bypasses_throttle(throttled_notifier):
+    """Batch context flushes immediately, bypassing the throttle interval"""
     events = []
-    debounced_notifier.add_observer(lambda e: events.append(e))
+    throttled_notifier.add_observer(lambda e: events.append(e))
 
-    async with debounced_notifier.batch():
-        await debounced_notifier.notify(StoreEvent(verb="create", item={"id": 1}))
-        await debounced_notifier.notify(StoreEvent(verb="create", item={"id": 2}))
+    async with throttled_notifier.batch():
+        await throttled_notifier.notify(StoreEvent(verb="create", item={"id": 1}))
+        await throttled_notifier.notify(StoreEvent(verb="create", item={"id": 2}))
 
-    # Events delivered immediately on batch exit (no debounce delay)
+    # Events delivered immediately on batch exit (no throttle delay)
     assert len(events) == 1
 
 
-async def test_debounce_after_batch(debounced_notifier):
-    """Normal debouncing resumes after batch context"""
+async def test_throttle_after_batch(throttled_notifier):
+    """Throttling resumes after a batch context; the next event flushes on the boundary"""
     events = []
-    debounced_notifier.add_observer(lambda e: events.append(e))
+    throttled_notifier.add_observer(lambda e: events.append(e))
 
-    # First: batch (immediate)
-    async with debounced_notifier.batch():
-        await debounced_notifier.notify(StoreEvent(verb="create", item={"id": 1}))
-
+    # First: batch flushes immediately and stamps the throttle boundary
+    async with throttled_notifier.batch():
+        await throttled_notifier.notify(StoreEvent(verb="create", item={"id": 1}))
     assert len(events) == 1
 
-    # Second: normal event (debounced)
-    await debounced_notifier.notify(StoreEvent(verb="create", item={"id": 2}))
-
-    # Not delivered yet
+    # Second: within the interval of the batch flush → coalesced, not immediate
+    await throttled_notifier.notify(StoreEvent(verb="create", item={"id": 2}))
     assert len(events) == 1
 
-    # Wait for debounce
+    # Trailing flush delivers it
     await asyncio.sleep(0.1)
-
     assert len(events) == 2
 
 

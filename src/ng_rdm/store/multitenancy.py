@@ -34,8 +34,8 @@ class TenancyError(Exception):
 class MultitenantTortoiseStore(TortoiseStore, Generic[T]):
     """Extends TortoiseStore with tenant scoping"""
 
-    def __init__(self, model: type[T], tenant: str | None = None) -> None:
-        super().__init__(model)
+    def __init__(self, model: type[T], tenant: str | None = None, throttle_ms: int = 100) -> None:
+        super().__init__(model, throttle_ms)
         self.tenant = tenant
         if tenant:
             self._validate_tenant(tenant)

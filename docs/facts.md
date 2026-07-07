@@ -145,23 +145,33 @@ Components are split by their needs:
 ## Store Module
 
 ### EventNotifier (notifier.py)
-Manages observer notifications with batching, debouncing, and topic filtering:
-- **Immediate mode** (`debounce_ms=0`): Events fire immediately
-- **Debounced mode** (`debounce_ms>0`): Coalesces rapid events, fires after quiet period
-- **Explicit batching**: `async with store.batch()` groups events into single notification
+Manages observer notifications with batching, throttling, and topic filtering:
+- **Immediate mode** (`throttle_ms=0`): Events fire immediately
+- **Throttled mode** (`throttle_ms>0`): Leading + trailing throttle. The first event flushes immediately; while events keep arriving it flushes at most once per interval; a trailing flush is guaranteed after the last event. Unlike a pure trailing debounce, a sustained sub-interval stream never starves — it flushes on a steady cadence (≤ one flush per interval).
+- **Explicit batching**: `async with store.batch()` groups events into single notification (flushes immediately on exit, bypassing the throttle)
 - **Topic filtering**: Observers can subscribe with `topics={"field": value}` to receive only matching events
 - Coalesces multiple events into `StoreEvent(verb="batch", item={"count": N, "verbs": [...]})`
-- Batch events notify ALL observers (conservative approach)
+- Batch events notify ALL observers regardless of topic (conservative approach)
 
 ### Store (base.py)
-Abstract base class providing CRUD interface with validation, observer notification, derived fields, sorting, and normalization. Uses composition with `EventNotifier` for notification logic. Subclasses implement `_create_item`, `_read_items`, `_update_item`, `_delete_item`.
+Abstract base class providing CRUD interface with validation, observer notification, derived fields, sorting, and normalization. Uses composition with `EventNotifier` for notification logic. Subclasses implement `_create_item`, `_read_items`, `_update_item`, `_delete_item`, `_read_counts`.
+
+The store is a **CRUD-by-id gateway**, not a cache — it re-reads on every call and writes are keyed by id. Bounding the read/view side is what keeps it scalable (see the bounded-view archetypes below).
 
 Key methods:
+- `read_items(filter_by=None, q=None, join_fields=[], limit=None, offset=0, order_by=None)` — bounded reads: `limit`/`offset` page the result and `order_by` sorts DB-side (bypassing the Python `set_sort_key` path). A fully-unbounded read past `unbounded_warn_threshold` (default 1000) rows logs a rate-limited warning.
+- `read_counts(filter_by=None, q=None, group_by=None) -> int | dict` — counts without fetching rows: an `int` total, or `dict[value, int]` when `group_by` is set. `MultitenantTortoiseStore` inherits tenant scoping for free (both route through `_build_query`).
 - `batch()` — Context manager for explicit notification batching
 - `add_observer(callback, topics=None)` — Register observer with optional topic filter
 - `remove_observer(callback)` — Unregister observer by callback identity
 - `set_topic_fields(fields)` — Configure which fields support topic routing
 - `notify_observers()` — Delegates to EventNotifier
+
+#### Bounded-view archetypes
+Because a reactive view's re-read cost ≈ its size, every reactive view should be small. Three archetypes:
+- **Query-view** — capped/searched table (`limit` + `order_by`, `auto_observe=False`); "N of M" via `read_counts()`.
+- **Count-view** — reads counts, not rows, on a throttled cadence, surfaced via NiceGUI binding (`ReactiveCounts`, see Components Module). Bypasses `@ui.refreshable`.
+- **Scoped-live-view** — `filter_by` down to a handful of rows; full re-read on throttle is cheap, so `auto_observe=True`.
 
 ### DictStore (dict_store.py)
 In-memory dict-based Store implementation. Useful for testing and prototyping.
@@ -184,6 +194,8 @@ ORM-backed Store. Handles:
 - Hydration/dehydration for datetime and date fields
 - Tortoise Q-object query support
 - Join field support for foreign key data (fields with `__` notation)
+- DB-side `limit`/`offset`/`order_by` on reads and grouped/total `read_counts`
+- `throttle_ms` notification interval (default 100 ms; bump for busy live views)
 - `init_db()` helper for database initialization
 
 ### MultitenantTortoiseStore (multitenancy.py)
@@ -203,8 +215,18 @@ Infrastructure modules (`base.py`, `protocol.py`, `fields.py`, `i18n.py`, `ng_rd
 | Component | Purpose |
 |-----------|---------|
 | **ActionButtonTable** | Table with action buttons per row (edit/delete/custom). All actions via callbacks. |
-| **ListTable** | Read-only table with clickable rows for navigation |
+| **ListTable** | Read-only table with clickable rows; accepts `limit`/`order_by` for bounded query-views |
 | **SelectionTable** | Table with checkbox column for multi-select |
+
+`ObservableRdmTable` (base of all tables) accepts `limit`/`order_by` and keeps the window (`limit`, `offset`) in its `state` dict, forwarding it to `load_data()` → `read_items()`.
+
+### ReactiveCounts (reactive.py)
+A throttled, binding-friendly **count-view** for progress/summary headers over large or fast-changing data. Registers a (throttled) store observer and recomputes `read_counts()` into `self.values` — a plain dict, mutated in place — so NiceGUI's `bind_text_from` tracks it without any table rebuild or `@ui.refreshable`. Ungrouped counts land under `key` (default `"total"`); grouped counts use group values as keys (pre-seed via `keys=` so bindings always resolve). Captures `ui.context.client` at `start()` and unobserves on `client.on_disconnect`.
+```python
+counts = ReactiveCounts(store, group_by="status", keys=["delivered", "pending"])
+await counts.start()
+ui.label().bind_text_from(counts.values, "delivered", backward=lambda v: str(v or 0))
+```
 
 ### ActionButtonTable Configuration
 

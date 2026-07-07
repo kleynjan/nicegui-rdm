@@ -1,6 +1,7 @@
 """
 Tests for DictStore: CRUD operations, validation, observers, sorting, derived fields.
 """
+import logging
 import pytest
 from ng_rdm.store import DictStore, StoreEvent, StoreRegistry
 from ng_rdm.models import FieldSpec, Validator
@@ -245,6 +246,66 @@ async def test_derived_fields(dict_store):
 
     items = await dict_store.read_items()
     assert items[0]["full_name"] == "Alice Smith"
+
+
+# --- Bounded reads: limit / offset / order_by ---
+
+async def test_read_items_order_by(dict_store):
+    """order_by sorts in Python for DictStore, ascending and descending"""
+    for name in ["Charlie", "Alice", "Bob"]:
+        await dict_store.create_item({"name": name})
+
+    asc = await dict_store.read_items(order_by=["name"])
+    assert [i["name"] for i in asc] == ["Alice", "Bob", "Charlie"]
+
+    desc = await dict_store.read_items(order_by=["-name"])
+    assert [i["name"] for i in desc] == ["Charlie", "Bob", "Alice"]
+
+
+async def test_read_items_limit_offset(dict_store):
+    """limit/offset return the correct ordered slice"""
+    for name in ["a", "b", "c", "d"]:
+        await dict_store.create_item({"name": name})
+
+    page = await dict_store.read_items(order_by=["name"], limit=2, offset=1)
+    assert [i["name"] for i in page] == ["b", "c"]
+
+
+# --- read_counts ---
+
+async def test_read_counts_total_filtered_grouped(dict_store):
+    await dict_store.create_item({"name": "A", "kind": "x"})
+    await dict_store.create_item({"name": "B", "kind": "x"})
+    await dict_store.create_item({"name": "C", "kind": "y"})
+
+    assert await dict_store.read_counts() == 3
+    assert await dict_store.read_counts(filter_by={"kind": "x"}) == 2
+    assert await dict_store.read_counts(group_by="kind") == {"x": 2, "y": 1}
+
+
+# --- Unbounded read warning ---
+
+async def test_unbounded_read_warns_past_threshold(dict_store, caplog):
+    """A fully-unbounded read above the threshold logs a warning"""
+    dict_store.unbounded_warn_threshold = 3
+    for i in range(5):
+        await dict_store.create_item({"name": f"n{i}"})
+
+    with caplog.at_level(logging.WARNING, logger="ng_rdm"):
+        await dict_store.read_items()
+    assert any("unbounded read" in r.message.lower() for r in caplog.records)
+
+
+async def test_bounded_read_does_not_warn(dict_store, caplog):
+    """No warning when limit or filter_by bound the read"""
+    dict_store.unbounded_warn_threshold = 3
+    for i in range(5):
+        await dict_store.create_item({"name": f"n{i}"})
+
+    with caplog.at_level(logging.WARNING, logger="ng_rdm"):
+        await dict_store.read_items(limit=2)
+        await dict_store.read_items(filter_by={"name": "n1"})
+    assert not any("unbounded read" in r.message.lower() for r in caplog.records)
 
 
 # --- StoreRegistry ---

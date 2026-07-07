@@ -26,6 +26,8 @@ class ListTable(ObservableRdmTable):
         transform: Optional transform function for loaded data
         row_key: Field to use as row identifier (default "id")
         join_fields: Additional join fields for data loading
+        limit: Optional hard cap on rows (for bounded query-views over large entities)
+        order_by: Optional DB-side ordering, e.g. ["name", "-created_at"]
     """
 
     def __init__(
@@ -40,12 +42,15 @@ class ListTable(ObservableRdmTable):
         join_fields: list[str] | None = None,
         render_toolbar: Callable[[], None] | None = None,
         auto_observe: bool = True,
+        limit: int | None = None,
+        order_by: list[str] | None = None,
     ):
         super().__init__(
             data_source=data_source, config=config,
             filter_by=filter_by, transform=transform,
             join_fields=join_fields, on_add=on_add,
             render_toolbar=render_toolbar, auto_observe=auto_observe,
+            limit=limit, order_by=order_by,
         )
         self.on_click = on_click
         self.row_key = row_key
