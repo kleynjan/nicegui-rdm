@@ -62,8 +62,12 @@ def str_to_utc_datetime(dt_str: str) -> datetime:
 # small helpers
 
 def now_utc() -> datetime:
-    """A non-naive now() replacement to allow datetime comparisons."""
-    return local_to_utc(datetime.now())
+    """A non-naive now() replacement to allow datetime comparisons.
+
+    Must read real UTC, not `local_to_utc(datetime.now())`: the latter re-labels the
+    server's OS wall-clock as TIMEZONE_PYTZ, so on any host whose OS tz != that display
+    tz (e.g. a UTC prod box) it shifts 'now' by the offset. See helpers TZ round-trip."""
+    return datetime.now(pytz.utc)
 
 def date_to_str(dd: date) -> str:
     """Format the date as a string."""
