@@ -71,6 +71,8 @@ class Column:
     placeholder: Optional[str] = None                        # placeholder text for modal inputs
     required: bool = False                                   # validation: field cannot be empty
     editable: bool = True                                    # if False, displayed as label in edit mode
+    sortable: bool = False                                   # if True, header is clickable to sort by this column
+    sort_key: Optional[str] = None                           # field passed to order_by when sorting (defaults to name)
     on_click: Callable[[dict], Awaitable[None] | None] | None = None  # per-column click handler
     formatter: Callable[[Any], str] | None = None            # display formatter for table cells
     render: Callable[[dict], None] | None = None             # custom render function (receives row dict)
@@ -354,6 +356,7 @@ class ObservableRdmTable(ObservableRdmComponent):
         self.on_add = on_add
         self.render_toolbar = render_toolbar
         self.order_by = order_by
+        self.row_key = "id"  # tie-break field for stable sort/paging; subclasses may override
         self.state.setdefault("limit", limit)
         self.state.setdefault("offset", 0)
         if auto_observe:
@@ -377,6 +380,54 @@ class ObservableRdmTable(ObservableRdmComponent):
             offset=offset or self.state.get("offset", 0),
             order_by=order_by if order_by is not None else self.order_by,
         )
+
+    # ── Header-click sorting ──
+    # Sort state lives on the instance (self.order_by), not in self.state, so
+    # components subscribed to the same store sort independently. The actual sort
+    # is delegated to read_items(order_by=...) via load_data() — never to the
+    # store's shared set_sort_key().
+
+    def _active_sort(self) -> tuple[str | None, bool]:
+        """Return (field, reverse) of the current primary sort, or (None, False)."""
+        if not self.order_by:
+            return None, False
+        first = self.order_by[0]
+        return (first[1:], True) if first.startswith("-") else (first, False)
+
+    async def _toggle_sort(self, col: Column) -> None:
+        """Flip ascending↔descending on a column's field, reset paging, and refresh."""
+        field = col.sort_key or col.name
+        active_field, active_reverse = self._active_sort()
+        reverse = not active_reverse if field == active_field else False
+        order = [f"-{field}" if reverse else field]
+        if self.row_key != field:
+            order.append(self.row_key)  # stable tie-break for deterministic paging
+        self.order_by = order
+        self.state["offset"] = 0
+        await self.build.refresh()  # type: ignore
+
+    def _render_column_headers(self) -> None:
+        """Render a <th> per data column; sortable columns get a click handler + indicator.
+
+        Shared by ListTable/ActionButtonTable/SelectionTable. Each caller supplies its
+        own leading/trailing header cells (checkbox, actions) around this call.
+        """
+        active_field, active_reverse = self._active_sort()
+        for col in self.config.columns:
+            if col.sortable:
+                is_active = (col.sort_key or col.name) == active_field
+                icon = ("caret-down-fill" if active_reverse else "caret-up-fill") if is_active else "arrow-down-up"
+                state = "rdm-sort-active" if is_active else "rdm-sort-inactive"
+                th = html.th().classes("rdm-sortable").mark(f"rdm-sort-{col.name}")
+                th.on("click", lambda _, c=col: self._toggle_sort(c))
+                with th:
+                    with html.div().classes("rdm-th-sort"):
+                        html.span(col.label or col.name)
+                        ui.html(f'<i class="bi bi-{icon}"></i>', sanitize=False).classes(f"rdm-sort-indicator {state}")
+            else:
+                th = html.th(col.label or col.name)
+            if col.width_percent:
+                th.style(f"width: {col.width_percent}%")
 
     def _build_toolbar(self, at: Literal["top", "bottom"] = "top"):
         """Render table toolbar at the given slot position.

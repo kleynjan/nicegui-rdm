@@ -39,7 +39,7 @@ def _infer_observer_name(callback: Callable) -> str:
     """Infer a human-readable name from a callback function or method."""
     # Method on object: "DataTable#a3f2" (class + short id)
     if hasattr(callback, '__self__'):
-        obj = callback.__self__
+        obj = getattr(callback, '__self__')
         class_name = obj.__class__.__name__
         short_id = hex(id(obj))[-4:]
         return f"{class_name}#{short_id}"

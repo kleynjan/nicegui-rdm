@@ -63,11 +63,11 @@ class DictStore(Store):
             counts[it.get(group_by)] = counts.get(it.get(group_by), 0) + 1
         return counts
 
-    async def _update_item(self, id: int, new_partial_item: dict) -> dict | None:
-        new_partial_item.pop("id", None)
+    async def _update_item(self, id: int, partial_item: dict) -> dict | None:
+        partial_item.pop("id", None)
         for item in self._items:
             if item["id"] == id:
-                item.update(new_partial_item)
+                item.update(partial_item)
                 return item
         return None
 
@@ -77,7 +77,7 @@ class DictStore(Store):
                 self._items.pop(i)
                 return
 
-    async def read_item_by_id(self, id: int) -> dict | None:
+    async def read_item_by_id(self, id: int, join_fields: list[str] = []) -> dict | None:
         for item in self._items:
             if item["id"] == id:
                 return item

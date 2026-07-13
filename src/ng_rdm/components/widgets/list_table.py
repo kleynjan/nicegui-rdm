@@ -66,7 +66,7 @@ class ListTable(ObservableRdmTable):
             super()._render_cell(col, value, row)
 
     @ui.refreshable_method
-    async def build(self):
+    async def build(self):  # type: ignore[override]  # refreshable_method descriptor vs base stub — see ObservableRdmComponent build contract
         """Build the table using native HTML elements."""
         await self.load_data()
 
@@ -81,10 +81,7 @@ class ListTable(ObservableRdmTable):
                 # Header
                 with html.thead():
                     with html.tr():
-                        for col in self.config.columns:
-                            th = html.th(col.label or col.name)
-                            if col.width_percent:
-                                th.style(f"width: {col.width_percent}%")
+                        self._render_column_headers()
 
                 # Body
                 with html.tbody():

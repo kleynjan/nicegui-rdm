@@ -232,6 +232,8 @@ form_config  = FormConfig(columns=columns, title_edit="Edit customer")
 
 Configuration covers the common case — labels, widths, ui-types, validation, required fields, custom per-row buttons. When you need to step outside it, every column has rendering hooks that take over for that one concern without losing the rest of the config: `Column.formatter` for simple display transforms, `Column.render(row)` for fully custom cell HTML (see the [chips example](src/ng_rdm/examples/chips.py)), `Column.on_click` for per-cell interactions, and `RowAction` / `render_toolbar` for buttons around the table. The [in_row_editing example](src/ng_rdm/examples/in_row_editing.py) goes one step further and subclasses `ObservableRdmTable` for inline per-cell editing while keeping the `Column` definitions intact.
 
+**Sortable columns** — set `Column.sortable=True` to make a header clickable; each click toggles ascending↔descending (all three tables support it, as shown in the [catalog example](src/ng_rdm/examples/catalog.py)). Sorting is delegated to the store's `read_items(order_by=...)`, so it runs DB-side for `TortoiseStore` and stays correct under `limit`/`offset` paging — order is applied before the window, with a row-key tie-break for stable pages. The active sort lives on the component instance, so two tables over the same store sort independently (the store's shared `set_sort_key` is never touched). Mark only columns backed by a real queryable field; use `sort_key` to sort a display column by a different underlying field.
+
 See [docs/api.md](docs/api.md) for the full API reference.
 
 ### Multitenancy
@@ -321,7 +323,7 @@ Note that by default, all table classes register as observers to the stores they
 
 The store is a **CRUD-by-id gateway** (it re-reads from the DB on every call and is not a cache). The "whole set" assumption lives only on the **read/view** side. When an entity is too big to render whole, or updates arrive several times per second, don't make a view over the entire set — make an explicitly **bounded** one. Reactivity then means *re-reading a small view on a throttled cadence*, so its cost stays low. Three archetypes:
 
-- **Query-view** — a searched/filtered table with a hard `limit` and DB-side `order_by`, `auto_observe=False`. Show "N of M" with `read_counts()`.
+- **Query-view** — a searched/filtered table with a hard `limit` and DB-side `order_by`, `auto_observe=False`. Show "N of M" with `read_counts()`. A `sortable` column header sets this `order_by` interactively (and resets `offset` to the first page), so the sort always spans the whole set, not just the visible window.
   ```python
   ListTable(data_source=users, config=cfg, order_by=["name"], limit=50, auto_observe=False)
   total = await users.read_counts(filter_by={"team": "Sales"})

@@ -155,6 +155,29 @@
             text-transform: none;
         }
 
+        th.rdm-sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+        th.rdm-sortable:hover {
+            color: var(--rdm-primary);
+        }
+        .rdm-th-sort {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--rdm-spacing-sm);
+        }
+        .rdm-sort-indicator {
+            font-size: 0.8em;
+            line-height: 1;
+        }
+        .rdm-sort-active {
+            color: var(--rdm-primary);
+        }
+        .rdm-sort-inactive {
+            opacity: 0.3;
+        }
+
         tbody {
             tr:hover {
                 background-color: var(--rdm-bg-hover);

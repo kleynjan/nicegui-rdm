@@ -55,6 +55,8 @@ Column(
     placeholder: str | None = None,
     required: bool = False,           # validation: field cannot be empty
     editable: bool = True,            # if False, displayed as label in edit mode
+    sortable: bool = False,           # if True, header is clickable to sort by this column
+    sort_key: str | None = None,      # field passed to order_by when sorting (defaults to name)
     on_click: Callable[[dict], ...],  # per-column click handler (receives row dict)
     formatter: Callable[[Any], str],  # display formatter for table cells
     render: Callable[[dict], None],   # custom render function (receives row dict, replaces default cell)
@@ -64,6 +66,7 @@ Column(
 - Fields with `__` in the name (e.g. `"category__name"`) auto-derive join fields for FK data.
 - `ui_type` of `ui.badge`, `ui.label`, `ui.html`, `ui.markdown` are display-only (skipped in forms).
 - For `ui.badge`: use `parms={"color_map": {"value": "color"}}` for value-based coloring (ListTable only).
+- `sortable=True` makes the header clickable (toggles ascending↔descending). Sorting is delegated to `read_items(order_by=...)` — DB-side and pagination-correct — with per-instance sort state, so tables sharing a store sort independently. The sort field is `sort_key or name`; only mark columns backed by a real queryable field.
 
 ### `TableConfig`
 

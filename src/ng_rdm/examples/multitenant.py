@@ -49,7 +49,7 @@ class Product(MultitenantRdmModel):
         ])
     }
 
-    class Meta(RdmModel.Meta):
+    class Meta(RdmModel.Meta):  # type: ignore[misc]  # Tortoise inner-Meta override is not variance-safe
         table = "mt_product"
 
 

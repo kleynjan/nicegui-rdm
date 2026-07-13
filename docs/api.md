@@ -302,6 +302,8 @@ Column(
     placeholder: str | None = None,
     required: bool = False,           # validation: field cannot be empty
     editable: bool = True,            # if False, displayed as label in edit mode
+    sortable: bool = False,           # if True, header is clickable to sort by this column
+    sort_key: str | None = None,      # field passed to order_by when sorting (defaults to name)
     on_click: Callable[[dict], ...],  # per-column click handler (receives row dict)
     formatter: Callable[[Any], str],  # display formatter for table cells
     render: Callable[[dict], None],   # custom render (receives row dict, replaces cell)
@@ -311,6 +313,7 @@ Column(
 - Fields with `__` in the name (e.g. `"category__name"`) auto-derive join fields for FK data.
 - `ui_type` of `ui.badge`, `ui.label`, `ui.html`, `ui.markdown` are display-only (skipped in forms).
 - For `ui.badge`: use `parms={"color_map": {"value": "color"}}` for value-based coloring (ListTable only).
+- `sortable=True` makes the column header clickable (ListTable/ActionButtonTable/SelectionTable): each click toggles ascending↔descending. Sorting is delegated to `read_items(order_by=...)`, so it is DB-side for `TortoiseStore` and correct under `limit`/`offset` paging. The sort field is `sort_key or name` — only mark columns backed by a real queryable field (a computed `render`/`formatter` column would need `sort_key` pointing at one). The active sort lives on the component instance, so tables sharing a store sort independently.
 
 ### `TableConfig`
 

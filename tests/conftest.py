@@ -60,7 +60,7 @@ class TenantItem(MultitenantRdmModel):
     name = fields.CharField(max_length=100)
     description = fields.TextField(null=True)
 
-    class Meta(RdmModel.Meta):
+    class Meta(RdmModel.Meta):  # type: ignore[misc]  # Tortoise inner-Meta override is not variance-safe
         table = "tenant_item"
 
 

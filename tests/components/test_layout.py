@@ -67,8 +67,8 @@ async def test_button_disabled(user: User):
     with user:
         for el in user.current_layout.descendants():
             if 'btn-dis' in getattr(el, '_markers', set()):
-                el.disable()
-                assert not el.enabled
+                el.disable()  # type: ignore[attr-defined]  # only DisableableElement has disable/enabled
+                assert not el.enabled  # type: ignore[attr-defined]
 
 
 # ── IconButton ──

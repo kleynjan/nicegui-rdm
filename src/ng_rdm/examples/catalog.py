@@ -139,10 +139,10 @@ async def startup():
 # =============================================================================
 
 product_cols = [
-    Column(name="name", label="Product", width_percent=35),
-    Column(name="price", label="Price", width_percent=18,
+    Column(name="name", label="Product", width_percent=35, sortable=True),
+    Column(name="price", label="Price", width_percent=18, sortable=True,
            formatter=lambda x: f"${float(x):.2f}" if x else ""),
-    Column(name="stock", label="Stock", width_percent=12),
+    Column(name="stock", label="Stock", width_percent=12, sortable=True),
     Column(name="expiry_date", label="Expires", width_percent=20),
 ]
 

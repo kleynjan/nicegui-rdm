@@ -38,6 +38,7 @@ def html_should_see(user: User, text: str) -> None:
 
 async def html_should_see_async(user: User, text: str, retries: int = 5) -> None:
     """Assert with retries — use after clicks that trigger refreshable updates."""
+    texts: list[str] = []
     for _ in range(retries):
         texts = get_html_texts(user)
         if any(text in t for t in texts):

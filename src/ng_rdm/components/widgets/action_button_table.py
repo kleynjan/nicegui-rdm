@@ -27,6 +27,8 @@ class ActionButtonTable(ObservableRdmTable):
         on_add: Callback when Add button clicked
         on_edit: Callback when Edit button clicked, receives row dict
         on_delete: Callback when Delete button clicked, receives row dict
+        limit: Optional hard cap on rows (for bounded query-views over large entities)
+        order_by: Optional initial DB-side ordering, e.g. ["name", "-created_at"]
     """
 
     def __init__(
@@ -41,11 +43,14 @@ class ActionButtonTable(ObservableRdmTable):
         on_delete: Callable[[dict], Awaitable[None] | None] | None = None,
         render_toolbar: Callable[[], None] | None = None,
         auto_observe: bool = True,
+        limit: int | None = None,
+        order_by: list[str] | None = None,
     ):
         super().__init__(
             data_source=data_source, config=config, state=state,
             filter_by=filter_by, on_add=on_add,
             render_toolbar=render_toolbar, auto_observe=auto_observe,
+            limit=limit, order_by=order_by,
         )
         # Build unified actions list from config and callbacks
         self._all_actions: list[RowAction] = list(config.custom_actions)
@@ -55,7 +60,7 @@ class ActionButtonTable(ObservableRdmTable):
             self._all_actions.append(RowAction(icon="trash", tooltip=_("Delete"), color="default", callback=on_delete))
 
     @ui.refreshable_method
-    async def build(self):
+    async def build(self):  # type: ignore[override]  # refreshable_method descriptor vs base stub — see ObservableRdmComponent build contract
         """Build the table using native HTML elements."""
         await self.load_data()
         self._build_toolbar("top")
@@ -65,10 +70,7 @@ class ActionButtonTable(ObservableRdmTable):
                 # Header
                 with html.thead():
                     with html.tr():
-                        for col in self.config.columns:
-                            th = html.th(col.label or col.name)
-                            if col.width_percent:
-                                th.style(f"width: {col.width_percent}%")
+                        self._render_column_headers()
                         # Actions column header
                         if self._all_actions:
                             html.th("").classes("rdm-col-actions")

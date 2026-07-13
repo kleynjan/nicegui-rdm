@@ -208,6 +208,7 @@ async def test_editdialog_open_for_edit(user: User):
     @ui.page('/')
     async def page():
         item = await store.create_item({'name': 'Alice'})
+        assert item is not None
         dlg = EditDialog(
             data_source=store,
             config=FormConfig(columns=[Column(name='name', label='Name')]),

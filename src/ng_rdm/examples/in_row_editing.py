@@ -77,7 +77,7 @@ class DirectEditTable(ObservableRdmTable):
         self.state["new_item"].update(self._blank_item())
 
     @ui.refreshable_method
-    async def build(self):
+    async def build(self):  # type: ignore[override]  # refreshable_method descriptor vs base stub — see ObservableRdmComponent build contract
         await self.load_data()
         self._build_toolbar("top")
 

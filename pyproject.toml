@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "nicegui-rdm"
-version = "0.1.65"
+version = "0.1.66"
 description = "Reactive Data Management for NiceGUI with Tortoise ORM"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -26,6 +26,14 @@ dependencies = [
     "nicegui>=3.0,<4.0",
     "tortoise-orm>=1.0.0,<2.0.0",
     "pytz",
+]
+
+[tool.pyright]
+exclude = [
+  "scripts",
+  "**/node_modules",
+  "**/__pycache__",
+  "**/.*",
 ]
 
 [project.optional-dependencies]

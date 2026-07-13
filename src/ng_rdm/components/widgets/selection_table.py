@@ -29,6 +29,8 @@ class SelectionTable(ObservableRdmTable):
         row_key: Field to use as row identifier (default "id")
         join_fields: Additional join fields for data loading
         on_selection_change: Callback when selection changes, receives set of selected IDs
+        limit: Optional hard cap on rows (for bounded query-views over large entities)
+        order_by: Optional initial DB-side ordering, e.g. ["name", "-created_at"]
     """
 
     def __init__(
@@ -46,11 +48,14 @@ class SelectionTable(ObservableRdmTable):
         on_selection_change: Callable[[set[int]], None] | None = None,
         render_toolbar: Callable[[], None] | None = None,
         auto_observe: bool = True,
+        limit: int | None = None,
+        order_by: list[str] | None = None,
     ):
         super().__init__(
             data_source=data_source, config=config, state=state,
             filter_by=filter_by, transform=transform,
             join_fields=join_fields, render_toolbar=render_toolbar, auto_observe=auto_observe,
+            limit=limit, order_by=order_by,
         )
         self.row_key = row_key
         self.on_selection_change = on_selection_change
@@ -107,7 +112,7 @@ class SelectionTable(ObservableRdmTable):
         self.sync_state()
 
     @ui.refreshable_method
-    async def build(self):
+    async def build(self):  # type: ignore[override]  # refreshable_method descriptor vs base stub — see ObservableRdmComponent build contract
         """Build the table using native HTML elements."""
         await self.load_data()
 
@@ -125,10 +130,7 @@ class SelectionTable(ObservableRdmTable):
                         if self.state['show_checkboxes']:
                             # Checkbox column header (narrow)
                             html.th("").style("width: 48px;")
-                        for col in self.config.columns:
-                            th = html.th(col.label or col.name)
-                            if col.width_percent:
-                                th.style(f"width: {col.width_percent}%")
+                        self._render_column_headers()
 
                 # Body
                 with html.tbody():

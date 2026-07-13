@@ -36,7 +36,7 @@ python -m ng_rdm.examples.large_dataset
 
 ## What Each Example Demonstrates
 
-- **catalog** — All component types: ActionButtonTable, ListTable, SelectionTable, EditDialog, DetailCard, Dialog, Tabs, ViewStack, StepWizard, buttons, layout primitives
+- **catalog** — All component types: ActionButtonTable, ListTable, SelectionTable, EditDialog, DetailCard, Dialog, Tabs, ViewStack, StepWizard, buttons, layout primitives. The product table demonstrates click-to-sort headers (`Column.sortable`)
 - **master_detail** — ViewStack pattern: list -> detail -> edit navigation with DetailCard and EditCard
 - **in_row_editing** - Subclassing ObservableRdmTable and customizing the rendering and on_add / on_edit handling to create a table with 'in-row' editing
 - **multitenant** — MultitenantTortoiseStore with two tenant-scoped stores; models subclass MultitenantRdmModel

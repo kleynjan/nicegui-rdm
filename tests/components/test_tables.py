@@ -11,7 +11,7 @@ from ng_rdm.components import (
     Column, TableConfig, RowAction,
 )
 
-from .conftest import html_should_see, html_should_not_see, html_should_see_async
+from .conftest import html_should_see, html_should_not_see, html_should_see_async, get_html_texts
 
 pytestmark = pytest.mark.components
 
@@ -458,3 +458,126 @@ async def test_st_on_selection_change(user: User):
     user.find(marker='rdm-checkbox-0').click()
     user.find(marker='rdm-checkbox-1').click()
     assert any({0, 1} == ids for ids in selection_log)
+
+
+# ═══════════════════════════════════════════════
+# Header-click sorting
+# ═══════════════════════════════════════════════
+
+def _visible_order(user: User, values: set[str]) -> list[str]:
+    """Return the given values in the order they appear in the rendered HTML."""
+    return [t for t in get_html_texts(user) if t in values]
+
+
+NAMES = {'Alice', 'Bob', 'Carol'}
+
+
+async def _seed_names(store: DictStore):
+    for name in ['Carol', 'Alice', 'Bob']:  # deliberately unsorted
+        await store.create_item({'name': name})
+
+
+async def test_sort_ascending_on_header_click(user: User):
+    """Clicking a sortable header orders rows ascending by that field."""
+    store = DictStore()
+
+    @ui.page('/')
+    async def page():
+        await _seed_names(store)
+        table = ListTable(
+            data_source=store,
+            config=TableConfig(columns=[Column(name='name', label='Name', sortable=True)]),
+            auto_observe=False,
+        )
+        await table.build()
+
+    await user.open('/')
+    assert _visible_order(user, NAMES) == ['Carol', 'Alice', 'Bob']  # insertion order
+    user.find(marker='rdm-sort-name').click()
+    await asyncio.sleep(0.1)
+    assert _visible_order(user, NAMES) == ['Alice', 'Bob', 'Carol']
+
+
+async def test_sort_toggles_descending(user: User):
+    """A second click on the same header flips to descending."""
+    store = DictStore()
+
+    @ui.page('/')
+    async def page():
+        await _seed_names(store)
+        table = ListTable(
+            data_source=store,
+            config=TableConfig(columns=[Column(name='name', label='Name', sortable=True)]),
+            auto_observe=False,
+        )
+        await table.build()
+
+    await user.open('/')
+    user.find(marker='rdm-sort-name').click()
+    await asyncio.sleep(0.1)
+    assert _visible_order(user, NAMES) == ['Alice', 'Bob', 'Carol']
+    user.find(marker='rdm-sort-name').click()
+    await asyncio.sleep(0.1)
+    assert _visible_order(user, NAMES) == ['Carol', 'Bob', 'Alice']
+
+
+async def test_non_sortable_header_has_no_sort_handle(user: User):
+    """Columns that don't opt in render a plain header with no sort marker."""
+    store = DictStore()
+
+    @ui.page('/')
+    async def page():
+        await store.create_item({'name': 'Alice'})
+        table = ListTable(
+            data_source=store,
+            config=TableConfig(columns=[Column(name='name', label='Name')]),  # sortable defaults False
+            auto_observe=False,
+        )
+        await table.build()
+
+    await user.open('/')
+    html_should_see(user, 'Name')
+    with pytest.raises(AssertionError):
+        user.find(marker='rdm-sort-name')
+
+
+async def test_sort_key_overrides_field(user: User):
+    """sort_key controls the ordering field independent of the displayed column name."""
+    store = DictStore()
+
+    @ui.page('/')
+    async def page():
+        await store.create_item({'label': 'Zeta', 'rank': 1})
+        await store.create_item({'label': 'Alpha', 'rank': 2})
+        table = ListTable(
+            data_source=store,
+            config=TableConfig(columns=[
+                Column(name='label', label='Label', sortable=True, sort_key='rank'),
+            ]),
+            auto_observe=False,
+        )
+        await table.build()
+
+    await user.open('/')
+    user.find(marker='rdm-sort-label').click()
+    await asyncio.sleep(0.1)
+    # Ordered by rank asc → Zeta (1) before Alpha (2), not alphabetical
+    assert _visible_order(user, {'Alpha', 'Zeta'}) == ['Zeta', 'Alpha']
+
+
+async def test_sort_is_per_subscriber(user: User):
+    """Two tables on one store sort independently (sort state is per-instance)."""
+    store = DictStore()
+
+    @ui.page('/')
+    async def page():
+        await _seed_names(store)
+        cfg = TableConfig(columns=[Column(name='name', label='Name', sortable=True)])
+        asc = ListTable(data_source=store, config=cfg, order_by=['name'], auto_observe=False)
+        desc = ListTable(data_source=store, config=cfg, order_by=['-name'], auto_observe=False)
+        await asc.build()
+        await desc.build()
+
+    await user.open('/')
+    # First table ascending, second descending, concatenated in DOM order
+    assert _visible_order(user, NAMES) == ['Alice', 'Bob', 'Carol', 'Carol', 'Bob', 'Alice']

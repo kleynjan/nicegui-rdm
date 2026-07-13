@@ -313,7 +313,10 @@ table = ActionButtonTable(
 - `formatter`, `render` (custom rendering callable)
 - `on_click` (per-column click handler)
 - `required`, `editable`, `placeholder`
+- `sortable`, `sort_key` — opt a column into header-click sorting (see below)
 - Fields with `__` in the name auto-derive join_fields for FK data
+
+**Header-click sorting** — set `Column.sortable=True` to make a header clickable; each click toggles ascending↔descending on `sort_key or name`. The table drives its own `order_by` (a per-instance attribute) and delegates the sort to `read_items(order_by=...)` — so it is DB-side for `TortoiseStore`, correct under `limit`/`offset` paging (order is applied before the window; a row-key tie-break keeps pages stable), and independent per subscriber (tables sharing a store sort separately; the shared `Store.set_sort_key` is never used). Clicking a header resets `offset` to the first page. Only mark columns backed by a real queryable field.
 
 ### TableConfig
 `TableConfig` dataclass configures table display:
