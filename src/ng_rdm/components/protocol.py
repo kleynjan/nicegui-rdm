@@ -55,6 +55,19 @@ class RdmDataSource(Protocol):
         """Delete an item."""
         ...
 
+    # Predicate building (required for TableConfig.show_search)
+    def search_q(self, text: str, fields: list[str]) -> Any | None:
+        """Build a case-insensitive OR-predicate over `fields`, in the source's own dialect.
+
+        Returns None when nothing should be constrained. Tables never build predicates
+        themselves, so they stay free of ORM knowledge.
+        """
+        ...
+
+    def and_q(self, a: Any | None, b: Any | None) -> Any | None:
+        """Compose two predicates so both apply; None means 'no constraint'."""
+        ...
+
     def validate(self, item: dict) -> tuple[bool, dict]:
         """Validate an item or partial.
 

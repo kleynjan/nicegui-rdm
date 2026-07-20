@@ -32,6 +32,21 @@ class DictStore(Store):
         super().__init__(field_specs)
         self._items: list[dict] = []
 
+    def search_q(self, text: str, fields: list[str]) -> Callable[[dict], bool] | None:
+        """Case-insensitive substring match over `fields` (derived names expanded via query_map)."""
+        fields = self._expand_fields(fields)
+        if not text or not fields:
+            return None
+        needle = text.lower()
+        return lambda item: any(needle in str(item.get(f) or "").lower() for f in fields)
+
+    def and_q(self, a: Any | None, b: Any | None) -> Callable[[dict], bool] | None:
+        if a is None or b is None:
+            return _as_predicate(a if b is None else b)
+        pa, pb = _as_predicate(a), _as_predicate(b)
+        assert pa and pb
+        return lambda item: pa(item) and pb(item)
+
     def _id_to_row_index(self, id: int) -> int | None:
         """Convert item ID to row index"""
         for i, item in enumerate(self._items):

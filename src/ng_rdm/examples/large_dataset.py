@@ -5,9 +5,10 @@ Demonstrates the three reactive-view archetypes ng_rdm supports at scale. The st
 is a CRUD-by-id gateway; a "view" is a separate, explicitly-bounded projection that
 re-reads on a throttled cadence.
 
-1. Query-view (users) — a capped, ordered, filterable table. auto_observe=False:
-   it does NOT react to every store event (there are too many rows to re-render).
-   It shows "N of M" using read_counts() and refines via a team filter + hard limit.
+1. Query-view (users) — a searched, ordered, paged table. auto_observe=False: it does
+   NOT react to every store event (there are too many rows to re-render). Search box
+   and pager are built in (TableConfig) and rendered once, outside the refreshable —
+   the pager binds to the state each read publishes, so it never goes stale.
 
 2. Count-view (bulk progress) — ReactiveCounts reads *counts* (not rows) grouped by
    status on a throttled cadence, and surfaces them via NiceGUI bind_text_from. No
@@ -170,31 +171,34 @@ async def main(client: Client):
             "throttled re-read is cheap."
         ).classes("demo-subtitle")
 
-        # ── 1. Query-view: capped, ordered, filterable users table ───────────
+        # ── 1. Query-view: searchable, paged, filterable users table ─────────
+        # Search and pager are toolbar elements: rendered once by render(), outside the
+        # refreshable, so the input keeps focus and the pager binds to published state.
         Separator()
-        ui.label("1 · Query-view — 1500 users, capped at 50").classes("demo-section-heading")
+        ui.label("1 · Query-view — 1500 users, 12 per page").classes("demo-section-heading")
 
         users_table = ListTable(
             data_source=users_store,
-            config=TableConfig(columns=user_cols, empty_message="No users"),
+            config=TableConfig(
+                columns=user_cols, empty_message="No users",
+                show_search=True, search_fields=["name", "team"],
+                show_pager=True, pager_position="top",   # same slot as search → one toolbar row
+                pager_label=lambda first, last, total: f"{first}–{last} of {total} users",
+            ),
             order_by=["name"],
-            limit=50,
+            limit=12,
             auto_observe=False,  # far too many rows to re-render on every store event
         )
 
-        count_label = ui.label().classes("demo-subtitle")
         team_select = ui.select(["All", *TEAMS], value="All", label="Team")
 
         async def refine():
             team = team_select.value
-            users_table.filter_by = None if team == "All" else {"team": team}
-            await users_table.build.refresh()
-            total = await users_store.read_counts(filter_by=users_table.filter_by)
-            count_label.text = f"Showing {len(users_table.data)} of {total} users"
+            # one call instead of "set filter_by, reset offset, refresh" in the right order
+            await users_table.requery(filter_by=None if team == "All" else {"team": team})
 
         team_select.on_value_change(refine)
-        await users_table.build()
-        await refine()  # initial "N of M" label
+        await users_table.render()
 
         # ── 2. Count-view: bulk-send progress via ReactiveCounts + binding ────
         Separator()

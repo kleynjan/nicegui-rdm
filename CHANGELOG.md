@@ -14,13 +14,44 @@ summaries only.
 
 Structural follow-up to 0.1.67: the table toolbar moves **out** of the refreshable, so it
 can host stateful widgets (search input, pager) that survive a refresh instead of losing
-focus and value on the keystroke that triggered it.
+focus and value on the keystroke that triggered it. On that foundation, search and paging
+ship in-library — tables stop being something apps have to wrap to make usable at scale.
 
 ### Added
 
 - **`ObservableRdmTable.render()`** — new public entry point. Renders the toolbar slots
   once, around the refreshable `build()`. Toolbar content reacts by *binding* to
   `self.state` (the `ReactiveCounts` pattern) rather than being re-rendered.
+- **Built-in pager** — `TableConfig(show_pager=True)` renders a bound label plus
+  prev/next. Every read publishes the window's numbers into `self.state` as first-class
+  keys — `total`, `shown`, `page_first`, `page_last`, `has_prev`, `has_next`, plus a
+  formatted `page_label`. The raw keys are the point: an app can bind its own counter
+  (`pager_label=lambda first, last, total: …`) with its own wording instead of taking the
+  built-in chrome. A `COUNT` runs only when something displays a total, and never when the
+  first page already came back short of its own `limit`.
+- **Built-in search** — `TableConfig(show_search=True, search_fields=[…])`, with
+  `search_placeholder` and `search_debounce` (300 ms). Safe now that the toolbar is
+  outside the refresh scope. Wants `auto_observe=False`: `q` takes no part in topic
+  routing, so a searched *and* observed table re-reads on every store event.
+- **`Store.search_q(text, fields)` / `Store.and_q(a, b)`** — predicate building lives on
+  the store, so tables stay free of ORM knowledge and search is testable on `DictStore`.
+  `TortoiseStore` returns an OR of `icontains` `Q`s; `DictStore` a callable. `and_q`
+  composes the table's own `q` with the search predicate so both apply instead of one
+  clobbering the other. Both are part of `RdmDataSource`.
+- **`set_derived_fields(..., query_map={…})`** — real fields standing in for a derived
+  name: `order_by` uses the first, `search_q` ORs over all of them. This is what makes a
+  derived column sortable *and* searchable. `Column.sort_key` now resolves lazily against
+  the attached store, since a `Column` is constructed before any store exists.
+- **`table.requery(q=…, filter_by=…, order_by=…, offset=0)`** — one call instead of the
+  order-sensitive "assign, reset offset, refresh" sequence. A new `filter_by` also moves
+  the observer subscription, so an observed table keeps reacting to its *new* scope; a
+  table given explicit topics via `observe(topics=…)` keeps those untouched.
+- **Selection/paging hazard is surfaced** — `SelectionTable` publishes `selected_count`
+  and `selected_offscreen`; the pager label appends "N selected (M off page)" so a bulk
+  action over invisible rows is at least visible. `clear_selection_on_page_change=True`
+  opts into page-scoped selection instead.
+- **CSS**: `.rdm-search`, `.rdm-pager`, `.rdm-pager-label`, `.rdm-pager-btn`. New i18n
+  keys for the pager, search and selection strings.
 - **`render_toolbar` may be async** — rendered once, so it can `await read_counts()` for
   the cost of a single query.
 - **Per-element toolbar slots** — `TableConfig.search_position` (default `"top"`) and
@@ -59,6 +90,15 @@ focus and value on the keystroke that triggered it.
   button or a `render_toolbar` is used.
 - Tables that set `show_add_button=False` purely to suppress an unwired button can drop
   the setting.
+- App-side search/paging wrappers collapse into config: a `ListTable` subclass that
+  existed only to pass `q`, plus a hand-rolled search box, counter and prev/next, become
+  `TableConfig(show_search=True, search_fields=[…], show_pager=True, pager_label=…)` on a
+  table with `limit=` and `auto_observe=False`.
+- A custom `RdmDataSource` (one not deriving from `Store`) needs `search_q()` and
+  `and_q()` before it can use `show_search`; without them the table raises a `TypeError`
+  naming the missing method. A custom **`Store` subclass** that inherits the base
+  implementations raises `NotImplementedError` when searched — deliberately, so a missing
+  override cannot present a search box that filters nothing.
 
 ## [0.1.67] — 2026-07-20
 
@@ -133,7 +173,8 @@ All changes are additive — no visual change to existing screens.
 
 - Tortoise `index` → `db_index` for current Tortoise versions.
 
-[Unreleased]: https://github.com/kleynjan/nicegui-rdm/compare/v0.1.67...HEAD
+[Unreleased]: https://github.com/kleynjan/nicegui-rdm/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/kleynjan/nicegui-rdm/compare/v0.1.67...v0.2.0
 [0.1.67]: https://github.com/kleynjan/nicegui-rdm/compare/v0.1.66...v0.1.67
 [0.1.66]: https://github.com/kleynjan/nicegui-rdm/compare/v0.1.65...v0.1.66
 [0.1.65]: https://github.com/kleynjan/nicegui-rdm/compare/v0.1.64...v0.1.65

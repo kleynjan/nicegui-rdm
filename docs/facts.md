@@ -162,7 +162,18 @@ Key methods:
 - `read_items(filter_by=None, q=None, join_fields=[], limit=None, offset=0, order_by=None)` — bounded reads: `limit`/`offset` page the result and `order_by` sorts DB-side (bypassing the Python `set_sort_key` path). A fully-unbounded read past `unbounded_warn_threshold` (default 1000) rows logs a rate-limited warning.
 - `read_counts(filter_by=None, q=None, group_by=None) -> int | dict` — counts without fetching rows: an `int` total, or `dict[value, int]` when `group_by` is set. `MultitenantTortoiseStore` inherits tenant scoping for free (both route through `_build_query`).
 
-**Derived fields are not queryable.** `set_derived_fields()` computes values *after* the read (`_apply_derived_fields` runs on returned rows), so a derived name is invisible to the database. Passing one to `filter_by`, `order_by` or `group_by` raises a `ValueError` naming the field — query a real field instead, and use `Column.sort_key` to point a derived column's header at one.
+- `search_q(text, fields) -> predicate | None` — builds a case-insensitive OR-match over `fields` in the store's own dialect (`TortoiseStore`: an OR of `icontains` `Q`s; `DictStore`: a callable). Returns `None` for empty text or no fields.
+- `and_q(a, b)` — composes two predicates so both apply; `None` on either side means "no constraint". This is what keeps a table's own `q` from being clobbered by its search box.
+
+Predicate building lives on the **store**, not the table, so tables stay free of ORM knowledge and search is testable on `DictStore`. Both methods are part of `RdmDataSource`; a custom data source must implement them to use `TableConfig(show_search=True)`. The base `Store` raises `NotImplementedError` from both rather than returning `None` — a store that forgets to implement them fails loudly instead of leaving the search box silently filtering nothing.
+
+**`filter_by` and the observer subscription.** `observe(topics=filter_by)` ties a table's subscription to its scope, so changing `filter_by` must move the subscription too or the table goes deaf to its own new scope. `requery(filter_by=...)` does this for you; a bare `table.filter_by = ...` assignment does not — call `reobserve(topics=...)` after it.
+
+**Derived fields are not queryable — unless you map them.** `set_derived_fields()` computes values *after* the read (`_apply_derived_fields` runs on returned rows), so a derived name is invisible to the database. Passing one to `filter_by`, `order_by` or `group_by` raises a `ValueError` naming the field.
+
+`set_derived_fields(..., query_map={"member_name": ["member__first_name", "member__last_name"]})` gives a derived name real fields to stand in for it: `order_by` uses the **first** mapped field, `search_q` ORs over **all** of them. That is what makes a derived column both sortable and searchable. Without a `query_map`, use `Column.sort_key` to point the header at a real field.
+
+A derived name can also reach the DB *inside* a `q=` predicate, where the up-front check cannot see it. `TortoiseStore` catches the resulting `FieldError` and re-raises a `ValueError` annotated with the store's derived field names; a store with no derived fields keeps the raw `FieldError` (most likely a typo).
 - `batch()` — Context manager for explicit notification batching
 - `add_observer(callback, topics=None)` — Register observer with optional topic filter
 - `remove_observer(callback)` — Unregister observer by callback identity
@@ -332,17 +343,44 @@ table = ActionButtonTable(
 
 **Sorting moves the window.** `_toggle_sort` resets `state["offset"] = 0` before refreshing, so the table returns to page one. Any paging chrome rendered *outside* the table must therefore read `table.state` (or bind to it) rather than mirror the offset in its own variable — otherwise the counter and prev/next go stale on a header click.
 
-**Selection survives a re-sort.** `SelectionTable` keys `state['selected_ids']` on `row_key`, not on row position, so re-sorting (or paging) leaves the selection intact.
+**Selection survives a re-sort — and a page change.** `SelectionTable` keys `state['selected_ids']` on `row_key`, not on row position, so re-sorting or paging leaves the selection intact.
+
+> ⚠️ **A bulk action can therefore operate on rows the user cannot see.** Select on page 1, page to page 2, hit "delete selected" — page 1's rows go too. This is deliberate (cross-page selection is legitimate), so it is surfaced rather than silently changed: every read publishes `selected_count` and `selected_offscreen` into `state`, and the built-in pager label appends "N selected (M off page)". Pass `SelectionTable(clear_selection_on_page_change=True)` for page-scoped selection instead. If you render your own bulk-action bar, bind it to those keys.
+
+### The toolbar is rendered once, outside the refreshable
+
+`build()` is `@ui.refreshable_method` — everything inside it is destroyed and rebuilt on every store event and every sort click. That is fine for rows, fatal for a search input, which would lose focus and value on the refresh its own keystroke triggered.
+
+So `render()` is the entry point: it renders the toolbar slots **once**, around `build()`. Toolbar content that depends on data does not re-render — it **binds** to `self.state`, the same pattern `ReactiveCounts` uses. Every read publishes the window's numbers there:
+
+| key | meaning |
+|---|---|
+| `total` | matching rows (`None` when nothing displays a total — see below) |
+| `shown` | rows on this page |
+| `page_first`, `page_last` | 1-based row numbers of the current window (`0` when empty) |
+| `has_prev`, `has_next` | whether a previous/next page exists |
+| `page_label` | formatted label — `pager_label(first, last, total)` if given |
+| `selected_count`, `selected_offscreen` | `SelectionTable` only |
+
+The raw keys are the point: an app can bind its own counter with its own wording (`ui.label().bind_text_from(table.state, "page_label")`, `Button(...).bind_enabled_from(table.state, "has_next")`) instead of taking the built-in chrome. Because `_toggle_sort` resets `state["offset"]`, bound chrome stays correct on a header click for free.
+
+**Counting costs a query, so it is skipped unless something shows it.** A first page that came back under its own `limit` is already the whole result set (free). Otherwise a `COUNT` runs only when `show_pager` is set or a `pager_label` is supplied — without that, `total` is `None` and `has_next` falls back to "this page is full". This matters on an `auto_observe=True` table, where a COUNT per read means a COUNT per store event.
 
 ### TableConfig
 `TableConfig` dataclass configures table display:
 - `columns` — Columns displayed in table view
-- `show_edit_button`, `show_delete_button`, `show_add_button`
+- `show_edit_button`, `show_delete_button`, `show_add_button` — the add button also needs an `on_add` handler; `add_button` is only its label, so it cannot imply one
 - `add_button` — Custom text for add button
 - `custom_actions` — List of `RowAction` for custom per-row buttons
-- `empty_message` — Message when table is empty
+- `empty_message` — Message when table is empty (rendered as a row *inside* the table, so headers and the sort affordance survive)
 - `toolbar_position` — slot for the add button and `render_toolbar` ("top"/"bottom", default "bottom")
-- `search_position` (default "top"), `pager_position` (default "bottom") — each toolbar element carries its own slot, so search-top / pager-bottom is expressible
+- `search_position` (default "top"), `pager_position` (default "bottom") — each toolbar element carries its own slot, so search-top / pager-bottom is expressible. Assigning both to the same slot puts them in one toolbar row (search left, pager right-aligned)
+- `show_pager` — label + prev/next, bound to the published state. Needs `limit` on the table
+- `pager_label` — `(first, last, total) -> str`; supplying one also switches counting on, for apps that render their own chrome
+- `show_search`, `search_fields` — debounced search box; the predicate comes from the store's `search_q()` and is ANDed with the table's own `q` via `and_q()`
+- `search_placeholder`, `search_debounce` (ms, default 300)
+
+> **`show_search` wants `auto_observe=False`.** `q` takes no part in topic routing, so a searched *and* observed table re-reads on every store event regardless of relevance — exactly the cost bounded views exist to avoid.
 
 ### FormConfig
 `FormConfig` dataclass configures form/dialog behavior:

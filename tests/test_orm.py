@@ -307,6 +307,53 @@ async def test_rdm_model_values_with_rename():
     assert d["author_name"] == "Jane Austen"
 
 
+# --- search_q / and_q / query_map (ORM) ---
+
+async def test_search_q_ors_icontains_over_fields():
+    store = TortoiseStore(Author)
+    await store.create_item({"name": "Jane Austen", "email": "jane@example.com"})
+    await store.create_item({"name": "Charles Dickens", "email": "charles@example.com"})
+
+    items = await store.read_items(q=store.search_q("jane", ["name", "email"]))
+    assert [i["name"] for i in items] == ["Jane Austen"]
+
+    # a match on the second field counts too — the predicate is an OR
+    items = await store.read_items(q=store.search_q("charles@", ["name", "email"]))
+    assert [i["name"] for i in items] == ["Charles Dickens"]
+
+
+async def test_and_q_composes_search_with_a_preset_predicate():
+    store = TortoiseStore(Author)
+    await store.create_item({"name": "Jane Austen", "email": "a@x.com"})
+    await store.create_item({"name": "Jane Eyre", "email": "b@x.com"})
+
+    both = store.and_q(Q(email="a@x.com"), store.search_q("jane", ["name"]))
+    assert [i["name"] for i in await store.read_items(q=both)] == ["Jane Austen"]
+
+
+async def test_query_map_makes_a_derived_field_queryable():
+    """A derived name with a query_map is ordered and searched via its real fields"""
+    author_store = TortoiseStore(Author)
+    austen = await author_store.create_item({"name": "Austen"})
+    dickens = await author_store.create_item({"name": "Dickens"})
+    assert austen and dickens
+
+    book_store = TortoiseStore(Book)
+    book_store.set_derived_fields(
+        derived_fields={"author_display": lambda row: f"by {row.get('author__name', '?')}"},
+        dependencies=["author__name"],
+        query_map={"author_display": ["author__name"]},
+    )
+    await book_store.create_item({"title": "Emma", "author_id": austen["id"]})
+    await book_store.create_item({"title": "Oliver", "author_id": dickens["id"]})
+
+    ordered = await book_store.read_items(order_by=["-author_display"])
+    assert [b["title"] for b in ordered] == ["Oliver", "Emma"]
+
+    q = book_store.search_q("dick", ["author_display"])
+    assert [b["title"] for b in await book_store.read_items(q=q)] == ["Oliver"]
+
+
 # --- Bounded reads: limit / offset / order_by (DB-side) ---
 
 async def test_read_items_order_by_ascending_and_descending():

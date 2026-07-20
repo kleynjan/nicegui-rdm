@@ -230,7 +230,33 @@
 .rdm-table-toolbar {
     display: flex;
     gap: var(--rdm-spacing-sm);
-    padding: var(--rdm-spacing-lg) 0;
+    padding: var(--rdm-spacing-lg) 0 0 0;
+    align-items: center;
+}
+
+/* Search box and pager live in a toolbar slot; both are rendered once and keep
+   their own state (the pager binds its label/enabled to the table's state dict). */
+
+.rdm-search {
+    min-width: 240px;
+}
+
+.rdm-pager {
+    display: flex;
+    align-items: center;
+    gap: var(--rdm-spacing-sm);
+    margin-left: auto;
+}
+
+.rdm-pager-label {
+    font-size: var(--rdm-font-size-sm);
+    color: var(--rdm-text-secondary);
+    white-space: nowrap;
+}
+
+.rdm-pager-btn[disabled] {
+    opacity: 0.4;
+    cursor: default;
 }
 
 /* UNUSED — 0.2.0 renders the empty state as a row inside the table (headers survive)

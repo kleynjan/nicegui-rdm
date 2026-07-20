@@ -85,8 +85,24 @@ TableConfig(
     toolbar_position: "top" | "bottom" = "bottom",   # add button + render_toolbar
     search_position: "top" | "bottom" = "top",
     pager_position: "top" | "bottom" = "bottom",
+    show_pager: bool = False,              # label + prev/next; needs limit= on the table
+    pager_label: Callable[[int, int, int], str] | None = None,   # (first, last, total) -> str
+    show_search: bool = False,             # debounced search box (wants auto_observe=False)
+    search_fields: list[str] = [],         # fields the search predicate covers
+    search_placeholder: str | None = None,
+    search_debounce: int = 300,            # ms
 )
 ```
+
+Each toolbar element carries its own slot, so the default config puts search above the table and the pager below it. Assign both to the **same** slot to get a single toolbar row instead — search on the left, pager right-aligned beside it:
+
+```python
+TableConfig(..., show_search=True, show_pager=True, pager_position="top")
+```
+
+**Search**: the predicate is built by the data source (`search_q`), not the table, and composed with the table's own `q` via `and_q` so both apply. A derived column becomes searchable by giving it a `query_map` in `set_derived_fields()`.
+
+**Pager**: supplying `pager_label` alone (without `show_pager`) switches counting on without rendering the built-in buttons — for apps binding their own chrome to `table.state`.
 
 ### `FormConfig`
 
@@ -132,9 +148,20 @@ All table components extend `ObservableRdmTable` and share these features.
 - `build()` is the refreshable: it re-renders headers and rows only. Call it directly only for a bare table with no toolbar
 - Toolbar contract: anything in a toolbar slot is rendered once, outside the refresh scope, so stateful widgets (a search input) keep focus and value. Data-dependent parts **bind** to `self.state` instead of being re-rendered — the `ReactiveCounts` pattern
 - `filter_by` dict for scoping data queries (equality, AND)
-- `q` for everything equality can't express — a Tortoise `Q`, or a callable predicate on `DictStore`. ANDed with `filter_by` by the store. Assign `table.q` then `await table.build.refresh()` to drive a search box; no subclass needed. Unlike `filter_by` it takes no part in topic routing.
+- `q` for everything equality can't express — a Tortoise `Q`, or a callable predicate on `DictStore`. ANDed with `filter_by` by the store. Unlike `filter_by` it takes no part in topic routing.
+- `requery(q=..., filter_by=..., order_by=..., offset=0)` — change the query and re-render in one step; only the arguments given are changed, and paging returns to the first page. Replaces the order-sensitive "assign, reset offset, refresh" dance. A new `filter_by` **moves the observer subscription with it**, so an observed table keeps reacting to its new scope — unless it was given explicit topics via `observe(topics=...)`, which are left alone.
 - `transform` callback for post-load data transformation
-- `render_toolbar` callback for custom toolbar content
+- `render_toolbar` callback for custom toolbar content (may be async — it is rendered once, so it can `await read_counts()`)
+- Built-in `show_search` / `show_pager` (see `TableConfig`), plus the state keys any custom chrome can bind to: `total`, `shown`, `page_first`, `page_last`, `has_prev`, `has_next`, `page_label`
+
+**Paging state is published, not pushed.** Every read writes the window's numbers into `table.state`; toolbar chrome binds to them rather than being re-rendered:
+
+```python
+ui.label().bind_text_from(table.state, "page_label")
+Button("Next", on_click=...).bind_enabled_from(table.state, "has_next")
+```
+
+A `COUNT` query runs only when something displays a total — `show_pager=True` or a `pager_label` — and never when the first page already came back short of its own `limit`.
 
 ### `ActionButtonTable`
 
@@ -156,8 +183,10 @@ table = ActionButtonTable(
     limit=None,                            # int — cap rows (bounded query-view)
     order_by=None,                         # list[str] — DB-side ordering
 )
-await table.build()
+await table.render()                       # build() alone renders no toolbar
 ```
+
+The Add button renders only when `config.show_add_button` **and** `on_add` are both set.
 
 Edit/delete buttons are auto-generated from `config.show_edit_button`/`show_delete_button`. Custom actions come from `config.custom_actions`. All render as `RowAction` icons.
 
@@ -193,7 +222,7 @@ table = ListTable(
     order_by=None,                         # list[str] — DB-side ordering
     q=None,                                # Q / callable — non-equality filter (search)
 )
-await table.build()
+await table.render()                       # or build() for a bare table with no toolbar
 ```
 
 - Supports `ui.badge` rendering via `Column(ui_type=ui.badge, parms={"color_map": {...}})`.
@@ -216,12 +245,14 @@ table = SelectionTable(
     row_key="id",
     join_fields=None,
     on_selection_change=None,              # Callable[[set[int]], None]
+    on_add=None,                           # Callable — required for the toolbar Add button
     render_toolbar=None,
     auto_observe=True,
     limit=None,                            # int — cap rows (bounded query-view)
     order_by=None,                         # list[str] — DB-side ordering
+    clear_selection_on_page_change=False,  # True = page-scoped selection
 )
-await table.build()
+await table.render()
 ```
 
 **Selection methods:**
@@ -230,7 +261,9 @@ await table.build()
 - `table.select_all()` / `table.clear_selection()`
 - `table.add_to_selection(row_key)` / `table.remove_from_selection(row_key)`
 
-**State keys:** `selected_ids: list[int]`, `show_checkboxes: bool`, `multi_select: bool`
+**State keys:** `selected_ids: list[int]`, `show_checkboxes: bool`, `multi_select: bool`, `selected_count: int`, `selected_offscreen: int`
+
+> ⚠️ **Selection is keyed on `row_key`, so it survives a page change** — a bulk action can operate on rows the user cannot see. `selected_offscreen` counts them and the built-in pager label surfaces it ("3 selected (2 off page)"); pass `clear_selection_on_page_change=True` for page-scoped selection instead.
 
 ---
 
@@ -613,7 +646,7 @@ async def index():
         data_source=product_store, config=table_config,
         on_add=dlg.open_for_new, on_edit=dlg.open_for_edit,
     )
-    await table.build()
+    await table.render()
 
 ui.run(title="My App")
 ```

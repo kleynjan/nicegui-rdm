@@ -9,6 +9,7 @@ from typing import Any, Awaitable, Callable
 from nicegui import html, ui
 
 from ..base import ObservableRdmTable, TableConfig, Column
+from ..i18n import _
 from ..protocol import RdmDataSource
 
 
@@ -50,10 +51,11 @@ class SelectionTable(ObservableRdmTable):
         join_fields: list[str] | None = None,
         on_selection_change: Callable[[set[int]], None] | None = None,
         on_add: Callable[[], Awaitable[None] | None] | None = None,
-        render_toolbar: Callable[[], Awaitable[None] | None] | None = None,
+        render_toolbar: Callable[[], Any] | None = None,   # sync or async; awaited if awaitable
         auto_observe: bool = True,
         limit: int | None = None,
         order_by: list[str] | None = None,
+        clear_selection_on_page_change: bool = False,
     ):
         super().__init__(
             data_source=data_source, config=config, state=state,
@@ -64,9 +66,35 @@ class SelectionTable(ObservableRdmTable):
         )
         self.row_key = row_key
         self.on_selection_change = on_selection_change
+        self._clear_on_page_change = clear_selection_on_page_change
+        self._last_offset = self.state.get('offset', 0)
         self.state.setdefault('selected_ids', [])
         self.state.setdefault('show_checkboxes', show_checkboxes if show_checkboxes is not None else True)
         self.state.setdefault('multi_select', multi_select if multi_select is not None else True)
+
+    async def _publish_page_state(self, read: dict) -> None:
+        """Publish the selection alongside the page numbers.
+
+        Selection is keyed on row_key, not position, so it survives a page change — which
+        means a bulk action can operate on rows the user cannot see. `selected_offscreen`
+        makes that visible (the built-in pager label surfaces it); pass
+        clear_selection_on_page_change=True for page-scoped selection instead.
+        """
+        if self._clear_on_page_change and read["offset"] != self._last_offset:
+            self.state['selected_ids'] = []
+        self._last_offset = read["offset"]
+        selected = set(self.state['selected_ids'])
+        self.state['selected_count'] = len(selected)
+        self.state['selected_offscreen'] = len(selected - {i.get(self.row_key) for i in self.data})
+        await super()._publish_page_state(read)
+
+    def _default_page_label(self, first: int, last: int, total: int) -> str:
+        label = super()._default_page_label(first, last, total)
+        if count := self.state.get('selected_count', 0):
+            label += f" · {count} {_('selected')}"
+            if offscreen := self.state.get('selected_offscreen', 0):
+                label += f" ({offscreen} {_('off page')})"
+        return label
 
     def handle_row_click(self, row_key: int):
         self.toggle(row_key)

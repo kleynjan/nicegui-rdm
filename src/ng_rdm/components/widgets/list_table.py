@@ -41,7 +41,7 @@ class ListTable(ObservableRdmTable):
         transform: Callable[[list[dict]], list[dict]] | None = None,
         row_key: str = "id",
         join_fields: list[str] | None = None,
-        render_toolbar: Callable[[], Awaitable[None] | None] | None = None,
+        render_toolbar: Callable[[], Any] | None = None,   # sync or async; awaited if awaitable
         auto_observe: bool = True,
         limit: int | None = None,
         order_by: list[str] | None = None,

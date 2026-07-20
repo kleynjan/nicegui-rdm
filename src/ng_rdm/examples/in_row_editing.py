@@ -57,7 +57,7 @@ class DirectEditTable(ObservableRdmTable):
         *,
         filter_by: dict[str, Any] | None = None,
         on_add: Callable[[], Awaitable[None] | None] | None = None,
-        render_toolbar: Callable[[], Awaitable[None] | None] | None = None,
+        render_toolbar: Callable[[], Any] | None = None,   # sync or async; awaited if awaitable
         auto_observe: bool = True,
     ):
         super().__init__(

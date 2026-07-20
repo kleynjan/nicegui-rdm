@@ -38,6 +38,7 @@ class Store:
         self._sort_reverse: bool = False
         self._derived_fields: dict[str, Callable[[dict], Any]] = {}
         self._derived_field_dependencies: list[str] = []
+        self._query_map: dict[str, list[str]] = {}
         self._last_unbounded_warn: float = 0.0
 
     def set_sort_key(self, key_func: Callable[[dict], Any], reverse: bool = False) -> None:
@@ -45,7 +46,8 @@ class Store:
         self._sort_key = key_func
         self._sort_reverse = reverse
 
-    def set_derived_fields(self, derived_fields: dict[str, Callable[[dict], Any]], dependencies: list[str] | None = None) -> None:
+    def set_derived_fields(self, derived_fields: dict[str, Callable[[dict], Any]], dependencies: list[str] | None = None,
+                           query_map: dict[str, list[str]] | None = None) -> None:
         """Set derived fields - computed values added to each item on read.
 
         Args:
@@ -53,9 +55,46 @@ class Store:
                 Example: {'calc_guest_name': lambda row: ... or row.get('guest__user_id') or ''}
             dependencies: list of join fields required by derived field computations
                 Example: ['guest__given_name', 'guest__family_name', 'guest__user_id']
+            query_map: real fields backing a derived name, making it queryable after all
+                Example: {'calc_guest_name': ['guest__given_name', 'guest__family_name']}
+                order_by uses the first entry; search_q ORs over all of them.
         """
         self._derived_fields = derived_fields
         self._derived_field_dependencies = dependencies or []
+        self._query_map = query_map or {}
+
+    def _expand_fields(self, fields: list[str]) -> list[str]:
+        """Expand derived names to their query_map targets; real names pass through."""
+        return [real for f in fields for real in self._query_map.get(f, [f])]
+
+    def _map_order_by(self, order_by: list[str] | None) -> list[str] | None:
+        """Rewrite derived names in order_by to their first query_map field, keeping '-'."""
+        if not order_by or not self._query_map:
+            return order_by
+        mapped = []
+        for entry in order_by:
+            desc, name = entry.startswith("-"), entry.lstrip("-")
+            real = self._query_map.get(name, [name])[0]
+            mapped.append(f"-{real}" if desc else real)
+        return mapped
+
+    def search_q(self, text: str, fields: list[str]) -> Any | None:
+        """Build a case-insensitive OR-predicate over `fields` (derived names expanded).
+
+        Subclasses return their own query dialect — a Tortoise Q, a callable on DictStore.
+        The base store has no query layer: it raises rather than returning None, which
+        would leave a search box silently filtering nothing.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement search_q() — a store must build its own "
+            f"search predicate (see DictStore/TortoiseStore) to back TableConfig(show_search=True)."
+        )
+
+    def and_q(self, a: Any | None, b: Any | None) -> Any | None:
+        """Compose two predicates so both apply; None means 'no constraint'."""
+        if a is None or b is None:
+            return b if a is None else a
+        raise NotImplementedError(f"{type(self).__name__} cannot compose two predicates")
 
     def _reject_derived(self, *fields: Any) -> None:
         """Raise if a derived field name is used where the query layer needs a real one.
@@ -221,6 +260,7 @@ class Store:
             offset: number of rows to skip (for paging; use with order_by for stable pages)
             order_by: DB-side ordering (e.g. ["name", "-created_at"]); bypasses the Python sort key
         """
+        order_by = self._map_order_by(order_by)
         self._reject_derived(filter_by, order_by)
         # Merge requested join_fields with derived field dependencies
         all_join_fields = list(set(join_fields + self._derived_field_dependencies))

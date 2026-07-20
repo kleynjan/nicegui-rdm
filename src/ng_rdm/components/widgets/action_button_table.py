@@ -43,7 +43,7 @@ class ActionButtonTable(ObservableRdmTable):
         on_add: Callable[[], Awaitable[None] | None] | None = None,
         on_edit: Callable[[dict], Awaitable[None] | None] | None = None,
         on_delete: Callable[[dict], Awaitable[None] | None] | None = None,
-        render_toolbar: Callable[[], Awaitable[None] | None] | None = None,
+        render_toolbar: Callable[[], Any] | None = None,   # sync or async; awaited if awaitable
         auto_observe: bool = True,
         limit: int | None = None,
         order_by: list[str] | None = None,

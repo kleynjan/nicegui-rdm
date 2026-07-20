@@ -53,9 +53,7 @@ class ListDataSource:
         offset: int = 0,
         order_by: list[str] | None = None,
     ) -> list[dict]:
-        items = list(self._items)
-        if filter_by:
-            items = [i for i in items if all(i.get(k) == v for k, v in filter_by.items())]
+        items = self._match(filter_by, q)
         if order_by:
             for key in reversed(order_by):  # right-to-left for a stable multi-key sort
                 reverse = key.startswith("-")
@@ -73,9 +71,7 @@ class ListDataSource:
         q: Any = None,
         group_by: str | None = None,
     ) -> int | dict:
-        items = list(self._items)
-        if filter_by:
-            items = [i for i in items if all(i.get(k) == v for k, v in filter_by.items())]
+        items = self._match(filter_by, q)
         if group_by is None:
             return len(items)
         counts: dict = {}
@@ -94,6 +90,26 @@ class ListDataSource:
     async def delete_item(self, item: dict) -> None:
         self._items = [i for i in self._items if i["id"] != item["id"]]
         await self._notify(StoreEvent(verb="delete", item=item))
+
+    def _match(self, filter_by: dict | None, q: Any = None) -> list[dict]:
+        """Apply the equality filter and the predicate — this source speaks callables."""
+        items = list(self._items)
+        if filter_by:
+            items = [i for i in items if all(i.get(k) == v for k, v in filter_by.items())]
+        return [i for i in items if q(i)] if q else items
+
+    # Predicate building — required for TableConfig(show_search=True). The table never
+    # builds a predicate itself, so each data source stays free to use its own dialect.
+    def search_q(self, text: str, fields: list[str]) -> Callable[[dict], bool] | None:
+        if not text or not fields:
+            return None
+        needle = text.lower()
+        return lambda item: any(needle in str(item.get(f) or "").lower() for f in fields)
+
+    def and_q(self, a: Any, b: Any) -> Any:
+        if a is None or b is None:
+            return b if a is None else a
+        return lambda item: a(item) and b(item)
 
     def validate(self, item: dict) -> tuple[bool, dict]:
         if not item.get("title", "").strip():

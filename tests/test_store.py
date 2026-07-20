@@ -273,6 +273,67 @@ async def test_derived_field_rejected_in_filter_and_group(dict_store):
     assert await dict_store.read_counts(group_by="first") == {"Alice": 1}
 
 
+# --- query_map: making a derived field queryable ---
+
+async def test_query_map_makes_a_derived_field_orderable(dict_store):
+    """order_by on a mapped derived name uses the first real field behind it"""
+    dict_store.set_derived_fields(
+        {"full_name": lambda item: f"{item['first']} {item['last']}"},
+        query_map={"full_name": ["last", "first"]},
+    )
+    await dict_store.create_item({"first": "Alice", "last": "Young"})
+    await dict_store.create_item({"first": "Bob", "last": "Adams"})
+
+    ordered = await dict_store.read_items(order_by=["full_name"])
+    assert [i["last"] for i in ordered] == ["Adams", "Young"]      # ordered by `last`
+
+
+async def test_search_q_expands_a_mapped_derived_field(dict_store):
+    """search_q ORs across every field behind the derived name"""
+    dict_store.set_derived_fields(
+        {"full_name": lambda item: f"{item['first']} {item['last']}"},
+        query_map={"full_name": ["first", "last"]},
+    )
+    await dict_store.create_item({"first": "Alice", "last": "Young"})
+    await dict_store.create_item({"first": "Bob", "last": "Adams"})
+
+    q = dict_store.search_q("adam", ["full_name"])
+    assert [i["first"] for i in await dict_store.read_items(q=q)] == ["Bob"]
+    q = dict_store.search_q("ali", ["full_name"])
+    assert [i["first"] for i in await dict_store.read_items(q=q)] == ["Alice"]
+
+
+async def test_search_q_is_empty_without_text_or_fields(dict_store):
+    assert dict_store.search_q("", ["name"]) is None
+    assert dict_store.search_q("x", []) is None
+
+
+async def test_base_store_search_q_raises_rather_than_filtering_nothing():
+    """A store that forgets to implement search_q must fail loudly — a None would make
+    the search box silently do nothing."""
+    from ng_rdm.store.base import Store
+
+    class BareStore(Store):
+        pass
+
+    with pytest.raises(NotImplementedError, match="BareStore"):
+        BareStore().search_q("ali", ["name"])
+
+
+async def test_and_q_composes_both_predicates(dict_store):
+    """and_q ANDs two predicates; a None side is 'no constraint'"""
+    await dict_store.create_item({"name": "Alice", "kind": "x"})
+    await dict_store.create_item({"name": "Alicia", "kind": "y"})
+
+    search = dict_store.search_q("ali", ["name"])
+    kind_x = (lambda item: item["kind"] == "x")
+
+    both = dict_store.and_q(kind_x, search)
+    assert [i["name"] for i in await dict_store.read_items(q=both)] == ["Alice"]
+    assert dict_store.and_q(None, search) is search
+    assert dict_store.and_q(kind_x, None) is kind_x
+
+
 # --- q predicate (in-memory form) ---
 
 async def test_read_items_callable_q(dict_store):

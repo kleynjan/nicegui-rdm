@@ -116,6 +116,16 @@ class TortoiseStore(Store, Generic[T]):
                     result[name] = None  # empty string → None for DB
         return result
 
+    def search_q(self, text: str, fields: list[str]) -> Q | None:
+        """OR of case-insensitive matches over `fields` (derived names expanded via query_map)."""
+        fields = self._expand_fields(fields)
+        if not text or not fields:
+            return None
+        return Q(*[Q(**{f"{f}__icontains": text}) for f in fields], join_type="OR")
+
+    def and_q(self, a: Q | None, b: Q | None) -> Q | None:
+        return a & b if a is not None and b is not None else super().and_q(a, b)
+
     def _build_query(self, filter_by: dict | None, q: Q | None) -> Q:
         """Build query from filter_by dict and optional Q object"""
         result = q or Q()

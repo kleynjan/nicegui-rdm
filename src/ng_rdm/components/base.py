@@ -15,6 +15,8 @@ from .protocol import RdmDataSource
 from ..store.notifier import StoreEvent
 from ..utils import logger
 
+_UNSET: Any = object()   # "argument not given", so requery(q=None) can clear a predicate
+
 
 @dataclass
 class RowAction:
@@ -102,6 +104,15 @@ class TableConfig:
     toolbar_position: Literal["top", "bottom"] = "bottom"   # add button + render_toolbar
     search_position: Literal["top", "bottom"] = "top"
     pager_position: Literal["top", "bottom"] = "bottom"
+    # Pager — needs limit= on the table. pager_label alone also switches counting on,
+    # for apps that bind their own chrome to the published state keys.
+    show_pager: bool = False
+    pager_label: Optional[Callable[[int, int, int], str]] = None   # (first, last, total) → str
+    # Search — wants auto_observe=False; q takes no part in topic routing
+    show_search: bool = False
+    search_fields: list[str] = field(default_factory=list)
+    search_placeholder: Optional[str] = None
+    search_debounce: int = 300                                     # ms
 
     def __post_init__(self):
         self.join_fields = list({col.name for col in self.columns if "__" in col.name})
@@ -355,7 +366,7 @@ class ObservableRdmTable(ObservableRdmComponent):
         transform: Callable[[list[dict]], list[dict]] | None = None,
         join_fields: list[str] | None = None,
         on_add: Callable[[], Awaitable[None] | None] | None = None,
-        render_toolbar: Callable[[], Awaitable[None] | None] | None = None,
+        render_toolbar: Callable[[], Any] | None = None,   # sync or async; awaited if awaitable
         auto_observe: bool = True,
         limit: int | None = None,
         order_by: list[str] | None = None,
@@ -370,8 +381,18 @@ class ObservableRdmTable(ObservableRdmComponent):
         self.render_toolbar = render_toolbar
         self.order_by = order_by
         self.row_key = "id"  # tie-break field for stable sort/paging; subclasses may override
+        self._search_q: Any | None = None
         self.state.setdefault("limit", limit)
         self.state.setdefault("offset", 0)
+        # Seed the published keys: a top-positioned pager binds before the first read,
+        # and an unseeded key would leave it blank with both buttons enabled.
+        self.state.setdefault("total", None)
+        self.state.setdefault("shown", 0)
+        self.state.setdefault("page_first", 0)
+        self.state.setdefault("page_last", 0)
+        self.state.setdefault("has_prev", False)
+        self.state.setdefault("has_next", False)
+        self.state.setdefault("page_label", "")
         if auto_observe:
             self.observe(topics=filter_by)
 
@@ -386,21 +407,130 @@ class ObservableRdmTable(ObservableRdmComponent):
         order_by: list[str] | None = None,
     ):
         all_joins = list(set(self.config.join_fields + self._extra_join_fields))
-        await super().load_data(
+        read: dict[str, Any] = dict(
             join_fields=join_fields or all_joins,
             filter_by=filter_by if filter_by is not None else self.filter_by,
-            q=q if q is not None else self.q,
+            q=self._effective_q(q),
             transform=transform if transform is not None else self.transform,
             limit=limit if limit is not None else self.state.get("limit"),
             offset=offset or self.state.get("offset", 0),
             order_by=order_by if order_by is not None else self.order_by,
         )
+        await super().load_data(**read)
+        await self._publish_page_state(read)
+
+    async def requery(self, *, q: Any = _UNSET, filter_by: Any = _UNSET, order_by: Any = _UNSET, offset: int = 0):
+        """Change the query and re-render in one step (assignments alone are order-sensitive).
+
+        Only the arguments given are changed; `offset` resets to the first page by default.
+
+        A new `filter_by` also moves the observer subscription with it, so an observed
+        table keeps reacting to its *new* scope — but only when the subscription was
+        tracking `filter_by` in the first place. A table given explicit topics via
+        `observe(topics=...)` keeps them; call `reobserve()` yourself to change those.
+        """
+        if q is not _UNSET:
+            self.q = q
+        if filter_by is not _UNSET:
+            tracking_filter = self._is_observing and self._observed_topics == self.filter_by
+            self.filter_by = filter_by
+            if tracking_filter:
+                self.reobserve(topics=filter_by)
+        if order_by is not _UNSET:
+            self.order_by = order_by
+        self.state["offset"] = offset
+        await self.build.refresh()  # type: ignore
+
+    # ── Paging / search state ──
+    # The toolbar is rendered once (see render()), so paging chrome cannot react by being
+    # re-rendered. Instead every read publishes its numbers into self.state — total, shown,
+    # page_first, page_last, has_prev, has_next, page_label — and the chrome binds to them.
+    # The raw keys are the point: an app can bind its own counter with its own wording.
+
+    def _effective_q(self, q: Any | None) -> Any | None:
+        """Compose the caller's predicate with the search box's, so both apply."""
+        base = q if q is not None else self.q
+        if self._search_q is None:
+            return base
+        return self._data_source_method("and_q")(base, self._search_q)
+
+    def _data_source_method(self, name: str) -> Callable[..., Any]:
+        """Fetch a predicate-building method, with a clear error for older data sources."""
+        method = getattr(self.data_source, name, None)
+        if method is None:
+            raise TypeError(
+                f"{type(self.data_source).__name__} has no {name}() — search needs a data source "
+                f"implementing the RdmDataSource predicate methods (search_q/and_q)."
+            )
+        return method
+
+    def _wants_counts(self) -> bool:
+        """A COUNT per read is only worth it if something displays the total."""
+        return self.config.show_pager or self.config.pager_label is not None
+
+    async def _publish_page_state(self, read: dict) -> None:
+        """Publish the window's numbers into state for bound (never re-rendered) chrome.
+
+        Counting is skipped when the answer is free — a first page that came back under its
+        own limit is the whole result set — and when nothing displays a total, so an
+        observed table does not add a COUNT per store event.
+        """
+        limit, offset = read["limit"], read["offset"]
+        shown = len(self.data)
+        if offset == 0 and (limit is None or shown < limit):
+            total = shown
+        elif self._wants_counts():
+            counted = await self.data_source.read_counts(filter_by=read["filter_by"], q=read["q"])
+            total = counted if isinstance(counted, int) else sum(counted.values())
+            if not shown and offset:  # window fell off the end (rows deleted) — step back
+                read["offset"] = offset = self.state["offset"] = ((total - 1) // limit) * limit if (total and limit) else 0
+                await super().load_data(**read)
+                shown = len(self.data)
+        else:
+            total = None
+
+        self.state.update(
+            total=total,
+            shown=shown,
+            page_first=offset + 1 if shown else 0,
+            page_last=offset + shown,
+            has_prev=offset > 0,
+            has_next=(offset + shown < total) if total is not None else (limit is not None and shown == limit),
+        )
+        label = self.config.pager_label or self._default_page_label
+        self.state["page_label"] = label(self.state["page_first"], self.state["page_last"], total or 0)
+
+    def _default_page_label(self, first: int, last: int, total: int) -> str:
+        return f"{first}–{last} {_('of')} {total}" if total else _("No data")
+
+    async def _page(self, direction: int) -> None:
+        """Step one page and refresh; the bound pager follows the published state."""
+        limit = self.state.get("limit")
+        if not limit:
+            return
+        self.state["offset"] = max(0, self.state.get("offset", 0) + direction * limit)
+        await self.build.refresh()  # type: ignore
+
+    async def _on_search(self, text: str | None) -> None:
+        """Rebuild the search predicate, return to page 1, refresh."""
+        text = (text or "").strip()
+        self._search_q = self._data_source_method("search_q")(text, self.config.search_fields) if text else None
+        self.state["offset"] = 0
+        await self.build.refresh()  # type: ignore
 
     # ── Header-click sorting ──
     # Sort state lives on the instance (self.order_by), not in self.state, so
     # components subscribed to the same store sort independently. The actual sort
     # is delegated to read_items(order_by=...) via load_data() — never to the
     # store's shared set_sort_key().
+
+    def _sort_field(self, col: Column) -> str:
+        """The field a column sorts on. Resolved here, not on Column: a derived name's
+        query_map lives on the store, which is not attached when Column is constructed."""
+        if col.sort_key:
+            return col.sort_key
+        query_map = getattr(self.data_source, "_query_map", {})
+        return query_map.get(col.name, [col.name])[0]
 
     def _active_sort(self) -> tuple[str | None, bool]:
         """Return (field, reverse) of the current primary sort, or (None, False)."""
@@ -411,7 +541,7 @@ class ObservableRdmTable(ObservableRdmComponent):
 
     async def _toggle_sort(self, col: Column) -> None:
         """Flip ascending↔descending on a column's field, reset paging, and refresh."""
-        field = col.sort_key or col.name
+        field = self._sort_field(col)
         active_field, active_reverse = self._active_sort()
         reverse = not active_reverse if field == active_field else col.sort_desc_first
         order = [f"-{field}" if reverse else field]
@@ -430,7 +560,7 @@ class ObservableRdmTable(ObservableRdmComponent):
         active_field, active_reverse = self._active_sort()
         for col in self.config.columns:
             if col.sortable:
-                is_active = (col.sort_key or col.name) == active_field
+                is_active = self._sort_field(col) == active_field
                 icon = ("caret-down-fill" if active_reverse else "caret-up-fill") if is_active else "arrow-down-up"
                 state = "rdm-sort-active" if is_active else "rdm-sort-inactive"
                 th = html.th().classes("rdm-sortable").mark(f"rdm-sort-{col.name}")
@@ -450,6 +580,27 @@ class ObservableRdmTable(ObservableRdmComponent):
             with html.td().props(f"colspan={colspan}"):
                 ui.label(self.config.empty_message or _("No data")).classes("rdm-text-muted")
 
+    def _render_search(self) -> None:
+        """Search input — rendered once, so it keeps focus and value across refreshes."""
+        ui.input(placeholder=self.config.search_placeholder or _("Search")) \
+            .props(f'debounce={self.config.search_debounce} clearable') \
+            .classes("rdm-search").mark("rdm-search") \
+            .on_value_change(lambda e: self._on_search(e.value))
+
+    def _render_pager(self) -> None:
+        """Pager — bound to the state published by each read; never re-rendered."""
+        from .widgets.button import IconButton
+        if not self.state.get("limit"):
+            logger.warning("ng_rdm: show_pager needs limit= on the table — the pager cannot page without one")
+        with html.div().classes("rdm-pager"):
+            IconButton("chevron-left", color="secondary", tooltip=_("Previous page"),
+                       on_click=lambda: self._page(-1)).classes("rdm-pager-btn") \
+                .bind_enabled_from(self.state, "has_prev")
+            ui.label().classes("rdm-pager-label").bind_text_from(self.state, "page_label")
+            IconButton("chevron-right", color="secondary", tooltip=_("Next page"),
+                       on_click=lambda: self._page(1)).classes("rdm-pager-btn") \
+                .bind_enabled_from(self.state, "has_next")
+
     async def _build_toolbar(self, at: Literal["top", "bottom"]):
         """Render whichever toolbar elements are assigned to the given slot.
 
@@ -457,17 +608,25 @@ class ObservableRdmTable(ObservableRdmComponent):
         focus and value, and data-dependent parts bind to self.state instead of being
         re-rendered. Both slots are visited; each renders only what is assigned to it.
         """
-        show_add = self.config.show_add_button and self.on_add is not None
-        if at != self.config.toolbar_position or not (show_add or self.render_toolbar):
+        own_slot = at == self.config.toolbar_position
+        show_add = own_slot and self.config.show_add_button and self.on_add is not None
+        show_custom = own_slot and self.render_toolbar is not None
+        show_search = self.config.show_search and at == self.config.search_position
+        show_pager = self.config.show_pager and at == self.config.pager_position
+        if not (show_add or show_custom or show_search or show_pager):
             return
         with html.div().classes("rdm-table-toolbar"):
+            if show_search:
+                self._render_search()
             if show_add:
                 from .widgets.button import Button
                 Button(self.config.add_button or _("Add new"), on_click=self.on_add)
-            if self.render_toolbar:
+            if self.render_toolbar and show_custom:
                 result = self.render_toolbar()
                 if result is not None and hasattr(result, '__await__'):
                     await result
+            if show_pager:
+                self._render_pager()
 
     async def render(self):
         """Render the toolbars once and the table itself. Public entry point.
