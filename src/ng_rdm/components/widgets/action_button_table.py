@@ -24,6 +24,7 @@ class ActionButtonTable(ObservableRdmTable):
         config: TableConfig with column definitions and custom_actions
         state: Shared state dict
         filter_by: Optional filter dict for data loading
+        q: Optional non-equality predicate (Tortoise Q; callable on DictStore) — for search
         on_add: Callback when Add button clicked
         on_edit: Callback when Edit button clicked, receives row dict
         on_delete: Callback when Delete button clicked, receives row dict
@@ -38,6 +39,7 @@ class ActionButtonTable(ObservableRdmTable):
         state: dict | None = None,
         *,
         filter_by: dict[str, Any] | None = None,
+        q: Any | None = None,
         on_add: Callable[[], Awaitable[None] | None] | None = None,
         on_edit: Callable[[dict], Awaitable[None] | None] | None = None,
         on_delete: Callable[[dict], Awaitable[None] | None] | None = None,
@@ -48,7 +50,7 @@ class ActionButtonTable(ObservableRdmTable):
     ):
         super().__init__(
             data_source=data_source, config=config, state=state,
-            filter_by=filter_by, on_add=on_add,
+            filter_by=filter_by, q=q, on_add=on_add,
             render_toolbar=render_toolbar, auto_observe=auto_observe,
             limit=limit, order_by=order_by,
         )

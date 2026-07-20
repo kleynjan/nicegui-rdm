@@ -5,14 +5,28 @@ DictStore is useful for testing and prototyping without database setup.
 """
 
 import copy
-from typing import Any
+from typing import Any, Callable, cast
 
 from ..models import FieldSpec
 from .base import Store
 
 
+def _as_predicate(q: Any | None) -> Callable[[dict], bool] | None:
+    """Validate `q` for the in-memory path: a callable predicate, or nothing."""
+    if q is None:
+        return None
+    if callable(q):
+        return cast(Callable[[dict], bool], q)
+    raise NotImplementedError("DictStore supports q only as a callable predicate: q=lambda item: ...")
+
+
 class DictStore(Store):
-    """In-memory dictionary-based store implementation"""
+    """In-memory dictionary-based store implementation.
+
+    Supports `q` as a plain predicate — `q=lambda item: 'ali' in item['name']` — so
+    component-level filtering can be exercised without a database. ORM `Q` objects and
+    `join_fields` remain unsupported.
+    """
 
     def __init__(self, field_specs: dict[str, FieldSpec] | None = None) -> None:
         super().__init__(field_specs)
@@ -33,13 +47,16 @@ class DictStore(Store):
 
     async def _read_items(self, filter_by: dict | None = None, q: Any | None = None, join_fields: list[str] = [],
                           limit: int | None = None, offset: int = 0, order_by: list[str] | None = None) -> list[dict]:
-        if q or join_fields:
-            raise NotImplementedError("ORM arguments q and join_fields not supported")
+        if join_fields:
+            raise NotImplementedError("ORM argument join_fields not supported")
+        q = _as_predicate(q)
 
         items = copy.deepcopy(self._items)
         if filter_by:
             items = [it for it in items
                      if all(key in it and it[key] == value for key, value in filter_by.items())]
+        if q:
+            items = [it for it in items if q(it)]
         if order_by:
             # apply keys right-to-left for a stable multi-key sort; None sorts first
             for key in reversed(order_by):
@@ -53,9 +70,7 @@ class DictStore(Store):
         return items
 
     async def _read_counts(self, filter_by: dict | None = None, q: Any | None = None, group_by: str | None = None) -> int | dict:
-        if q:
-            raise NotImplementedError("ORM argument q not supported")
-        items = await self._read_items(filter_by=filter_by)
+        items = await self._read_items(filter_by=filter_by, q=_as_predicate(q))
         if group_by is None:
             return len(items)
         counts: dict = {}

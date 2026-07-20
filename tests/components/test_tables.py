@@ -565,6 +565,31 @@ async def test_sort_key_overrides_field(user: User):
     assert _visible_order(user, {'Alpha', 'Zeta'}) == ['Zeta', 'Alpha']
 
 
+async def test_sort_desc_first_opens_descending(user: User):
+    """sort_desc_first flips the initial click to descending; toggling is unchanged."""
+    store = DictStore()
+
+    @ui.page('/')
+    async def page():
+        await _seed_names(store)
+        table = ListTable(
+            data_source=store,
+            config=TableConfig(columns=[
+                Column(name='name', label='Name', sortable=True, sort_desc_first=True),
+            ]),
+            auto_observe=False,
+        )
+        await table.build()
+
+    await user.open('/')
+    user.find(marker='rdm-sort-name').click()
+    await asyncio.sleep(0.1)
+    assert _visible_order(user, NAMES) == ['Carol', 'Bob', 'Alice']
+    user.find(marker='rdm-sort-name').click()
+    await asyncio.sleep(0.1)
+    assert _visible_order(user, NAMES) == ['Alice', 'Bob', 'Carol']
+
+
 async def test_sort_is_per_subscriber(user: User):
     """Two tables on one store sort independently (sort state is per-instance)."""
     store = DictStore()
@@ -581,3 +606,95 @@ async def test_sort_is_per_subscriber(user: User):
     await user.open('/')
     # First table ascending, second descending, concatenated in DOM order
     assert _visible_order(user, NAMES) == ['Alice', 'Bob', 'Carol', 'Carol', 'Bob', 'Alice']
+
+
+# ═══════════════════════════════════════════════
+# q predicate pass-through
+# ═══════════════════════════════════════════════
+
+async def test_q_filters_rows_at_construction(user: User):
+    """A q passed to the constructor reaches read_items — no subclass needed."""
+    store = DictStore()
+
+    @ui.page('/')
+    async def page():
+        await _seed_names(store)
+        table = ListTable(
+            data_source=store,
+            config=TableConfig(columns=[Column(name='name', label='Name')]),
+            q=lambda item: item['name'].startswith('A'),
+            auto_observe=False,
+        )
+        await table.build()
+
+    await user.open('/')
+    assert _visible_order(user, NAMES) == ['Alice']
+
+
+async def test_q_reassignment_swaps_result_set(user: User):
+    """Assigning table.q then refreshing is the supported way to drive a search box."""
+    store = DictStore()
+
+    @ui.page('/')
+    async def page():
+        await _seed_names(store)
+        table = ListTable(
+            data_source=store,
+            config=TableConfig(columns=[Column(name='name', label='Name')]),
+            auto_observe=False,
+        )
+        await table.build()
+
+        async def search():
+            table.q = lambda item: item['name'] == 'Bob'
+            await table.build.refresh()
+
+        ui.button('search', on_click=search)
+
+    await user.open('/')
+    assert _visible_order(user, NAMES) == ['Carol', 'Alice', 'Bob']  # unfiltered
+    user.find('search').click()
+    await asyncio.sleep(0.1)
+    assert _visible_order(user, NAMES) == ['Bob']
+
+
+async def test_q_composes_with_filter_by_and_window(user: User):
+    """q is ANDed with filter_by and applied before limit/order_by."""
+    store = DictStore()
+
+    @ui.page('/')
+    async def page():
+        for name, kind in [('Carol', 'x'), ('Alice', 'x'), ('Bob', 'y'), ('Alicia', 'x')]:
+            await store.create_item({'name': name, 'kind': kind})
+        table = ListTable(
+            data_source=store,
+            config=TableConfig(columns=[Column(name='name', label='Name')]),
+            filter_by={'kind': 'x'},
+            q=lambda item: 'ali' in item['name'].lower(),
+            order_by=['name'],
+            limit=1,
+            auto_observe=False,
+        )
+        await table.build()
+
+    await user.open('/')
+    # kind=x AND name~ali → Alice, Alicia; ordered by name, capped at 1
+    assert _visible_order(user, {'Alice', 'Alicia', 'Bob', 'Carol'}) == ['Alice']
+
+
+async def test_no_q_is_unchanged(user: User):
+    """Omitting q keeps the existing call shape (q=None) — nothing regresses."""
+    store = DictStore()
+
+    @ui.page('/')
+    async def page():
+        await _seed_names(store)
+        table = ListTable(
+            data_source=store,
+            config=TableConfig(columns=[Column(name='name', label='Name')]),
+            auto_observe=False,
+        )
+        await table.build()
+
+    await user.open('/')
+    assert _visible_order(user, NAMES) == ['Carol', 'Alice', 'Bob']

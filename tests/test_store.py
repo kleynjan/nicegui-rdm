@@ -248,6 +248,58 @@ async def test_derived_fields(dict_store):
     assert items[0]["full_name"] == "Alice Smith"
 
 
+async def test_derived_field_rejected_in_order_by(dict_store):
+    """Derived fields are computed after the read, so ordering by one is an error"""
+    dict_store.set_derived_fields({"full_name": lambda item: item.get("first", "")})
+    await dict_store.create_item({"first": "Alice"})
+
+    with pytest.raises(ValueError, match="full_name"):
+        await dict_store.read_items(order_by=["full_name"])
+    with pytest.raises(ValueError, match="full_name"):
+        await dict_store.read_items(order_by=["-full_name"])
+
+
+async def test_derived_field_rejected_in_filter_and_group(dict_store):
+    """Same guard applies to filter_by and to read_counts' group_by"""
+    dict_store.set_derived_fields({"full_name": lambda item: item.get("first", "")})
+    await dict_store.create_item({"first": "Alice"})
+
+    with pytest.raises(ValueError, match="full_name"):
+        await dict_store.read_items(filter_by={"full_name": "Alice"})
+    with pytest.raises(ValueError, match="full_name"):
+        await dict_store.read_counts(group_by="full_name")
+
+    # Real fields are unaffected
+    assert await dict_store.read_counts(group_by="first") == {"Alice": 1}
+
+
+# --- q predicate (in-memory form) ---
+
+async def test_read_items_callable_q(dict_store):
+    """DictStore accepts q as a plain predicate, ANDed with filter_by"""
+    for name, kind in [("Alice", "x"), ("Alicia", "y"), ("Bob", "x")]:
+        await dict_store.create_item({"name": name, "kind": kind})
+
+    hits = await dict_store.read_items(q=lambda it: "ali" in it["name"].lower())
+    assert [i["name"] for i in hits] == ["Alice", "Alicia"]
+
+    both = await dict_store.read_items(filter_by={"kind": "x"}, q=lambda it: "ali" in it["name"].lower())
+    assert [i["name"] for i in both] == ["Alice"]
+
+
+async def test_read_counts_callable_q(dict_store):
+    for name in ["Alice", "Alicia", "Bob"]:
+        await dict_store.create_item({"name": name})
+
+    assert await dict_store.read_counts(q=lambda it: "ali" in it["name"].lower()) == 2
+
+
+async def test_non_callable_q_rejected(dict_store):
+    """A Tortoise Q (or anything else non-callable) still raises on the in-memory path"""
+    with pytest.raises(NotImplementedError):
+        await dict_store.read_items(q={"name": "Alice"})
+
+
 # --- Bounded reads: limit / offset / order_by ---
 
 async def test_read_items_order_by(dict_store):

@@ -73,6 +73,7 @@ class Column:
     editable: bool = True                                    # if False, displayed as label in edit mode
     sortable: bool = False                                   # if True, header is clickable to sort by this column
     sort_key: Optional[str] = None                           # field passed to order_by when sorting (defaults to name)
+    sort_desc_first: bool = False                            # open descending on first click (dates, counts)
     on_click: Callable[[dict], Awaitable[None] | None] | None = None  # per-column click handler
     formatter: Callable[[Any], str] | None = None            # display formatter for table cells
     render: Callable[[dict], None] | None = None             # custom render function (receives row dict)
@@ -260,15 +261,17 @@ class ObservableRdmComponent(RdmComponent):
         self,
         join_fields: list[str] | None = None,
         filter_by: dict[str, Any] | None = None,
+        q: Any | None = None,
         transform: Callable[[list[dict]], list[dict]] | None = None,
         limit: int | None = None,
         offset: int = 0,
         order_by: list[str] | None = None,
     ):
-        """Load data from data source with optional filter, transform and bounded window."""
+        """Load data from data source with optional filter, predicate, transform and bounded window."""
         self.data = await self.data_source.read_items(
             join_fields=join_fields or [],
             filter_by=filter_by,
+            q=q,
             limit=limit,
             offset=offset,
             order_by=order_by,
@@ -324,13 +327,17 @@ class ObservableRdmTable(ObservableRdmComponent):
     """Base class for store-connected table components.
 
     Adds shared table concerns on top of ObservableRdmComponent:
-    - TableConfig, filter_by, transform, extra join fields
+    - TableConfig, filter_by, q, transform, extra join fields
     - load_data() with join field merging
     - Bounded window (limit/offset/order_by) held in state for query-view paging
     - Toolbar rendering (add button; filtering/pagination in future)
 
     For large entities, pass limit=/order_by= and auto_observe=False to make this a
     bounded "query-view"; the offset in state supports paging on the render_toolbar hook.
+
+    `q` carries non-equality filtering (a Tortoise Q; a callable predicate on DictStore) —
+    assign `table.q` then `await table.build.refresh()` to drive a search box. Unlike
+    filter_by it takes no part in topic routing, so observe() still subscribes on filter_by.
     """
 
     def __init__(
@@ -340,6 +347,7 @@ class ObservableRdmTable(ObservableRdmComponent):
         state: dict | None = None,
         *,
         filter_by: dict[str, Any] | None = None,
+        q: Any | None = None,
         transform: Callable[[list[dict]], list[dict]] | None = None,
         join_fields: list[str] | None = None,
         on_add: Callable[[], Awaitable[None] | None] | None = None,
@@ -351,6 +359,7 @@ class ObservableRdmTable(ObservableRdmComponent):
         super().__init__(data_source=data_source, state=state)
         self.config = config
         self.filter_by = filter_by
+        self.q = q
         self.transform = transform
         self._extra_join_fields = join_fields or []
         self.on_add = on_add
@@ -366,6 +375,7 @@ class ObservableRdmTable(ObservableRdmComponent):
         self,
         join_fields: list[str] | None = None,
         filter_by: dict[str, Any] | None = None,
+        q: Any | None = None,
         transform: Callable[[list[dict]], list[dict]] | None = None,
         limit: int | None = None,
         offset: int = 0,
@@ -375,6 +385,7 @@ class ObservableRdmTable(ObservableRdmComponent):
         await super().load_data(
             join_fields=join_fields or all_joins,
             filter_by=filter_by if filter_by is not None else self.filter_by,
+            q=q if q is not None else self.q,
             transform=transform if transform is not None else self.transform,
             limit=limit if limit is not None else self.state.get("limit"),
             offset=offset or self.state.get("offset", 0),
@@ -398,7 +409,7 @@ class ObservableRdmTable(ObservableRdmComponent):
         """Flip ascending↔descending on a column's field, reset paging, and refresh."""
         field = col.sort_key or col.name
         active_field, active_reverse = self._active_sort()
-        reverse = not active_reverse if field == active_field else False
+        reverse = not active_reverse if field == active_field else col.sort_desc_first
         order = [f"-{field}" if reverse else field]
         if self.row_key != field:
             order.append(self.row_key)  # stable tie-break for deterministic paging

@@ -161,6 +161,8 @@ The store is a **CRUD-by-id gateway**, not a cache — it re-reads on every call
 Key methods:
 - `read_items(filter_by=None, q=None, join_fields=[], limit=None, offset=0, order_by=None)` — bounded reads: `limit`/`offset` page the result and `order_by` sorts DB-side (bypassing the Python `set_sort_key` path). A fully-unbounded read past `unbounded_warn_threshold` (default 1000) rows logs a rate-limited warning.
 - `read_counts(filter_by=None, q=None, group_by=None) -> int | dict` — counts without fetching rows: an `int` total, or `dict[value, int]` when `group_by` is set. `MultitenantTortoiseStore` inherits tenant scoping for free (both route through `_build_query`).
+
+**Derived fields are not queryable.** `set_derived_fields()` computes values *after* the read (`_apply_derived_fields` runs on returned rows), so a derived name is invisible to the database. Passing one to `filter_by`, `order_by` or `group_by` raises a `ValueError` naming the field — query a real field instead, and use `Column.sort_key` to point a derived column's header at one.
 - `batch()` — Context manager for explicit notification batching
 - `add_observer(callback, topics=None)` — Register observer with optional topic filter
 - `remove_observer(callback)` — Unregister observer by callback identity
@@ -175,6 +177,10 @@ Because a reactive view's re-read cost ≈ its size, every reactive view should 
 
 ### DictStore (dict_store.py)
 In-memory dict-based Store implementation. Useful for testing and prototyping.
+
+`q` is supported as a **callable predicate** — `q=lambda item: 'ali' in item['name']` — ANDed with `filter_by` and applied before `order_by`/`limit`/`offset`. This lets search and other non-equality filtering be exercised without a database; Tortoise `Q` objects (and any other non-callable) still raise `NotImplementedError`, as do `join_fields`.
+
+`order_by` sorts `None` first ascending and last descending, matching MySQL. **Postgres does the opposite**, so a `DictStore`-backed test can pass while an ORM-backed screen looks wrong on a nullable column. There is no `nulls_last` option; order on a non-nullable field where it matters.
 
 ### StoreRegistry (base.py)
 Flat `name → Store` registry. Single-tenant apps use this. `store_registry` is the module-level singleton.
@@ -219,6 +225,10 @@ Infrastructure modules (`base.py`, `protocol.py`, `fields.py`, `i18n.py`, `ng_rd
 | **SelectionTable** | Table with checkbox column for multi-select |
 
 `ObservableRdmTable` (base of all tables) accepts `limit`/`order_by` and keeps the window (`limit`, `offset`) in its `state` dict, forwarding it to `load_data()` → `read_items()`.
+
+**`q` on tables.** All three widgets accept `q=` and expose it as `self.q`, handled exactly like `filter_by`: assign `table.q` then `await table.build.refresh()` to re-run the query — the supported way to drive a search box, and the reason no table needs subclassing for one. `q` is ANDed with `filter_by` by the store. It takes no part in topic routing, so `observe()` still subscribes on `filter_by` alone; a `q`-filtered live table is refreshed by any event matching its `filter_by` topics.
+
+**State ownership.** A `state` dict passed to a component is *owned* by that component — it may write to it freely. Give each component its own dict (or sub-dict of a page-level `ui_state`); never share one between two components.
 
 ### ReactiveCounts (reactive.py)
 A throttled, binding-friendly **count-view** for progress/summary headers over large or fast-changing data. Registers a (throttled) store observer and recomputes `read_counts()` into `self.values` — a plain dict, mutated in place — so NiceGUI's `bind_text_from` tracks it without any table rebuild or `@ui.refreshable`. Ungrouped counts land under `key` (default `"total"`); grouped counts use group values as keys (pre-seed via `keys=` so bindings always resolve). Captures `ui.context.client` at `start()` and unobserves on `client.on_disconnect`.
@@ -313,10 +323,16 @@ table = ActionButtonTable(
 - `formatter`, `render` (custom rendering callable)
 - `on_click` (per-column click handler)
 - `required`, `editable`, `placeholder`
-- `sortable`, `sort_key` — opt a column into header-click sorting (see below)
+- `sortable`, `sort_key`, `sort_desc_first` — opt a column into header-click sorting (see below)
 - Fields with `__` in the name auto-derive join_fields for FK data
 
-**Header-click sorting** — set `Column.sortable=True` to make a header clickable; each click toggles ascending↔descending on `sort_key or name`. The table drives its own `order_by` (a per-instance attribute) and delegates the sort to `read_items(order_by=...)` — so it is DB-side for `TortoiseStore`, correct under `limit`/`offset` paging (order is applied before the window; a row-key tie-break keeps pages stable), and independent per subscriber (tables sharing a store sort separately; the shared `Store.set_sort_key` is never used). Clicking a header resets `offset` to the first page. Only mark columns backed by a real queryable field.
+**Header-click sorting** — set `Column.sortable=True` to make a header clickable; each click toggles ascending↔descending on `sort_key or name`. The table drives its own `order_by` (a per-instance attribute) and delegates the sort to `read_items(order_by=...)` — so it is DB-side for `TortoiseStore`, correct under `limit`/`offset` paging (order is applied before the window; a row-key tie-break keeps pages stable), and independent per subscriber (tables sharing a store sort separately; the shared `Store.set_sort_key` is never used). Only mark columns backed by a real queryable field — a derived name raises (see Store).
+
+`sort_desc_first=True` opens the column descending on the *first* click, for dates and counts where newest/largest first is what the user wants; toggling is unchanged.
+
+**Sorting moves the window.** `_toggle_sort` resets `state["offset"] = 0` before refreshing, so the table returns to page one. Any paging chrome rendered *outside* the table must therefore read `table.state` (or bind to it) rather than mirror the offset in its own variable — otherwise the counter and prev/next go stale on a header click.
+
+**Selection survives a re-sort.** `SelectionTable` keys `state['selected_ids']` on `row_key`, not on row position, so re-sorting (or paging) leaves the selection intact.
 
 ### TableConfig
 `TableConfig` dataclass configures table display:

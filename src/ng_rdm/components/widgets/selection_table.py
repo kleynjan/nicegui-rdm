@@ -25,6 +25,7 @@ class SelectionTable(ObservableRdmTable):
         show_checkboxes: Whether to show checkboxes in the first column
         multi_select: Whether to allow multiple selection
         filter_by: Optional filter dict for data loading
+        q: Optional non-equality predicate (Tortoise Q; callable on DictStore) — for search
         transform: Optional transform function for loaded data
         row_key: Field to use as row identifier (default "id")
         join_fields: Additional join fields for data loading
@@ -42,6 +43,7 @@ class SelectionTable(ObservableRdmTable):
         multi_select: bool | None = None,
         *,
         filter_by: dict[str, Any] | None = None,
+        q: Any | None = None,
         transform: Callable[[list[dict]], list[dict]] | None = None,
         row_key: str = "id",
         join_fields: list[str] | None = None,
@@ -53,7 +55,7 @@ class SelectionTable(ObservableRdmTable):
     ):
         super().__init__(
             data_source=data_source, config=config, state=state,
-            filter_by=filter_by, transform=transform,
+            filter_by=filter_by, q=q, transform=transform,
             join_fields=join_fields, render_toolbar=render_toolbar, auto_observe=auto_observe,
             limit=limit, order_by=order_by,
         )

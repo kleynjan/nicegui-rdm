@@ -57,6 +57,7 @@ Column(
     editable: bool = True,            # if False, displayed as label in edit mode
     sortable: bool = False,           # if True, header is clickable to sort by this column
     sort_key: str | None = None,      # field passed to order_by when sorting (defaults to name)
+    sort_desc_first: bool = False,    # open descending on first click (dates, counts)
     on_click: Callable[[dict], ...],  # per-column click handler (receives row dict)
     formatter: Callable[[Any], str],  # display formatter for table cells
     render: Callable[[dict], None],   # custom render function (receives row dict, replaces default cell)
@@ -66,7 +67,7 @@ Column(
 - Fields with `__` in the name (e.g. `"category__name"`) auto-derive join fields for FK data.
 - `ui_type` of `ui.badge`, `ui.label`, `ui.html`, `ui.markdown` are display-only (skipped in forms).
 - For `ui.badge`: use `parms={"color_map": {"value": "color"}}` for value-based coloring (ListTable only).
-- `sortable=True` makes the header clickable (toggles ascending↔descending). Sorting is delegated to `read_items(order_by=...)` — DB-side and pagination-correct — with per-instance sort state, so tables sharing a store sort independently. The sort field is `sort_key or name`; only mark columns backed by a real queryable field.
+- `sortable=True` makes the header clickable (toggles ascending↔descending). Sorting is delegated to `read_items(order_by=...)` — DB-side and pagination-correct — with per-instance sort state, so tables sharing a store sort independently. The sort field is `sort_key or name`; only mark columns backed by a real queryable field. A header click also resets `state["offset"]` to the first page. `sort_desc_first=True` opens descending on the first click — the useful default for dates and counts.
 
 ### `TableConfig`
 
@@ -127,7 +128,8 @@ All table components extend `ObservableRdmTable` and share these features.
 - Auto-observe data source (configurable via `auto_observe`)
 - `build()` renders the table (call with `await`)
 - `build_with_toolbars()` wraps `build()` with toolbar at configured position
-- `filter_by` dict for scoping data queries
+- `filter_by` dict for scoping data queries (equality, AND)
+- `q` for everything equality can't express — a Tortoise `Q`, or a callable predicate on `DictStore`. ANDed with `filter_by` by the store. Assign `table.q` then `await table.build.refresh()` to drive a search box; no subclass needed. Unlike `filter_by` it takes no part in topic routing.
 - `transform` callback for post-load data transformation
 - `render_toolbar` callback for custom toolbar content
 
@@ -145,8 +147,11 @@ table = ActionButtonTable(
     on_add=None,                           # Callable — Add button clicked
     on_edit=None,                          # Callable[[dict], ...] — Edit clicked
     on_delete=None,                        # Callable[[dict], ...] — Delete clicked
+    q=None,                                # Q / callable — non-equality filter (search)
     render_toolbar=None,                   # Callable — custom toolbar content
     auto_observe=True,
+    limit=None,                            # int — cap rows (bounded query-view)
+    order_by=None,                         # list[str] — DB-side ordering
 )
 await table.build()
 ```
@@ -181,6 +186,9 @@ table = ListTable(
     join_fields=None,                      # list[str] — additional join fields
     render_toolbar=None,
     auto_observe=True,
+    limit=None,                            # int — cap rows (bounded query-view)
+    order_by=None,                         # list[str] — DB-side ordering
+    q=None,                                # Q / callable — non-equality filter (search)
 )
 await table.build()
 ```
@@ -200,12 +208,15 @@ table = SelectionTable(
     multi_select=True,                     # allow multiple selections
     *,
     filter_by=None,
+    q=None,                                # Q / callable — non-equality filter (search)
     transform=None,
     row_key="id",
     join_fields=None,
     on_selection_change=None,              # Callable[[set[int]], None]
     render_toolbar=None,
     auto_observe=True,
+    limit=None,                            # int — cap rows (bounded query-view)
+    order_by=None,                         # list[str] — DB-side ordering
 )
 await table.build()
 ```

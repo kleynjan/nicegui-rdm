@@ -57,6 +57,31 @@ class Store:
         self._derived_fields = derived_fields
         self._derived_field_dependencies = dependencies or []
 
+    def _reject_derived(self, *fields: Any) -> None:
+        """Raise if a derived field name is used where the query layer needs a real one.
+
+        Derived fields are computed after the read, so they are invisible to the DB —
+        passing one to filter_by/order_by/group_by raises a raw Tortoise FieldError on
+        the ORM path and silently sorts by nothing on the in-memory one.
+        Accepts dicts (keys), lists (entries, with any leading '-') and plain names.
+        """
+        if not self._derived_fields:
+            return
+        names: set[str] = set()
+        for f in fields:
+            if isinstance(f, dict):
+                names |= set(f)
+            elif isinstance(f, (list, tuple)):
+                names |= {str(x).lstrip("-") for x in f}
+            elif f is not None:
+                names.add(str(f))
+        clash = names & set(self._derived_fields)
+        if clash:
+            raise ValueError(
+                f"{', '.join(sorted(clash))}: derived field(s) are computed after the read and "
+                f"cannot be queried or ordered. Name a real field instead (see Column.sort_key)."
+            )
+
     def _apply_derived_fields(self, items: list[dict]) -> list[dict]:
         """Apply derived field computations to items"""
         if not self._derived_fields:
@@ -185,6 +210,7 @@ class Store:
             offset: number of rows to skip (for paging; use with order_by for stable pages)
             order_by: DB-side ordering (e.g. ["name", "-created_at"]); bypasses the Python sort key
         """
+        self._reject_derived(filter_by, order_by)
         # Merge requested join_fields with derived field dependencies
         all_join_fields = list(set(join_fields + self._derived_field_dependencies))
 
@@ -200,6 +226,7 @@ class Store:
         Returns an int total when group_by is None, else a dict {group_value: count}.
         Ideal for reactive progress/summary views — see ReactiveCounts.
         """
+        self._reject_derived(filter_by, group_by)
         return await self._read_counts(filter_by, q, group_by)
 
     def _warn_if_unbounded(self, limit: int | None, filter_by: dict | None, q: Any | None, count: int) -> None:

@@ -28,6 +28,7 @@ class ListTable(ObservableRdmTable):
         join_fields: Additional join fields for data loading
         limit: Optional hard cap on rows (for bounded query-views over large entities)
         order_by: Optional DB-side ordering, e.g. ["name", "-created_at"]
+        q: Optional non-equality predicate (Tortoise Q; callable on DictStore) — for search
     """
 
     def __init__(
@@ -44,10 +45,11 @@ class ListTable(ObservableRdmTable):
         auto_observe: bool = True,
         limit: int | None = None,
         order_by: list[str] | None = None,
+        q: Any | None = None,
     ):
         super().__init__(
             data_source=data_source, config=config,
-            filter_by=filter_by, transform=transform,
+            filter_by=filter_by, q=q, transform=transform,
             join_fields=join_fields, on_add=on_add,
             render_toolbar=render_toolbar, auto_observe=auto_observe,
             limit=limit, order_by=order_by,

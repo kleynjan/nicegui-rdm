@@ -94,9 +94,13 @@ store.set_sort_key(key_func, reverse=False)
 store.set_derived_fields(derived_fields: dict[str, Callable], dependencies=None)
 ```
 
+Derived fields are computed *after* the read, so they cannot be queried: passing a derived name to `filter_by`, `order_by` or `group_by` raises a `ValueError`. Point `Column.sort_key` at a real field instead.
+
 ### `DictStore` (`store/dict_store.py`)
 
 In-memory dict-based store. Same CRUD API as `TortoiseStore`. Useful for prototyping, non-persistent data, and testing.
+
+`q` is accepted as a callable predicate — `q=lambda item: 'ali' in item['name']` — so search behaviour can be tested without a database. Tortoise `Q` objects and `join_fields` raise `NotImplementedError`.
 
 ```python
 store = DictStore()
@@ -304,6 +308,7 @@ Column(
     editable: bool = True,            # if False, displayed as label in edit mode
     sortable: bool = False,           # if True, header is clickable to sort by this column
     sort_key: str | None = None,      # field passed to order_by when sorting (defaults to name)
+    sort_desc_first: bool = False,    # open descending on first click (dates, counts)
     on_click: Callable[[dict], ...],  # per-column click handler (receives row dict)
     formatter: Callable[[Any], str],  # display formatter for table cells
     render: Callable[[dict], None],   # custom render (receives row dict, replaces cell)
@@ -313,7 +318,7 @@ Column(
 - Fields with `__` in the name (e.g. `"category__name"`) auto-derive join fields for FK data.
 - `ui_type` of `ui.badge`, `ui.label`, `ui.html`, `ui.markdown` are display-only (skipped in forms).
 - For `ui.badge`: use `parms={"color_map": {"value": "color"}}` for value-based coloring (ListTable only).
-- `sortable=True` makes the column header clickable (ListTable/ActionButtonTable/SelectionTable): each click toggles ascending↔descending. Sorting is delegated to `read_items(order_by=...)`, so it is DB-side for `TortoiseStore` and correct under `limit`/`offset` paging. The sort field is `sort_key or name` — only mark columns backed by a real queryable field (a computed `render`/`formatter` column would need `sort_key` pointing at one). The active sort lives on the component instance, so tables sharing a store sort independently.
+- `sortable=True` makes the column header clickable (ListTable/ActionButtonTable/SelectionTable): each click toggles ascending↔descending. Sorting is delegated to `read_items(order_by=...)`, so it is DB-side for `TortoiseStore` and correct under `limit`/`offset` paging. The sort field is `sort_key or name` — only mark columns backed by a real queryable field (a computed `render`/`formatter` column would need `sort_key` pointing at one). The active sort lives on the component instance, so tables sharing a store sort independently. A header click also resets `state["offset"]` to the first page. `sort_desc_first=True` makes the first click descending instead of ascending — the useful default for date and count columns.
 
 ### `TableConfig`
 
@@ -365,7 +370,8 @@ All table components extend `ObservableRdmTable` and share:
 - Auto-observe data source (configurable via `auto_observe`)
 - `build()` renders the table (call with `await`)
 - `build_with_toolbars()` wraps `build()` with toolbar at configured position
-- `filter_by` dict for scoping data queries
+- `filter_by` dict for scoping data queries (equality, AND)
+- `q` for everything equality can't express — a Tortoise `Q`, or a callable predicate on `DictStore`. ANDed with `filter_by` by the store. Assign `table.q` then `await table.build.refresh()` to drive a search box; no subclass needed. Unlike `filter_by` it takes no part in topic routing.
 - `transform` callback for post-load data transformation
 - `render_toolbar` callback for custom toolbar content
 
@@ -385,8 +391,11 @@ table = ActionButtonTable(
     on_add=None,                           # Callable — Add button clicked
     on_edit=None,                          # Callable[[dict], ...] — Edit clicked
     on_delete=None,                        # Callable[[dict], ...] — Delete clicked
+    q=None,                                # Q / callable — non-equality filter (search)
     render_toolbar=None,                   # Callable — custom toolbar content
     auto_observe=True,
+    limit=None,                            # int — cap rows (bounded query-view)
+    order_by=None,                         # list[str] — DB-side ordering
 )
 await table.build()
 ```
@@ -420,6 +429,9 @@ table = ListTable(
     join_fields=None,
     render_toolbar=None,
     auto_observe=True,
+    limit=None,                            # int — cap rows (bounded query-view)
+    order_by=None,                         # list[str] — DB-side ordering
+    q=None,                                # Q / callable — non-equality filter (search)
 )
 await table.build()
 ```
@@ -439,12 +451,15 @@ table = SelectionTable(
     multi_select=True,
     *,
     filter_by=None,
+    q=None,                                # Q / callable — non-equality filter (search)
     transform=None,
     row_key="id",
     join_fields=None,
     on_selection_change=None,              # Callable[[set[int]], None]
     render_toolbar=None,
     auto_observe=True,
+    limit=None,                            # int — cap rows (bounded query-view)
+    order_by=None,                         # list[str] — DB-side ordering
 )
 await table.build()
 ```

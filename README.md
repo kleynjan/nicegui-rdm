@@ -350,6 +350,11 @@ For testing:
 - pytest-asyncio>=0.23
 - pytest-cov>=5.0
 - httpx
+- pyright
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
