@@ -26,6 +26,9 @@ class ReactiveCounts:
     Ungrouped counts are stored under ``key`` (default ``"total"``); grouped counts use
     the group values as keys. For grouped views, pre-seed expected groups via ``keys``
     so bindings always resolve (a group with zero rows is absent from the DB result).
+    A grouped view can also publish the sum of its groups under ``key`` by passing
+    ``with_total=True`` — an "All" tile beside the per-group ones, without a second
+    instance and a second query.
 
     Usage::
 
@@ -43,12 +46,14 @@ class ReactiveCounts:
         group_by: str | None = None,
         key: str = "total",
         keys: list[Any] | None = None,
+        with_total: bool = False,
     ) -> None:
         self.data_source = data_source
         self.filter_by = filter_by
         self.q = q
         self.group_by = group_by
         self.key = key
+        self.with_total = with_total and group_by is not None
         # Stable dict object bindings can track; pre-seed keys to 0 so labels resolve.
         self.values: dict[Any, int] = {}
         if group_by is None:
@@ -56,6 +61,8 @@ class ReactiveCounts:
         else:
             for k in keys or []:
                 self.values[k] = 0
+            if self.with_total:
+                self.values[key] = 0
         self._client: Any = None
         self._observing = False
 
@@ -89,3 +96,5 @@ class ReactiveCounts:
             for k in self.values:
                 self.values[k] = 0
             self.values.update(result)
+            if self.with_total:  # every group is in the result, so the sum is the total
+                self.values[self.key] = sum(result.values())

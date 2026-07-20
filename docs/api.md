@@ -370,7 +370,22 @@ TableConfig(..., show_search=True, show_pager=True, pager_position="top")
 
 **Search**: the predicate is built by the data source (`search_q`), not the table, and composed with the table's own `q` via `and_q` so both apply. A derived column becomes searchable by giving it a `query_map` in `set_derived_fields()`.
 
-**Pager**: supplying `pager_label` alone (without `show_pager`) switches counting on without rendering the built-in buttons — for apps binding their own chrome to `table.state`.
+**Pager**: supplying `pager_label` alone (without `show_pager`) switches counting on without rendering the built-in buttons — for apps binding their own chrome to `table.state`. `pager_label` is asked only about non-empty results: at `total == 0` the label falls back to the built-in empty text (`empty_message`, else "No data"), so a custom label never has to remember that branch.
+
+**The search-first archetype.** For an entity too large to browse whole (tens of thousands of rows), the working combination is search + DB paging + `auto_observe=False`:
+
+```python
+ListTable(
+    data_source=store,
+    config=TableConfig(columns=…, show_search=True, search_fields=["name", "username"],
+                       show_pager=True, empty_message="No results."),
+    order_by=["name"], limit=25, auto_observe=False,
+)
+```
+
+`auto_observe=False` is the non-obvious half: `q` takes no part in topic routing, so an *observed* searched table re-reads its query on every store event, search term and all. Turn it back on deliberately when the table must follow live changes and its scope is small and bounded — a filtered drilldown over one parent's rows — and use `requery(filter_by=…)` to move the subscription with the scope. After an external mutation, refresh a non-observing table with `requery()`.
+
+**Test handles**: search is `mark("rdm-search")`, each sortable header `mark(f"rdm-sort-{col.name}")`, and the pager `mark("rdm-pager-prev" | "rdm-pager-label" | "rdm-pager-next")` — so `user.find(marker=…)` can drive all of the built-in chrome.
 
 ### `FormConfig`
 
@@ -804,6 +819,7 @@ ReactiveCounts(
     group_by=None,        # None → single total; else dict[value, count]
     key="total",          # dict key for the ungrouped total
     keys=None,            # pre-seed grouped keys to 0 so bindings always resolve
+    with_total=False,     # grouped: also publish the sum of all groups under `key`
 )
 
 counts = ReactiveCounts(messages, group_by="status", keys=["delivered", "pending"])
@@ -812,3 +828,5 @@ ui.label().bind_text_from(counts.values, "delivered", backward=lambda v: str(v o
 ```
 
 `start()` captures `ui.context.client` and unobserves automatically on `client.on_disconnect`; call `stop()` to unobserve early.
+
+`with_total=True` covers the "All" tile beside a set of per-group ones: the sum comes out of the same grouped result, so it costs no second instance and no second `COUNT`. (Only meaningful with `group_by`; the sum lands under `key`, so rename it if a group value collides with `"total"`.)

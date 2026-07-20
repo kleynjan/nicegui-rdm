@@ -9,6 +9,12 @@ layer: the stores already do the heavy lifting (`q`, `limit`/`offset`, `order_by
 
 Ordered by value. §1–§3 are the ones that would let the app delete code.
 
+**Status: §1–§6 shipped in 0.2.0** (`q` through the components layer, built-in
+search/pager, toolbar rendered once outside the refreshable, async `render_toolbar`,
+`sort_desc_first`, `query_map`). `_scale.py` went from ~280 lines to ~180 of
+configuration. Round two — what the 0.2.0 integration left over — is in
+[§8](#8-round-two-what-remained-after-integrating-020).
+
 ---
 
 ## 1. Pass `q` through the component layer
@@ -244,3 +250,68 @@ same list — deriving it by default may be enough.
 - **`SelectionTable` + sorting:** worth documenting that selection survives a re-sort
   because `state['selected_ids']` is keyed on `row_key`, not on position. It does; it
   just isn't stated, and it is the first thing you'd worry about.
+
+---
+
+## 8. Round two: what remained after integrating 0.2.0
+
+Filed after porting the alert app onto 0.2.0. The three small ones (empty pager label,
+pager markers, `ReactiveCounts` total) were fixed on the spot — recorded here for the
+reasoning, not as open requests. The two that stay open are the halves of one pattern.
+
+### 8a. Clickable counts strip — *open, deliberately deferred*
+
+`ReactiveCounts` is a data primitive: a throttled `values` dict you bind to. Everything
+that makes it a *UI* lives in the app (`routes/m/_scale.py`, `CountsStrip`, ~55 lines):
+tile layout, a leading "All" total tile, `.selected` class toggling for the active tile,
+and click → callback plumbing. "A counts strip over a status facet" is a generic pattern
+and nothing in the components layer expresses it.
+
+**Why not yet.** A `CountsStrip` widget would freeze five design decisions off a single
+consumer — tile markup, label lookup, selected-state styling, the optional leading total,
+sync-or-async `on_select` — and it is only half a pattern without 8b, so shipping it also
+commits to the counts→table binding. Alert has three call sites (people, authorizations,
+messages); if they stay identical, promote it. If they diverge, it was app design.
+
+**Interim.** Ship the pattern as an example (`examples/counts_drilldown.py`, CSS in the
+example rather than `ng_rdm.css`), so the archetype is discoverable without an API to
+support. The one genuine primitive gap it exposed — the "All" tile needing a *second*
+`ReactiveCounts` and a second `COUNT` per event — is fixed: `with_total=True` publishes
+the sum of the grouped result under `key`.
+
+### 8b. A filter control bound to a table's scope — *won't fix*
+
+`DrilldownTable.select()` composes a persistent `base_filter` with the clicked facet
+value and calls `requery(filter_by=…)`. Six lines now. An abstraction here would have to
+own the precedence between a base scope and a facet value, which is exactly the app's
+business logic. `requery(filter_by=…)` — which moves the observer subscription with the
+scope — is the whole API; it is now documented as the scope-change idiom.
+
+### 8c. `SearchFirstList` as a config preset — *documented, not built*
+
+Its body is gone under 0.2.0; ~35 lines remain purely to bundle
+`show_search`/`show_pager`/`limit`/`auto_observe=False` plus noun'd pager wording. The
+combination *is* the search-first archetype, and every app has to rediscover that search
+wants `auto_observe=False`.
+
+But it can't be a default or a warning: alert's own `DrilldownTable` overrides it on
+purpose (a live, bounded delivery view). So the gap is knowledge, not code — the pairing
+and its counter-case are now written up under `TableConfig` in `docs/api.md`. The
+remaining app-side lines are i18n'd wording and app defaults, which is app config.
+
+### 8d. `pager_label` had to re-implement the empty case — *fixed*
+
+`_default_page_label` returned `_("No data")` at `total == 0`, but a custom `pager_label`
+just received `total=0` and had to remember the branch, or silently render
+"0–0 van 0 personen". The empty case is the library's to answer: `pager_label` is now
+asked only about non-empty results, and the built-in empty text prefers
+`TableConfig.empty_message`.
+
+### 8e. Pager buttons had no marker — *fixed*
+
+Search had `mark("rdm-search")` and sort headers `mark(f"rdm-sort-{col.name}")`, but the
+pager buttons carried only a CSS class. With no stable `user.find()` handle, alert
+dropped its click-through paging tests and asserted the count label instead — the one
+thing that integration added which its suite did not exercise. Now
+`rdm-pager-prev` / `rdm-pager-label` / `rdm-pager-next`, with a click-through test in
+`tests/components/test_tables.py`.

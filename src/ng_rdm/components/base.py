@@ -497,11 +497,13 @@ class ObservableRdmTable(ObservableRdmComponent):
             has_prev=offset > 0,
             has_next=(offset + shown < total) if total is not None else (limit is not None and shown == limit),
         )
-        label = self.config.pager_label or self._default_page_label
+        # The empty case is the library's to answer: a custom pager_label that forgot the
+        # total == 0 branch would otherwise render "0–0 of 0 things".
+        label = self.config.pager_label if (self.config.pager_label and total) else self._default_page_label
         self.state["page_label"] = label(self.state["page_first"], self.state["page_last"], total or 0)
 
     def _default_page_label(self, first: int, last: int, total: int) -> str:
-        return f"{first}–{last} {_('of')} {total}" if total else _("No data")
+        return f"{first}–{last} {_('of')} {total}" if total else (self.config.empty_message or _("No data"))
 
     async def _page(self, direction: int) -> None:
         """Step one page and refresh; the bound pager follows the published state."""
@@ -594,11 +596,12 @@ class ObservableRdmTable(ObservableRdmComponent):
             logger.warning("ng_rdm: show_pager needs limit= on the table — the pager cannot page without one")
         with html.div().classes("rdm-pager"):
             IconButton("chevron-left", color="secondary", tooltip=_("Previous page"),
-                       on_click=lambda: self._page(-1)).classes("rdm-pager-btn") \
+                       on_click=lambda: self._page(-1)).classes("rdm-pager-btn").mark("rdm-pager-prev") \
                 .bind_enabled_from(self.state, "has_prev")
-            ui.label().classes("rdm-pager-label").bind_text_from(self.state, "page_label")
+            ui.label().classes("rdm-pager-label").mark("rdm-pager-label") \
+                .bind_text_from(self.state, "page_label")
             IconButton("chevron-right", color="secondary", tooltip=_("Next page"),
-                       on_click=lambda: self._page(1)).classes("rdm-pager-btn") \
+                       on_click=lambda: self._page(1)).classes("rdm-pager-btn").mark("rdm-pager-next") \
                 .bind_enabled_from(self.state, "has_next")
 
     async def _build_toolbar(self, at: Literal["top", "bottom"]):

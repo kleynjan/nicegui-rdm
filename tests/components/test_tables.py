@@ -834,6 +834,70 @@ async def test_pager_pages_and_publishes_state(user: User):
     assert table.state['page_first'] == 1
 
 
+async def test_pager_buttons_page_on_click(user: User):
+    """The pager buttons carry stable markers, so paging is clickable from a test."""
+    store = DictStore()
+    tables = []
+
+    @ui.page('/')
+    async def page():
+        await _seed_names(store)
+        table = ListTable(
+            data_source=store,
+            config=TableConfig(columns=[Column(name='name', label='Name')], show_pager=True),
+            order_by=['name'],
+            limit=2,
+            auto_observe=False,
+        )
+        tables.append(table)
+        await table.render()
+
+    await user.open('/')
+    assert _visible_order(user, NAMES) == ['Alice', 'Bob']
+
+    user.find(marker='rdm-pager-next').click()
+    await asyncio.sleep(0.1)
+    assert _visible_order(user, NAMES) == ['Carol']
+    assert tables[0].state['page_first'] == 3
+    await user.should_see('3–3 of 3')
+
+    user.find(marker='rdm-pager-prev').click()
+    await asyncio.sleep(0.1)
+    assert _visible_order(user, NAMES) == ['Alice', 'Bob']
+    assert tables[0].state['page_first'] == 1
+
+
+async def test_custom_pager_label_is_not_asked_about_the_empty_case(user: User):
+    """total == 0 falls back to the built-in empty label, which prefers empty_message —
+    a custom pager_label never has to remember the branch."""
+    store = DictStore()
+    tables = []
+
+    @ui.page('/')
+    async def page():
+        table = ListTable(
+            data_source=store,
+            config=TableConfig(
+                columns=[Column(name='name', label='Name')],
+                empty_message='No persons found.',
+                show_pager=True,
+                pager_label=lambda f, l, t: f'{f}–{l} of {t} persons',
+            ),
+            limit=2,
+            auto_observe=False,
+        )
+        tables.append(table)
+        await table.render()
+
+    await user.open('/')
+    table = tables[0]
+    assert table.state['page_label'] == 'No persons found.'
+
+    await store.create_item({'name': 'Alice'})
+    await table.build.refresh()
+    assert table.state['page_label'] == '1–1 of 1 persons'  # non-empty still uses the custom label
+
+
 async def test_sort_click_returns_to_first_page(user: User):
     """A header click resets offset — the bound pager follows for free."""
     store = DictStore()

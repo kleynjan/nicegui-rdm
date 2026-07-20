@@ -10,6 +10,26 @@ summaries only.
 
 ## [Unreleased]
 
+Follow-ups from integrating 0.2.0 into the SMS-Alert app — three small gaps in the new
+toolbar chrome, plus a primitive the counts+drilldown pattern kept working around.
+
+### Added
+
+- **Pager markers** — the pager buttons and label now carry `rdm-pager-prev`,
+  `rdm-pager-next` and `rdm-pager-label` markers, matching `rdm-search` and
+  `rdm-sort-{column}`. Without them the pager was the one piece of built-in chrome
+  `user.find()` could not drive, so apps had to drop click-through paging tests.
+- **`ReactiveCounts(with_total=True)`** — a grouped count-view also publishes the sum of
+  its groups under `key` (default `"total"`). An "All" tile beside the per-group tiles no
+  longer needs a second `ReactiveCounts` instance and a second `COUNT` per event.
+
+### Changed
+
+- **`pager_label` is no longer asked about the empty case.** At `total == 0` the label
+  falls back to the built-in empty text, and that default now prefers
+  `TableConfig.empty_message` over the generic "No data". A custom label that forgot the
+  `total == 0` branch used to silently render "0–0 of 0 persons"; it now can't.
+
 ## [0.2.0] — unreleased
 
 Structural follow-up to 0.1.67: the table toolbar moves **out** of the refreshable, so it

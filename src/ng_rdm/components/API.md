@@ -102,7 +102,11 @@ TableConfig(..., show_search=True, show_pager=True, pager_position="top")
 
 **Search**: the predicate is built by the data source (`search_q`), not the table, and composed with the table's own `q` via `and_q` so both apply. A derived column becomes searchable by giving it a `query_map` in `set_derived_fields()`.
 
-**Pager**: supplying `pager_label` alone (without `show_pager`) switches counting on without rendering the built-in buttons — for apps binding their own chrome to `table.state`.
+**Pager**: supplying `pager_label` alone (without `show_pager`) switches counting on without rendering the built-in buttons — for apps binding their own chrome to `table.state`. `pager_label` is asked only about non-empty results: at `total == 0` the label falls back to the built-in empty text (`empty_message`, else "No data").
+
+**The search-first archetype**: search + DB paging + `auto_observe=False` (`show_search=True`, `search_fields=[…]`, `show_pager=True`, `limit=25`). `auto_observe=False` is the non-obvious half — `q` takes no part in topic routing, so an observed searched table re-reads on every store event. Turn it back on deliberately for a live, bounded drilldown, and use `requery(filter_by=…)` to move the subscription with the scope.
+
+**Test handles**: `mark("rdm-search")`, `mark(f"rdm-sort-{col.name}")`, `mark("rdm-pager-prev" | "rdm-pager-label" | "rdm-pager-next")`.
 
 ### `FormConfig`
 
