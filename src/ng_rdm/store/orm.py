@@ -2,10 +2,12 @@
 ORM-specific store implementation using Tortoise ORM.
 """
 
+from contextlib import contextmanager
 from typing import Generic, Type, TypeVar
 
 from tortoise import Tortoise
 from tortoise.contrib.fastapi import register_tortoise
+from tortoise.exceptions import FieldError
 from tortoise.expressions import Q
 from tortoise.functions import Count
 
@@ -131,28 +133,42 @@ class TortoiseStore(Store, Generic[T]):
         db_item = await self.model.create(**item)
         return self._hydrate(db_item.values())
 
+    @contextmanager
+    def _field_error_hint(self):
+        """Turn a Tortoise FieldError into a ValueError naming the store's derived fields.
+
+        A derived name passed inside q= is invisible to _reject_derived; it only fails
+        here. Stores without derived fields keep the raw FieldError (likely a typo).
+        """
+        try:
+            yield
+        except FieldError as e:
+            if not self._derived_fields:
+                raise
+            raise ValueError(self._derived_hint(e)) from e
+
     async def _read_items(self, filter_by: dict | None = None, q: Q | None = None, join_fields: list[str] = [],
                           limit: int | None = None, offset: int = 0, order_by: list[str] | None = None) -> list[dict]:
         """Read items from database with optional filtering, DB-side ordering and pagination"""
         fields = self._get_field_names(join_fields=join_fields)
-        query = self._build_query(filter_by, q)
-        qs = self.model.filter(query)
-        if order_by:
-            qs = qs.order_by(*order_by)
-        if offset:
-            qs = qs.offset(offset)
-        if limit is not None:
-            qs = qs.limit(limit)
-        items = await qs.values(*fields)
-        items = [self._hydrate(item, join_fields) for item in items]
-        return items
+        with self._field_error_hint():
+            qs = self.model.filter(self._build_query(filter_by, q))
+            if order_by:
+                qs = qs.order_by(*order_by)
+            if offset:
+                qs = qs.offset(offset)
+            if limit is not None:
+                qs = qs.limit(limit)
+            items = await qs.values(*fields)
+        return [self._hydrate(item, join_fields) for item in items]
 
     async def _read_counts(self, filter_by: dict | None = None, q: Q | None = None, group_by: str | None = None) -> int | dict:
         """Count matching rows DB-side; grouped when group_by is given."""
         query = self._build_query(filter_by, q)
-        if group_by is None:
-            return await self.model.filter(query).count()
-        rows = await self.model.filter(query).annotate(n=Count("id")).group_by(group_by).values(group_by, "n")
+        with self._field_error_hint():
+            if group_by is None:
+                return await self.model.filter(query).count()
+            rows = await self.model.filter(query).annotate(n=Count("id")).group_by(group_by).values(group_by, "n")
         return {row[group_by]: row["n"] for row in rows}
 
     async def _update_item(self, id: int, partial_item: dict) -> dict | None:

@@ -4,6 +4,10 @@ Tests for TortoiseStore: ORM CRUD, hydration/dehydration, join fields.
 from ng_rdm.models import FieldSpec
 from datetime import date, datetime
 
+import pytest
+from tortoise.exceptions import FieldError
+from tortoise.expressions import Q
+
 from ng_rdm.store import TortoiseStore
 from tests.conftest import Author, Book
 
@@ -216,6 +220,25 @@ async def test_derived_fields_with_join():
 
     items = await book_store.read_items()
     assert items[0]["author_display"] == "by Jane Austen"
+
+
+async def test_derived_field_in_q_raises_value_error():
+    """A derived name inside q= fails at query time; the error explains why"""
+    store = TortoiseStore(Author)
+    store.set_derived_fields({"display": lambda row: row["name"].upper()})
+
+    with pytest.raises(ValueError, match="display"):
+        await store.read_items(q=Q(display__icontains="x"))
+    with pytest.raises(ValueError, match="display"):
+        await store.read_counts(q=Q(display__icontains="x"))
+
+
+async def test_bad_field_without_derived_fields_still_raises_field_error():
+    """No derived fields configured → a typo'd name keeps its raw FieldError"""
+    store = TortoiseStore(Author)
+
+    with pytest.raises(FieldError):
+        await store.read_items(q=Q(nosuchfield__icontains="x"))
 
 
 # --- Observer with ORM ---

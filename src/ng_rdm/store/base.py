@@ -77,10 +77,21 @@ class Store:
                 names.add(str(f))
         clash = names & set(self._derived_fields)
         if clash:
-            raise ValueError(
-                f"{', '.join(sorted(clash))}: derived field(s) are computed after the read and "
-                f"cannot be queried or ordered. Name a real field instead (see Column.sort_key)."
-            )
+            raise ValueError(self._derived_message(clash))
+
+    def _derived_message(self, names: Any) -> str:
+        return (
+            f"{', '.join(sorted(names))}: derived field(s) are computed after the read and "
+            f"cannot be queried or ordered. Name a real field instead (see Column.sort_key)."
+        )
+
+    def _derived_hint(self, exc: Exception) -> str:
+        """Annotate a query-layer error with this store's derived field names.
+
+        For derived names that reach the DB inside a q= predicate, which _reject_derived
+        cannot inspect — the error only surfaces when the query runs.
+        """
+        return f"{exc} — {self._derived_message(self._derived_fields)}"
 
     def _apply_derived_fields(self, items: list[dict]) -> list[dict]:
         """Apply derived field computations to items"""
