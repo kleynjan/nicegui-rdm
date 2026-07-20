@@ -57,7 +57,7 @@ class DirectEditTable(ObservableRdmTable):
         *,
         filter_by: dict[str, Any] | None = None,
         on_add: Callable[[], Awaitable[None] | None] | None = None,
-        render_toolbar: Callable[[], None] | None = None,
+        render_toolbar: Callable[[], Awaitable[None] | None] | None = None,
         auto_observe: bool = True,
     ):
         super().__init__(
@@ -79,7 +79,6 @@ class DirectEditTable(ObservableRdmTable):
     @ui.refreshable_method
     async def build(self):  # type: ignore[override]  # refreshable_method descriptor vs base stub — see ObservableRdmComponent build contract
         await self.load_data()
-        self._build_toolbar("top")
 
         with html.div().classes("rdm-table-card rdm-component show-refresh"):
             with html.table().classes("rdm-table rdm-direct-table"):
@@ -94,17 +93,12 @@ class DirectEditTable(ObservableRdmTable):
 
                 with html.tbody():
                     if not self.data and not self.state["show_new_item"]:
-                        with html.tr():
-                            colspan = len(self.config.columns) + (1 if self.config.show_delete_button else 0)
-                            with html.td().props(f"colspan={colspan}"):
-                                html.span(self.config.empty_message or "No data").classes("rdm-text-muted")
+                        self._render_empty_row(len(self.config.columns) + bool(self.config.show_delete_button))
                     else:
                         for item in self.data:
                             self._build_data_row(item)
                         if self.state["show_new_item"]:
                             self._build_new_row()
-
-        self._build_toolbar("bottom")
 
     def _build_data_row(self, item: dict[str, Any]) -> None:
         async def delete(r: dict) -> None:
@@ -263,7 +257,7 @@ async def main(client: Client):
             data_source=store,
             config=TableConfig(columns=task_cols, add_button="+ Add task"),
         )
-        await table.build()
+        await table.render()
 
         # Separator(style="margin: 1.5rem 0")
 

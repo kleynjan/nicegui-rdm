@@ -193,7 +193,7 @@ async def main(client: Client):
                 on_click=on_click,
                 on_add=vs.show_edit_new,
             )
-            await table.build()
+            await table.render()
 
         async def render_detail(vs: ViewStack, item: dict):
             product_id = item.get("id")
@@ -231,7 +231,7 @@ async def main(client: Client):
                     on_edit=component_dialog.open_for_edit,
                     on_delete=on_delete_component,
                 )
-                await component_table.build()
+                await component_table.render()
 
             detail = DetailCard(
                 state=ui_state["detail_card"],

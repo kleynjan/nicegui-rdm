@@ -48,7 +48,6 @@ customer_table_config = TableConfig(
         Column(name="name", label="Name", width_percent=55),
         Column(name="country", label="Country", width_percent=30),
     ],
-    show_add_button=False,
     show_delete_button=False,
     empty_message="No customers",
 )

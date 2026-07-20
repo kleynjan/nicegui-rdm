@@ -10,6 +10,56 @@ summaries only.
 
 ## [Unreleased]
 
+## [0.2.0] — unreleased
+
+Structural follow-up to 0.1.67: the table toolbar moves **out** of the refreshable, so it
+can host stateful widgets (search input, pager) that survive a refresh instead of losing
+focus and value on the keystroke that triggered it.
+
+### Added
+
+- **`ObservableRdmTable.render()`** — new public entry point. Renders the toolbar slots
+  once, around the refreshable `build()`. Toolbar content reacts by *binding* to
+  `self.state` (the `ReactiveCounts` pattern) rather than being re-rendered.
+- **`render_toolbar` may be async** — rendered once, so it can `await read_counts()` for
+  the cost of a single query.
+- **Per-element toolbar slots** — `TableConfig.search_position` (default `"top"`) and
+  `pager_position` (default `"bottom"`) alongside `toolbar_position`, so search-top /
+  pager-bottom is expressible. Both slots are now visited; each renders what is assigned
+  to it.
+- **`SelectionTable(on_add=...)`** — previously only `ListTable` and `ActionButtonTable`
+  accepted it, which made `show_add_button` unsatisfiable there.
+
+### Changed
+
+- **BREAKING: `ActionButtonTable.build()` no longer renders its own toolbar.** Callers
+  that relied on it move to `await table.render()`. `build()` stays
+  `@ui.refreshable_method`, so `build.refresh()` and the `prune()`/`targets` lifecycle are
+  unchanged.
+- **BREAKING: the Add button requires a handler.** It renders only when
+  `config.show_add_button` **and** `on_add is not None` — `add_button` is only the label,
+  so it could not imply a handler. The no-op `_default_on_add` is gone.
+- **Empty results keep their chrome.** `ListTable` and `SelectionTable` now render the
+  empty message as a row *inside* the table, so column headers and the sort affordance
+  survive a filter that matches nothing (`ActionButtonTable` already did).
+- **A derived field reaching the DB inside `q=` now raises a clear `ValueError`.**
+  `_reject_derived` can only inspect `filter_by`/`order_by`/`group_by`; a derived name
+  inside a `Q` only fails when the query runs. `TortoiseStore` now catches that
+  `FieldError` and re-raises it annotated with the store's derived field names. Stores
+  with no derived fields keep the raw `FieldError` (most likely a typo).
+
+### Deprecated
+
+- **`build_with_toolbars()`** — alias for `render()`; logs a warning.
+
+### Migration
+
+- `await table.build_with_toolbars()` → `await table.render()`.
+- `ActionButtonTable`: `await table.build()` → `await table.render()` wherever the add
+  button or a `render_toolbar` is used.
+- Tables that set `show_add_button=False` purely to suppress an unwired button can drop
+  the setting.
+
 ## [0.1.67] — 2026-07-20
 
 Component-layer follow-up to 0.1.66's header-click sorting: the store layer already

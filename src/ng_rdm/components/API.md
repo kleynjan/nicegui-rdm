@@ -78,11 +78,13 @@ TableConfig(
     columns: list[Column] = [],
     empty_message: str | None = None,      # shown when table has no data
     add_button: str | None = None,         # custom Add button text
-    show_add_button: bool = True,
+    show_add_button: bool = True,          # button renders only when on_add= is also set
     show_edit_button: bool = True,         # ActionButtonTable only
     show_delete_button: bool = True,       # ActionButtonTable only
     custom_actions: list[RowAction] = [],  # additional per-row action buttons
-    toolbar_position: "top" | "bottom" = "bottom",
+    toolbar_position: "top" | "bottom" = "bottom",   # add button + render_toolbar
+    search_position: "top" | "bottom" = "top",
+    pager_position: "top" | "bottom" = "bottom",
 )
 ```
 
@@ -121,13 +123,14 @@ RowAction(
 
 All table components extend `ObservableRdmTable` and share these features.
 
-**Custom table subclasses** — subclass `ObservableRdmTable` directly to build bespoke table behaviour (e.g. inline per-cell editing). Implement `@ui.refreshable_method async def build(self)`, call `self.load_data()` and `self._build_toolbar("top"/"bottom")` at the appropriate positions, and use `self._render_cell(col, value, row)` for read-only cells. For editable cells, use `build_cell_field(col, row_dict)` (from `ng_rdm.components.fields`) — it produces a label-less, compact widget correctly styled for table cells. See `examples/direct_edit.py` for a full working example.
+**Custom table subclasses** — subclass `ObservableRdmTable` directly to build bespoke table behaviour (e.g. inline per-cell editing). Implement `@ui.refreshable_method async def build(self)` rendering headers and rows only (the inherited `render()` places the toolbars around it), call `self.load_data()`, and use `self._render_cell(col, value, row)` for read-only cells. For editable cells, use `build_cell_field(col, row_dict)` (from `ng_rdm.components.fields`) — it produces a label-less, compact widget correctly styled for table cells. See `examples/in_row_editing.py` for a full working example.
 
 ---
 
 - Auto-observe data source (configurable via `auto_observe`)
-- `build()` renders the table (call with `await`)
-- `build_with_toolbars()` wraps `build()` with toolbar at configured position
+- `render()` renders the toolbars **once** and the table itself — the entry point for any table with an add button, `render_toolbar`, search or pager
+- `build()` is the refreshable: it re-renders headers and rows only. Call it directly only for a bare table with no toolbar
+- Toolbar contract: anything in a toolbar slot is rendered once, outside the refresh scope, so stateful widgets (a search input) keep focus and value. Data-dependent parts **bind** to `self.state` instead of being re-rendered — the `ReactiveCounts` pattern
 - `filter_by` dict for scoping data queries (equality, AND)
 - `q` for everything equality can't express — a Tortoise `Q`, or a callable predicate on `DictStore`. ANDed with `filter_by` by the store. Assign `table.q` then `await table.build.refresh()` to drive a search box; no subclass needed. Unlike `filter_by` it takes no part in topic routing.
 - `transform` callback for post-load data transformation
@@ -643,11 +646,12 @@ Auto-cleanup: when a component's DOM context is gone (e.g. page navigation), `_h
 ### Build pattern
 
 ```python
-# Simple: just the table
+# Toolbars + table — the normal entry point, called once
+await table.render()
+
+# Bare table, no toolbar at all:
 await table.build()
 
-# With toolbars (add button, custom toolbar):
-await table.build_with_toolbars()
-
-# Or call build() directly — it renders toolbars at configured position internally
+# build() is the refreshable: build.refresh() re-renders headers and rows,
+# leaving toolbar content (and its focus/value) untouched.
 ```

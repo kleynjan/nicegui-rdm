@@ -41,7 +41,7 @@ class ListTable(ObservableRdmTable):
         transform: Callable[[list[dict]], list[dict]] | None = None,
         row_key: str = "id",
         join_fields: list[str] | None = None,
-        render_toolbar: Callable[[], None] | None = None,
+        render_toolbar: Callable[[], Awaitable[None] | None] | None = None,
         auto_observe: bool = True,
         limit: int | None = None,
         order_by: list[str] | None = None,
@@ -72,12 +72,6 @@ class ListTable(ObservableRdmTable):
         """Build the table using native HTML elements."""
         await self.load_data()
 
-        if not self.data:
-            if self.config.empty_message:
-                with html.div().classes("rdm-empty"):
-                    ui.label(self.config.empty_message).classes("rdm-empty-text")
-            return
-
         with html.div().classes("rdm-table-card rdm-component show-refresh"):
             with html.table().classes("rdm-table"):
                 # Header
@@ -87,6 +81,8 @@ class ListTable(ObservableRdmTable):
 
                 # Body
                 with html.tbody():
+                    if not self.data:
+                        self._render_empty_row(len(self.config.columns))
                     for item in self.data:
                         key = item.get(self.row_key)
                         tr = html.tr().classes("rdm-clickable").mark(f"rdm-row-{key}")

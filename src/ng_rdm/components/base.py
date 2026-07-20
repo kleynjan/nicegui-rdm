@@ -13,6 +13,7 @@ from nicegui import html, ui
 from .i18n import _
 from .protocol import RdmDataSource
 from ..store.notifier import StoreEvent
+from ..utils import logger
 
 
 @dataclass
@@ -97,7 +98,10 @@ class TableConfig:
     show_edit_button: bool = True
     show_delete_button: bool = True
     custom_actions: list[RowAction] = field(default_factory=list)
-    toolbar_position: Literal["top", "bottom"] = "bottom"
+    # Each toolbar element carries its own slot, so search-top / pager-bottom is expressible
+    toolbar_position: Literal["top", "bottom"] = "bottom"   # add button + render_toolbar
+    search_position: Literal["top", "bottom"] = "top"
+    pager_position: Literal["top", "bottom"] = "bottom"
 
     def __post_init__(self):
         self.join_fields = list({col.name for col in self.columns if "__" in col.name})
@@ -351,7 +355,7 @@ class ObservableRdmTable(ObservableRdmComponent):
         transform: Callable[[list[dict]], list[dict]] | None = None,
         join_fields: list[str] | None = None,
         on_add: Callable[[], Awaitable[None] | None] | None = None,
-        render_toolbar: Callable[[], None] | None = None,
+        render_toolbar: Callable[[], Awaitable[None] | None] | None = None,
         auto_observe: bool = True,
         limit: int | None = None,
         order_by: list[str] | None = None,
@@ -440,37 +444,49 @@ class ObservableRdmTable(ObservableRdmComponent):
             if col.width_percent:
                 th.style(f"width: {col.width_percent}%")
 
-    def _build_toolbar(self, at: Literal["top", "bottom"] = "top"):
-        """Render table toolbar at the given slot position.
+    def _render_empty_row(self, colspan: int) -> None:
+        """Empty state as a row inside the table, so headers and sorting survive it."""
+        with html.tr():
+            with html.td().props(f"colspan={colspan}"):
+                ui.label(self.config.empty_message or _("No data")).classes("rdm-text-muted")
 
-        Subclasses call this twice — once before and once after the table —
-        passing the slot name. Only the call matching config.toolbar_position renders.
+    async def _build_toolbar(self, at: Literal["top", "bottom"]):
+        """Render whichever toolbar elements are assigned to the given slot.
+
+        Called once from render(), outside the refreshable: stateful widgets keep their
+        focus and value, and data-dependent parts bind to self.state instead of being
+        re-rendered. Both slots are visited; each renders only what is assigned to it.
         """
-        if at != self.config.toolbar_position:
-            return
-        if not self.config.show_add_button and not self.render_toolbar:
+        show_add = self.config.show_add_button and self.on_add is not None
+        if at != self.config.toolbar_position or not (show_add or self.render_toolbar):
             return
         with html.div().classes("rdm-table-toolbar"):
-            if self.config.show_add_button:
+            if show_add:
                 from .widgets.button import Button
-                add_handler = self.on_add or self._default_on_add
-                Button(self.config.add_button or _("Add new"), on_click=add_handler)
+                Button(self.config.add_button or _("Add new"), on_click=self.on_add)
             if self.render_toolbar:
-                self.render_toolbar()
+                result = self.render_toolbar()
+                if result is not None and hasattr(result, '__await__'):
+                    await result
+
+    async def render(self):
+        """Render the toolbars once and the table itself. Public entry point.
+
+        build() stays refreshable and re-renders headers and rows only; anything in a
+        toolbar slot is rendered once here and reacts by binding to self.state.
+        """
+        await self._build_toolbar("top")
+        await self.build()
+        await self._build_toolbar("bottom")
 
     async def build_with_toolbars(self):
-        """Build the table with toolbars. Call this instead of build() if using toolbars."""
-        self._build_toolbar("top")
-        await self.build()
-        self._build_toolbar("bottom")
+        """Deprecated — use render()."""
+        logger.warning("ng_rdm: build_with_toolbars() is deprecated, use render()")
+        await self.render()
 
     async def build(self):
         """Subclasses must implement build() to render the table itself."""
         raise NotImplementedError("Subclasses must implement build()")
-
-    def _default_on_add(self):
-        """Default add handler — no-op. Subclasses with modal support override this."""
-        pass
 
 
 async def confirm_dialog(item: dict | None = None, prompts: dict | None = None):

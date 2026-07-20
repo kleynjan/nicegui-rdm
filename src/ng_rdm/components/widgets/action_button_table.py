@@ -43,7 +43,7 @@ class ActionButtonTable(ObservableRdmTable):
         on_add: Callable[[], Awaitable[None] | None] | None = None,
         on_edit: Callable[[dict], Awaitable[None] | None] | None = None,
         on_delete: Callable[[dict], Awaitable[None] | None] | None = None,
-        render_toolbar: Callable[[], None] | None = None,
+        render_toolbar: Callable[[], Awaitable[None] | None] | None = None,
         auto_observe: bool = True,
         limit: int | None = None,
         order_by: list[str] | None = None,
@@ -65,7 +65,6 @@ class ActionButtonTable(ObservableRdmTable):
     async def build(self):  # type: ignore[override]  # refreshable_method descriptor vs base stub — see ObservableRdmComponent build contract
         """Build the table using native HTML elements."""
         await self.load_data()
-        self._build_toolbar("top")
 
         with html.div().classes("rdm-table-card rdm-component show-refresh"):
             with html.table().classes("rdm-table"):
@@ -80,19 +79,10 @@ class ActionButtonTable(ObservableRdmTable):
                 # Body
                 with html.tbody():
                     if not self.data:
-                        with html.tr():
-                            colspan = len(self.config.columns)
-                            if self._all_actions:
-                                colspan += 1
-                            with html.td().props(f"colspan={colspan}"):
-                                ui.label(
-                                    self.config.empty_message or _("No data")
-                                ).classes("rdm-text-muted")
+                        self._render_empty_row(len(self.config.columns) + bool(self._all_actions))
                     else:
                         for row in self.data:
                             self._build_row(row)
-
-        self._build_toolbar("bottom")
 
     def _build_row(self, row: dict):
         """Build a single data row."""

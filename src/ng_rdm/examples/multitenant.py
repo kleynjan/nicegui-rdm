@@ -139,14 +139,13 @@ async def main(client: Client):
                         on_edit=dialog.open_for_edit,
                         on_delete=on_delete,
                     )
-                    await table_left.build()
+                    await table_left.render()
 
                 with Col(style="flex: 1"):
                     table_right = ActionButtonTable(
                         data_source=store,
                         config=TableConfig(
                             columns=table_cols,
-                            show_add_button=False,
                         ),
                         on_edit=dialog.open_for_edit,
                         on_delete=on_delete,

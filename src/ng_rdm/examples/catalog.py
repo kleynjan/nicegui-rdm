@@ -186,7 +186,7 @@ async def section_toc_table():
 
     table = ListTable(
         data_source=toc_store,
-        config=TableConfig(columns=toc_cols, show_add_button=False),
+        config=TableConfig(columns=toc_cols),
         on_click=on_click,
         auto_observe=False,
     )
@@ -225,7 +225,7 @@ async def section_action_button_table(product_store, category_store):
         on_edit=dialog.open_for_edit,
         on_delete=on_delete,
     )
-    await table.build()
+    await table.render()
 
 
 async def section_list_table(category_store):
@@ -241,7 +241,7 @@ async def section_list_table(category_store):
 
     table = ListTable(
         data_source=category_store,
-        config=TableConfig(columns=category_cols, show_add_button=False, empty_message="No categories"),
+        config=TableConfig(columns=category_cols, empty_message="No categories"),
         on_click=on_click,
     )
     await table.build()
@@ -263,12 +263,12 @@ async def section_selection_table(selection_state, product_store):
     table = SelectionTable(
         state=selection_state,
         data_source=product_store,
-        config=TableConfig(columns=product_cols, show_add_button=False),
+        config=TableConfig(columns=product_cols),
         show_checkboxes=True,
         multi_select=False,
         render_toolbar=render_toolbar,
     )
-    await table.build_with_toolbars()
+    await table.render()
 
     ui.label("").classes("demo-caption").bind_text_from(
         selection_state, "selected_ids",
@@ -322,7 +322,7 @@ async def section_tabs(tabs, product_store, category_store):
     async def render_products():
         config = TableConfig(
             columns=product_cols[:2],
-            show_add_button=False, show_edit_button=False, show_delete_button=False,
+            show_edit_button=False, show_delete_button=False,
         )
         table = ListTable(data_source=product_store, config=config)
         await table.build()
@@ -330,7 +330,7 @@ async def section_tabs(tabs, product_store, category_store):
     async def render_categories():
         config = TableConfig(
             columns=category_cols,
-            show_add_button=False, show_edit_button=False, show_delete_button=False,
+            show_edit_button=False, show_delete_button=False,
         )
         table = ListTable(data_source=category_store, config=config)
         await table.build()
@@ -386,7 +386,7 @@ async def section_viewstack(viewstack, vs_list, detail_card, vs_editcard, catego
             on_click=on_click,
             on_add=vs.show_edit_new,
         )
-        await table.build()
+        await table.render()
 
     async def render_detail(vs: ViewStack, item: dict):
         async def render_header(i: dict):

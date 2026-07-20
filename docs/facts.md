@@ -240,7 +240,7 @@ ui.label().bind_text_from(counts.values, "delivered", backward=lambda v: str(v o
 
 ### ActionButtonTable Configuration
 
-ActionButtonTable displays data with per-row action buttons. All action semantics are delegated to client callbacks. The add button is rendered automatically in the table toolbar when `config.show_add_button` is True.
+ActionButtonTable displays data with per-row action buttons. All action semantics are delegated to client callbacks. The add button is rendered in the table toolbar when `config.show_add_button` is True **and** an `on_add` callback is set — `add_button` is only the label, so it cannot imply a handler. Toolbars are rendered by `render()`, not `build()`.
 
 ```python
 ActionButtonTable(
@@ -341,7 +341,8 @@ table = ActionButtonTable(
 - `add_button` — Custom text for add button
 - `custom_actions` — List of `RowAction` for custom per-row buttons
 - `empty_message` — Message when table is empty
-- `toolbar_position` — "top" or "bottom" (default: "bottom")
+- `toolbar_position` — slot for the add button and `render_toolbar` ("top"/"bottom", default "bottom")
+- `search_position` (default "top"), `pager_position` (default "bottom") — each toolbar element carries its own slot, so search-top / pager-bottom is expressible
 
 ### FormConfig
 `FormConfig` dataclass configures form/dialog behavior:

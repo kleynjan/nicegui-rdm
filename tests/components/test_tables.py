@@ -189,7 +189,7 @@ async def test_abt_add_button(user: User):
             on_add=lambda: add_log.append('added'),
             auto_observe=False,
         )
-        await table.build()
+        await table.render()
 
     await user.open('/')
     await user.should_see('Add Person')
@@ -209,12 +209,80 @@ async def test_abt_hide_add_button(user: User):
                 columns=[Column(name='name', label='Name')],
                 show_add_button=False,
             ),
+            on_add=lambda: None,
             auto_observe=False,
         )
-        await table.build()
+        await table.render()
 
     await user.open('/')
     html_should_not_see(user, 'Add new')
+
+
+# ═══════════════════════════════════════════════
+# Toolbar (rendered by render(), outside the refreshable)
+# ═══════════════════════════════════════════════
+
+async def test_toolbar_renders_and_survives_empty_data(user: User):
+    """render_toolbar content appears — also when the filter matches zero rows."""
+    store = DictStore()
+
+    @ui.page('/')
+    async def page():
+        await store.create_item({'name': 'Alice'})
+        table = ListTable(
+            data_source=store,
+            config=TableConfig(columns=[Column(name='name', label='Name')]),
+            filter_by={'name': 'Nobody'},
+            render_toolbar=lambda: ui.label('TOOLBAR'),
+            auto_observe=False,
+        )
+        await table.render()
+
+    await user.open('/')
+    await user.should_see('TOOLBAR')
+    html_should_see(user, 'Name')          # headers survive the empty result too
+
+
+async def test_toolbar_accepts_async_render_toolbar(user: User):
+    """render_toolbar may be a coroutine function — it can await read_counts()."""
+    store = DictStore()
+
+    @ui.page('/')
+    async def page():
+        await store.create_item({'name': 'Alice'})
+        table = ListTable(
+            data_source=store,
+            config=TableConfig(columns=[Column(name='name', label='Name')]),
+            auto_observe=False,
+        )
+
+        async def toolbar():
+            ui.label(f"total {await store.read_counts()}")
+
+        table.render_toolbar = toolbar
+        await table.render()
+
+    await user.open('/')
+    await user.should_see('total 1')
+
+
+async def test_add_button_needs_a_handler(user: User):
+    """Default config renders no Add button; on_add renders one — also on SelectionTable."""
+    store = DictStore()
+    config = TableConfig(columns=[Column(name='name', label='Name')])
+
+    @ui.page('/')
+    async def page():
+        plain = ListTable(data_source=store, config=config, auto_observe=False)
+        await plain.render()
+        wired = SelectionTable(
+            data_source=store, config=config, on_add=lambda: None, auto_observe=False,
+        )
+        await wired.render()
+
+    await user.open('/')
+    labels = [el.text for el in user.find('Add new').elements]
+    assert len(labels) == 1  # only the on_add-wired table has one
 
 
 async def test_abt_custom_actions(user: User):

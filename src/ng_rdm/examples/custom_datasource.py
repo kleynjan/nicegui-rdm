@@ -175,7 +175,7 @@ async def main(client: Client):
             on_edit=dialog.open_for_edit,
             on_delete=on_delete,
         )
-        await table.build()
+        await table.render()
 
 
 ui.run(title="Custom DataSource — ng_rdm", storage_secret="custom_ds_1928")

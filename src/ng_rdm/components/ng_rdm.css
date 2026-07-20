@@ -233,7 +233,8 @@
     padding: var(--rdm-spacing-lg) 0;
 }
 
-/* this is a sibling/alternative to .rdm-table-card */
+/* UNUSED — 0.2.0 renders the empty state as a row inside the table (headers survive)
+   this is a sibling/alternative to .rdm-table-card
 .rdm-empty {
     padding: var(--rdm-spacing-xl);
     text-align: center;
@@ -242,6 +243,7 @@
         font-size: var(--rdm-font-size);
     }
 }
+*/
 
 /* =============================================================================
    Dialog / Modal

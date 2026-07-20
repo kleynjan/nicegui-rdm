@@ -4,7 +4,7 @@ SelectionTable - Table with checkbox selection column for multi-select.
 Uses native HTML <table> elements for clean, semantic markup.
 Tracks selected row IDs via the selected_ids property.
 """
-from typing import Any, Callable
+from typing import Any, Awaitable, Callable
 
 from nicegui import html, ui
 
@@ -30,6 +30,7 @@ class SelectionTable(ObservableRdmTable):
         row_key: Field to use as row identifier (default "id")
         join_fields: Additional join fields for data loading
         on_selection_change: Callback when selection changes, receives set of selected IDs
+        on_add: Callback for the toolbar Add button (the button renders only when set)
         limit: Optional hard cap on rows (for bounded query-views over large entities)
         order_by: Optional initial DB-side ordering, e.g. ["name", "-created_at"]
     """
@@ -48,7 +49,8 @@ class SelectionTable(ObservableRdmTable):
         row_key: str = "id",
         join_fields: list[str] | None = None,
         on_selection_change: Callable[[set[int]], None] | None = None,
-        render_toolbar: Callable[[], None] | None = None,
+        on_add: Callable[[], Awaitable[None] | None] | None = None,
+        render_toolbar: Callable[[], Awaitable[None] | None] | None = None,
         auto_observe: bool = True,
         limit: int | None = None,
         order_by: list[str] | None = None,
@@ -56,7 +58,8 @@ class SelectionTable(ObservableRdmTable):
         super().__init__(
             data_source=data_source, config=config, state=state,
             filter_by=filter_by, q=q, transform=transform,
-            join_fields=join_fields, render_toolbar=render_toolbar, auto_observe=auto_observe,
+            join_fields=join_fields, on_add=on_add,
+            render_toolbar=render_toolbar, auto_observe=auto_observe,
             limit=limit, order_by=order_by,
         )
         self.row_key = row_key
@@ -118,12 +121,6 @@ class SelectionTable(ObservableRdmTable):
         """Build the table using native HTML elements."""
         await self.load_data()
 
-        if not self.data:
-            if self.config.empty_message:
-                with html.div().classes("rdm-empty"):
-                    ui.label(self.config.empty_message).classes("rdm-empty-text")
-            return
-
         with html.div().classes("rdm-table-card rdm-component"):
             with html.table().classes("rdm-table"):
                 # Header
@@ -136,6 +133,8 @@ class SelectionTable(ObservableRdmTable):
 
                 # Body
                 with html.tbody():
+                    if not self.data:
+                        self._render_empty_row(len(self.config.columns) + bool(self.state['show_checkboxes']))
                     for item in self.data:
                         key = item.get(self.row_key)
                         if key is None:
